@@ -5,6 +5,7 @@ services:
       target: dev
     environment:
       PYTHONPATH: server
+      SECRET_KEY: CHANGE ME
     ports:
       - "5000:5000"
     develop:
