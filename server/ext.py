@@ -2,6 +2,7 @@ from flask import Flask
 
 from db.shared import db
 from db.loader import load_models
+from views.route import create_blueprints
 
 
 class MapWebUI:
@@ -26,6 +27,8 @@ class MapWebUI:
         """
         self.app = app
         self.init_db_app(app)
+
+        create_blueprints(app)
 
         app.extensions["map_web_ui"] = self
 

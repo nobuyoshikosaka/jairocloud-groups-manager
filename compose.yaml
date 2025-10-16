@@ -4,8 +4,10 @@ services:
       context: .
       target: dev
     image: web-ui-dev
+    container_name: web
     environment:
       PYTHONPATH: server
+      SERVER_NAME: localhost:5000
       SECRET_KEY: CHANGE ME
       POSTGRES_USER: mapuser
       POSTGRES_HOST: postgres
@@ -14,6 +16,7 @@ services:
       POSTGRES_DB: mapdb
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+      MAP_CORE_BASE_URL: https://map-core.example.com
     ports:
       - "5000:5000"
     develop:
@@ -35,9 +38,11 @@ services:
       context: .
       target: dev
     image: web-ui-dev
+    container_name: worker
     command: uv run celery -A server.worker worker
     environment:
       PYTHONPATH: server
+      SERVER_NAME: localhost:5000
       SECRET_KEY: CHANGE ME
       POSTGRES_USER: mapuser
       POSTGRES_HOST: postgres
@@ -46,6 +51,7 @@ services:
       POSTGRES_DB: mapdb
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+      MAP_CORE_BASE_URL: https://map-core.example.com
     develop:
       watch:
         - action: sync

@@ -6,6 +6,9 @@ from sqlalchemy.engine import URL, make_url
 class RuntimeConfig(BaseSettings):
     """Configuration for runtime settings."""
 
+    SERVER_NAME: str = "localhost:5000"
+    """The server name."""
+
     SECRET_KEY: str = "sample_secret_key"
     """A secret key for cryptographic operations."""
 
@@ -49,6 +52,15 @@ class RuntimeConfig(BaseSettings):
             "result_backend": self.CELERY_RESULT_BACKEND,
             "task_ignore_result": True,
         }
+
+    MAP_CORE_BASE_URL: str = "https://map-core.example.com"
+    """Base URL for the mAP Core service."""
+
+    WEB_UI_SP_CERT_PATH: str = "./certs/server.crt"
+    """Path to the mAP SP certificate."""
+
+    WEB_UI_SP_KEY_PATH: str = "./certs/server.key"
+    """Path to the mAP SP private key."""
 
 
 config = RuntimeConfig()
