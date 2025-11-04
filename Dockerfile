@@ -2,6 +2,7 @@
 
 # === Base image with Python and user setup ===
 FROM python:3.14-slim AS base
+
 ARG USERNAME=pyuser
 ARG GROUPNAME=pyuser
 ARG UID=1000
@@ -24,9 +25,18 @@ RUN uv sync --frozen
 
 # === Development server for Flask app ===
 FROM base AS dev
-ENV FLASK_ENV=development
+
+ENV VIRTUAL_ENV="/code/.venv"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY --from=deps --chown=${USERNAME}:${GROUPNAME} /code/.venv ./.venv
 COPY --chown=${USERNAME}:${GROUPNAME} . .
 
-EXPOSE 5000
-CMD ["uv", "run", "flask", "-A", "server.app", "run", "--reload", "--debug", "--host=0.0.0.0"]
+RUN uv pip install -e .
+
+ENV FLASK_ENV=development
+ENV FLASK_APP="server.app"
+ENV FLASK_RUN_HOST="0.0.0.0"
+ENV FLASK_RUN_PORT=5050
+ENV FLASK_DEBUG=1
+EXPOSE 5050
+CMD ["flask", "run", "--reload"]

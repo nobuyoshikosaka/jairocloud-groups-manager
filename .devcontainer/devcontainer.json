@@ -1,0 +1,92 @@
+{
+  "name": "devcontainer",
+  "dockerComposeFile": [
+    "../compose.yaml",
+    "dev.compose.yaml"
+  ],
+  "runServices": ["dev"],
+  "service": "dev",
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspace",
+
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.14"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "dockerDashComposeVersion": "latest",
+      "enableNonRootDocker": true,
+      "moby": false
+    }
+  },
+  "remoteEnv": {
+    "VIRTUAL_ENV": "/home/vscode/.venv",
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
+  },
+  "postCreateCommand": "chmod +x .devcontainer/setup.sh && .devcontainer/setup.sh vscode",
+  "postStartCommand": "docker compose up --watch",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.languageServer": "Pylance",
+        "[python]": {
+          "editor.rulers": [88],
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports": "explicit"
+          },
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+
+        "[typescript]": {
+          "editor.rulers": [100],
+          "editor.formatOnSave": true
+        },
+        "[vue]": {
+          "editor.rulers": [100],
+          "editor.formatOnSave": true
+        },
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "always"
+        },
+        "tailwindCSS.classAttributes": ["class", "ui"],
+        "tailwindCSS.experimental.classRegex": [
+          ["ui:\\s*{([^)]*)\\s*}", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+        ],
+        "i18n-ally.localesPaths": ["app/i18n/locales"],
+        "i18n-ally.keystyle": "nested",
+        "i18n-ally.sourceLanguage": "en",
+        "i18n-ally.sortKeys": true,
+        "i18n-ally.extract.autoDetect": true,
+        "i18n-ally.extract.ignored": [
+          "**/node_modules/**",
+          "**/dist/**"
+        ]
+      },
+      "extensions": [
+        "visualstudioexptteam.vscodeintellicode",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "tamasfe.even-better-toml",
+        "charliermarsh.ruff",
+
+        "vue.volar",
+        "vitest.explorer",
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "lokalise.i18n-ally",
+
+        "editorconfig.editorconfig",
+
+        "mhutchie.git-graph",
+        "eamodio.gitlens"
+      ]
+    }
+  }
+}

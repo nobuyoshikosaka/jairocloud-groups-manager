@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+
+# === Base image with Node.js ===
+FROM node:24.11-slim AS base
+
+ARG USERNAME=node
+ARG GROUPNAME=node
+ARG UID=1000
+ARG GID=1000
+
+WORKDIR /code
+RUN chown ${USERNAME}:${GROUPNAME} /code
+RUN npm install -g npm && npm install -g pnpm
+
+USER ${USERNAME}
+
+
+# === Install Node.js dependencies ===
+FROM base AS deps
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install --frozen-lockfile
+
+
+# === Development server for Vite app ===
+FROM base AS dev
+
+COPY --from=deps --chown=${USERNAME}:${GROUPNAME} /code/node_modules ./node_modules
+COPY --chown=${USERNAME}:${GROUPNAME} . .
+
+ENV NODE_ENV=development
+ENV NUXT_PORT=3000
+EXPOSE 3000
+CMD ["pnpm", "nuxt", "dev"]

@@ -25,9 +25,16 @@ dev = [
     "taskipy>=1.14.1",
 ]
 
+[tool.setuptools.packages.find]
+include = ["server"]
+
+
 [tool.taskipy.tasks]
+# refer to https://github.com/taskipy/taskipy?tab=readme-ov-file#usage
 test = "pytest"
+"test:cov" = "pytest --cov=server --cov-report=term --cov-report=html"
 lint = "uvx ruff check"
+"lint:fix" = "uvx ruff check --fix"
 format = "uvx ruff format"
 typecheck = "pyright"
 check-updates = "uvx --from=pip-check-updates pcu pyproject.toml"
@@ -42,8 +49,36 @@ addopts = [
 source = ["server"]
 omit = ["*/__init__.py", "*/tests/*"]
 
-[tool.ruff]
-fix = true
+[tool.ruff.lint]
+# refer to https://docs.astral.sh/ruff/settings/#lint
+ignore = [
+  "D203",
+  "D213",
+  "TC006",
+  "COM812",
+  "ANN201",
+  "TRY400",
+]
+preview = true
+select = ["ALL"]
+
+[tool.ruff.lint.isort]
+# refer to https://docs.astral.sh/ruff/settings/#lintisort
+combine-as-imports = true
+known-first-party = ["server", "ext"]
+lines-between-types = 1
+
+[tool.ruff.analyze]
+# refer to https://docs.astral.sh/ruff/settings/#analyze
+detect-string-imports = true
+
+[tool.ruff.format]
+# refer to https://docs.astral.sh/ruff/settings/#format
+docstring-code-format = true
+docstring-code-line-length = 80
+line-ending = "lf"
+preview = true
+skip-magic-trailing-comma = false
 
 [tool.pyright]
 extraPaths = ["server"]

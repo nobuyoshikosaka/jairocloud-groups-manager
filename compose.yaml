@@ -7,7 +7,7 @@ services:
     container_name: web
     environment:
       PYTHONPATH: server
-      SERVER_NAME: localhost:5000
+      SERVER_NAME: localhost:5050
       SECRET_KEY: CHANGE ME
       POSTGRES_USER: mapuser
       POSTGRES_HOST: postgres
@@ -18,16 +18,20 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       MAP_CORE_BASE_URL: https://map-core.example.com
     ports:
-      - "5000:5000"
+      - "5050:5050"
     develop:
       watch:
         - action: sync
           path: .
           target: /code
+          include:
+            - server
+            - certs
           ignore:
             - .venv
             - __pycache__
             - .pytest_cache
+            - node_modules
         - action: rebuild
           path: pyproject.toml
         - action: rebuild
@@ -39,7 +43,7 @@ services:
       target: dev
     image: web-ui-dev
     container_name: worker
-    command: uv run celery -A server.worker worker
+    command: celery -A server.worker worker
     environment:
       PYTHONPATH: server
       SERVER_NAME: localhost:5000
@@ -54,15 +58,48 @@ services:
       MAP_CORE_BASE_URL: https://map-core.example.com
     develop:
       watch:
-        - action: sync
+        - action: sync+restart
           path: .
           target: /code
+          include:
+            - server
+            - certs
           ignore:
+            - .nuxt
             - .venv
             - __pycache__
             - .pytest_cache
+            - node_modules
         - action: rebuild
           path: pyproject.toml
+        - action: rebuild
+          path: Dockerfile.vite
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.vite
+      target: dev
+    image: web-ui-vite
+    container_name: app
+    ports:
+      - "3000:3000"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /code
+          include:
+            - app
+            - public
+          ignore:
+            - .nuxt
+            - .venv
+            - __pycache__
+            - .pytest_cache
+            - node_modules
+        - action: rebuild
+          path: package.json
         - action: rebuild
           path: Dockerfile
 
