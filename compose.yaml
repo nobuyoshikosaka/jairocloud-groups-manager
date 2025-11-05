@@ -36,6 +36,8 @@ services:
           path: pyproject.toml
         - action: rebuild
           path: Dockerfile
+    networks:
+      - dev_net
 
   worker:
     build:
@@ -74,6 +76,8 @@ services:
           path: pyproject.toml
         - action: rebuild
           path: Dockerfile.vite
+    networks:
+      - dev_net
 
   app:
     build:
@@ -102,6 +106,8 @@ services:
           path: package.json
         - action: rebuild
           path: Dockerfile
+    networks:
+      - dev_net
 
   postgres:
     image: postgres:12
@@ -113,11 +119,20 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - dev_net
 
   redis:
     image: redis:7
     ports:
       - "6379:6379"
+    networks:
+      - dev_net
 
 volumes:
   pgdata:
+
+networks:
+  dev_net:
+    external: true
+    name: map-web-ui_default

@@ -27,7 +27,8 @@
     "VIRTUAL_ENV": "/home/vscode/.venv",
     "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
   },
-  "postCreateCommand": "chmod +x .devcontainer/setup.sh && .devcontainer/setup.sh vscode",
+  "onCreateCommand": "/bin/bash .devcontainer/deps.sh",
+  "postCreateCommand": "/bin/bash .devcontainer/setup.sh vscode",
   "postStartCommand": "docker compose up --watch",
 
   "customizations": {

@@ -9,24 +9,6 @@ if [ -z "$REMOTE_USER" ]; then
     exit 1
 fi
 
-if [ -S /var/run/docker.sock ]; then
-    DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
-
-    sudo groupadd -g $DOCKER_GID docker_host || true
-    sudo usermod -aG docker_host "${REMOTE_USER}"
-
-    if ! grep -q "docker_host_reload" "$BASHRC_FILE" 2>/dev/null; then
-        {
-        echo ""
-        echo "# docker_host_reload"
-        echo "if ! groups | grep -q 'docker_host'; then"
-        echo "  exec newgrp docker_host"
-        echo "fi"
-        } >> "$BASHRC_FILE"
-
-        sudo chown ${REMOTE_USER}:${REMOTE_USER} "$BASHRC_FILE"
-    fi
-fi
 
 if ! grep -q "venv_activate_reload" "$BASHRC_FILE" 2>/dev/null; then
     {
@@ -41,9 +23,52 @@ if ! grep -q "venv_activate_reload" "$BASHRC_FILE" 2>/dev/null; then
 fi
 
 
-pip install --upgrade pip
-pip install uv && uv sync
+if [ -S /var/run/docker.sock ]; then
+    DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
 
-npm install -g pnpm
-pnpm config set store-dir "$HOME/.pnpm-store"
-pnpm install
+    EXISTING_GROUP=$(getent group "$DOCKER_GID" | cut -d: -f1)
+    if [ -n "$EXISTING_GROUP" ] && [ "$EXISTING_GROUP" != "docker" ]; then
+        FOUND_GID=""
+        for NEW_GID in $(seq 998 -1 1); do
+            if ! getent group $NEW_GID > /dev/null; then
+                FOUND_GID=$NEW_GID
+                break
+            fi
+        done
+
+        if [ -z "$FOUND_GID" ]; then
+            for NEW_GID in $(seq 10000 11000); do
+                if ! getent group $NEW_GID > /dev/null; then
+                    FOUND_GID=$NEW_GID
+                    break
+                fi
+            done
+        fi
+
+        if [ -n "$FOUND_GID" ]; then
+            sudo groupmod -g $FOUND_GID "$EXISTING_GROUP"
+        else
+            echo "Error: No available GID found to resolve group conflict." >&2
+            exit 1
+        fi
+    fi
+
+    if getent group docker > /dev/null 2>&1; then
+        sudo groupmod -g $DOCKER_GID docker
+    else
+        sudo groupadd -g $DOCKER_GID docker
+    fi
+    sudo usermod -aG docker "${REMOTE_USER}"
+
+    if ! grep -q "docker_reload" "$BASHRC_FILE" 2>/dev/null; then
+        {
+        echo ""
+        echo "# docker_reload"
+        echo "if ! groups | grep -q 'docker'; then"
+        echo "  exec newgrp docker"
+        echo "fi"
+        } >> "$BASHRC_FILE"
+
+        sudo chown ${REMOTE_USER}:${REMOTE_USER} "$BASHRC_FILE"
+    fi
+fi
