@@ -1,26 +1,11 @@
 {
-  "[python]": {
-    "editor.rulers": [88],
-  },
   "python.testing.pytestArgs": [
     "tests"
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
 
-  "[typescript]": {
-    "editor.rulers": [100],
-  },
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "always",
-  },
-  "tailwindCSS.classAttributes": [
-    "class",
-    "ui",
-  ],
-    "tailwindCSS.experimental.classRegex": [
-    ["ui:\\s*{([^)]*)\\s*}", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
-  ],
+  "typescript.tsdk": "node_modules/typescript/lib",
   "i18n-ally.localesPaths": [
     "app/i18n/locales"
   ],
