@@ -110,6 +110,20 @@ services:
     networks:
       - dev_net
 
+  nginx:
+    build:
+      context: ./nginx
+    image: web-ui-nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - web
+      - app
+    networks:
+      - dev_net
+
   postgres:
     image: postgres:12
     environment:
