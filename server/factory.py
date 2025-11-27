@@ -11,10 +11,6 @@ def create_app(config_object: object | str = "config.config"):
     celery_init_app(app)
     _map_web_ui = MapWebUI(app)
 
-    @app.route("/")
-    def home():
-        return "Welcome to the mAP Web UI!"
-
     return app
 
 

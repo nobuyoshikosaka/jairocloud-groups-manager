@@ -1,8 +1,8 @@
-from typing import TYPE_CHECKING
+import typing as t
 
 from factory import create_app
 
-if TYPE_CHECKING:
+if t.TYPE_CHECKING:
     from celery import Celery
 
 flask_app = create_app()

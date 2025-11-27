@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request
 from client.users import exixt_eppn
 from services.service_settings import get_access_token, get_client_cert
 
-bp = Blueprint("users", __name__, url_prefix="/users")
+bp = Blueprint("users", __name__, url_prefix="/api/users")
 
 
 @bp.route("/exist", methods=["GET"])
@@ -34,5 +34,5 @@ def exist():
         return jsonify(exists=False), 200
     return jsonify(
         exists=exists[0],
-        user=exists[1].model_dump(mode="json"),
+        user=exists[1].model_dump(mode="json", by_alias=True),
     ), 200

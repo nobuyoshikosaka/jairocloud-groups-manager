@@ -19,7 +19,7 @@ def issue_certificate(entity_id: str) -> ClientCert:
     Returns:
         ClientCert: The issued client certificate.
     """
-    redirect_uri = url_for("auth.redirect", _external=True)
+    redirect_uri = url_for("auth.callback", _external=True)
 
     try:
         response = requests.post(
@@ -33,7 +33,7 @@ def issue_certificate(entity_id: str) -> ClientCert:
         response.raise_for_status()
         data = response.json()
     except requests.HTTPError, requests.JSONDecodeError:
-        current_app.logger.error(f"Failed to issue certificate for {entity_id}.")
+        current_app.logger.error("Failed to issue certificate for %s.", entity_id)
         traceback.print_exc()
         raise
 
@@ -65,7 +65,7 @@ def get_access_token(code: _OAuthCode, cert: _ClientCert) -> OAuthToken:
     Returns:
         OAuthToken: The obtained OAuth access token.
     """
-    redirect_uri = url_for("auth.redirect", _external=True)
+    redirect_uri = url_for("auth.callback", _external=True)
 
     try:
         response = requests.post(

@@ -42,12 +42,12 @@ def exixt_eppn(eppn: str, *, access_token: str, client_secret: str):
     except requests.RequestException as ex:
         error_type = type(ex).__name__
         current_app.logger.error(
-            f"Failed to check ePPN existence for {eppn}: {error_type}."
+            "Failed to check ePPN existence for %s: %s", eppn, error_type
         )
         raise
     except Exception:
         current_app.logger.error(
-            f"An unexpected error occurred while checking ePPN existence for {eppn}."
+            "An unexpected error occurred while checking ePPN existence for %s.", eppn
         )
         raise
 
