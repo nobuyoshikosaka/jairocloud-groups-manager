@@ -1,4 +1,8 @@
 # JAIRO Cloud Groups Manager
+
+[![Flask](https://img.shields.io/badge/Flask-3BABC3?logo=flask&labelColor=000000)](https://flask.palletsprojects.com)
+[![Nuxt UI](https://img.shields.io/badge/Nuxt%20UI-00DC82?logo=nuxt&labelColor=020420)](https://ui.nuxt.com)
+
 A web client for JAIRO Cloud repository administrators to manage groups in the GakuNin Cloud Gateway.
 
 ## Development Setup

@@ -1,0 +1,40 @@
+{
+  "name": "jairocloud-groups-manager",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "A web client for JAIRO Cloud repository administrators to manage groups in the GakuNin Cloud Gateway.",
+  "license": "MIT",
+  "author": {
+    "name": "National Institute of Informatics"
+  },
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@iconify-json/lucide": "^1.2.80",
+    "@iconify-json/simple-icons": "^1.2.62",
+    "@nuxt/content": "3.9.0",
+    "@nuxt/ui": "^4.2.1",
+    "nuxt": "^4.2.2"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.12.1",
+    "@nuxt/test-utils": "3.21.0",
+    "better-sqlite3": "^12.5.0",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.1.8"
+  },
+  "engines": {
+    "node": "^24.12.0",
+    "pnpm": "^10.25.0",
+    "npm": "please_use_pnpm_instead"
+  },
+  "packageManager": "pnpm@10.25.0"
+}

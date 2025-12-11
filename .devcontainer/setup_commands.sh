@@ -1,8 +1,15 @@
 #!/bin/bash
 
 install_deps() {
+    # Install Python dependencies
     pip install --upgrade pip && pip install uv
     uv sync && uv pip install -e .
+
+    # Install Node.js dependencies
+    npm install -g npm && npm install -g pnpm
+    pnpm config set global-bin-dir "$HOME/.local/bin"
+    pnpm config set store-dir "$HOME/.pnpm-store"
+    pnpm install
 }
 
 
