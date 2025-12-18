@@ -73,6 +73,19 @@ COPY --from=build \
 
 COPY nginx/supervisord.conf /etc/supervisord.conf
 COPY nginx/shibboleth2.xml /etc/shibboleth/shibboleth2.xml
+COPY nginx/cgidp-metadata.xml /etc/shibboleth/cgidp-metadata.xml
+
+COPY nginx/attribute-map.inc.xml /etc/shibboleth/attribute-map.inc.xml
+RUN sed -i \
+    '/Other eduPerson attributes/r /etc/shibboleth/attribute-map.inc.xml' \
+    /etc/shibboleth/attribute-map.xml
+
+COPY nginx/attribute-policy.inc.xml /etc/shibboleth/attribute-policy.inc.xml
+RUN AWK_PATTERN='Catch-all that passes everything else through unmolested.' && \
+    awk -v p="$AWK_PATTERN" -v target_file="/etc/shibboleth/attribute-policy.inc.xml" \
+        '$0 ~ p { system("cat " target_file); } { print }' \
+        /etc/shibboleth/attribute-policy.xml > /tmp/temp_policy.xml && \
+    mv /tmp/temp_policy.xml /etc/shibboleth/attribute-policy.xml
 
 COPY nginx/conf.d /etc/nginx/conf.d
 COPY nginx/ssl/server.crt /etc/nginx/server.crt

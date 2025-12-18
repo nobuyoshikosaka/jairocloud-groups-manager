@@ -24,7 +24,7 @@
     </RequestMapper>
 
     <!-- The ApplicationDefaults element is where most of Shibboleth's SAML bits are defined. -->
-    <ApplicationDefaults entityID="localhost/shibboleth-sp"
+    <ApplicationDefaults entityID="https://localhost/shibboleth-sp"
         REMOTE_USER="eppn persistent-id targeted-id"
         cipherSuites="DEFAULT:!EXP:!LOW:!aNULL:!eNULL:!DES:!IDEA:!SEED:!RC4:!3DES:!kRSA:!SSLv2:!SSLv3:!TLSv1:!TLSv1.1">
 
@@ -101,6 +101,10 @@
         -->
         <MetadataProvider type="XML"
             url="https://metadata.gakunin.nii.ac.jp/gakunin-test-metadata.xml" />
+        <MetadataProvider type="XML"
+            url="https://core-stg.orthros.gakunin.nii.ac.jp/metadata/orthrosstg-idp-metadata.xml" />
+        <MetadataProvider type="XML"
+            path="/etc/shibboleth/cgidp-metadata.xml" />
 
         <!-- Example of remotely supplied "on-demand" signed metadata. -->
         <!--
@@ -110,6 +114,16 @@
             <MetadataFilter type="Signature" certificate="mdqsigner.pem" />
         </MetadataProvider>
         -->
+
+        <AttributeResolver type="SimpleAggregation" attributeId="eppn"
+            format="urn:oid:1.3.6.1.4.1.5923.1.1.1.6">
+            <Entity>https://sptest.cg.gakunin.jp/idp/shibboleth</Entity>
+            <saml2:Attribute
+                xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion"
+                Name="urn:oid:1.3.6.1.4.1.5923.1.5.1.1"
+                NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:uri"
+                FriendlyName="isMemberOf"/>
+        </AttributeResolver>
 
         <!-- Map to extract attributes from SAML assertions. -->
         <AttributeExtractor type="XML" validate="true" reloadChanges="false" path="attribute-map.xml"/>

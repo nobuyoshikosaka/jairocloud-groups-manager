@@ -1,0 +1,4 @@
+        <AttributeRule attributeID="isMemberOf">
+            <PermitValueRule xsi:type="Issuer"
+                value="https://sptest.cg.gakunin.jp/idp/shibboleth"/>
+        </AttributeRule>
