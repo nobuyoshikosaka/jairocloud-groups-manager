@@ -1,4 +1,4 @@
-// Application configuration for frontend contents
+// Application configuration for client side
 /* eslint-disable @stylistic/max-len */
 
 /**

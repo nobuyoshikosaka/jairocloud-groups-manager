@@ -74,6 +74,7 @@ services:
           include:
             - src/app
             - public
+            - configs/app.config.ts
             - nuxt.config.ts
             - tsconfig.json
             - pnpm-workspace.yaml
