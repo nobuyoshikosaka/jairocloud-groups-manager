@@ -69,7 +69,7 @@ class RuntimeConfig(BaseSettings):
             return origin
 
         toml_settings = TomlConfigSettingsSource(cls, toml_file)
-        return (*origin[:1], toml_settings, *origin[1:])
+        return (*origin, toml_settings)
 
     model_config = SettingsConfigDict(
         extra="forbid",
