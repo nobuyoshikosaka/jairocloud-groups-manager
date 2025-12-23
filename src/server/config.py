@@ -11,7 +11,7 @@ import typing as t
 
 from contextvars import ContextVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -19,16 +19,6 @@ from pydantic_settings import (
     TomlConfigSettingsSource,
 )
 from werkzeug.local import LocalProxy
-
-
-class CeleryConfig(BaseModel):
-    """Celery configuration."""
-
-    broker_url: str = "redis://localhost:6379/0"
-    """URL of the Celery message broker."""
-
-    result_backend: str = "redis://localhost:6379/0"
-    """URL of the Celery result backend."""
 
 
 class RuntimeConfig(BaseSettings):
@@ -43,7 +33,7 @@ class RuntimeConfig(BaseSettings):
     SECRET_KEY: str = "CHANGE ME"  # noqa: S105
     """Secret key for cryptographic operations."""
 
-    CELERY: CeleryConfig = CeleryConfig()
+    CELERY: CeleryConfig = Field(default_factory=lambda: CeleryConfig())  # noqa: PLW0108
     """Celery configuration values."""
 
     @t.override
@@ -78,6 +68,16 @@ class RuntimeConfig(BaseSettings):
         validate_default=True,
     )
     """Base model configuration."""
+
+
+class CeleryConfig(BaseModel):
+    """Celery configuration."""
+
+    broker_url: str = "redis://localhost:6379/0"
+    """URL of the Celery message broker."""
+
+    result_backend: str = "redis://localhost:6379/0"
+    """URL of the Celery result backend."""
 
 
 _no_config_msg = "Config has not been initialized."
