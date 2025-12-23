@@ -63,6 +63,7 @@ def celery_init_app(app: Flask) -> Celery:
     class FlaskTask(Task):
         """Task with Flask application context."""
 
+        @t.override
         def __call__(self, *args, **kwargs):
             with app.app_context():
                 return self.run(*args, **kwargs)

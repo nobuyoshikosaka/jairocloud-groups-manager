@@ -11,14 +11,17 @@ import typing as t
 
 from contextvars import ContextVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     TomlConfigSettingsSource,
 )
+from sqlalchemy.engine import URL, make_url
 from werkzeug.local import LocalProxy
+
+# ruff: noqa: S105, N802
 
 
 class RuntimeConfig(BaseSettings):
@@ -30,11 +33,25 @@ class RuntimeConfig(BaseSettings):
     SERVER_NAME: str = "localhost"
     """Server hostname of this application."""
 
-    SECRET_KEY: str = "CHANGE ME"  # noqa: S105
+    SECRET_KEY: str = "CHANGE ME"
     """Secret key for cryptographic operations."""
 
     CELERY: CeleryConfig = Field(default_factory=lambda: CeleryConfig())  # noqa: PLW0108
     """Celery configuration values."""
+
+    POSTGRES: PostgresConfig = Field(
+        default_factory=lambda: PostgresConfig()  # noqa: PLW0108
+    )
+    """PostgreSQL database configuration values."""
+
+    @computed_field
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> URL:
+        """Database connection URI for SQLAlchemy."""
+        pg = self.POSTGRES
+        return make_url(
+            f"postgresql+psycopg://{pg.user}:{pg.password}@{pg.host}:{pg.port}/{pg.db}"
+        )
 
     @t.override
     @classmethod
@@ -78,6 +95,25 @@ class CeleryConfig(BaseModel):
 
     result_backend: str = "redis://localhost:6379/0"
     """URL of the Celery result backend."""
+
+
+class PostgresConfig(BaseModel):
+    """Schema for PostgreSQL database configuration."""
+
+    user: str = "jcgroups"
+    """Database user name for authentication."""
+
+    password: str = "jcpass"
+    """Database user password for authentication."""
+
+    host: str = "localhost"
+    """Host name or IP address of the PostgreSQL server."""
+
+    port: int = 5432
+    """Port number for the PostgreSQL server."""
+
+    db: str = "jcgroups"
+    """Name of the PostgreSQL database."""
 
 
 _no_config_msg = "Config has not been initialized."

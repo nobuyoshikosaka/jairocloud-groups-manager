@@ -12,3 +12,19 @@ broker_url = "amqp://guest:guest@rabbitmq:5672//"
 
 # URL of the Celery result backend.
 result_backend = "redis://redis:6379/2"
+
+[postgres]
+# Database user name for authentication.
+user = "jcgroups"
+
+# Database user password for authentication.
+password = "jcpass"
+
+# Host name or IP address of the PostgreSQL server.
+host = "localhost"
+
+# Port number for the PostgreSQL server.
+port = 5432
+
+# Name of the PostgreSQL database.
+db = "jcgroups"
