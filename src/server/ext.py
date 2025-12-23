@@ -45,6 +45,7 @@ class JAIROCloudGroupsManager:
         """
         self.app = app
         self.init_config(app)
+        self.init_db_app(app)
 
         create_blueprints(app)
 

@@ -40,7 +40,8 @@ class RuntimeConfig(BaseSettings):
     """Celery configuration values."""
 
     POSTGRES: PostgresConfig = Field(
-        default_factory=lambda: PostgresConfig()  # noqa: PLW0108
+        default_factory=lambda: PostgresConfig(),  # noqa: PLW0108
+        exclude=True,
     )
     """PostgreSQL database configuration values."""
 

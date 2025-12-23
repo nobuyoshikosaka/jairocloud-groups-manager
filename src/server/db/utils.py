@@ -11,7 +11,22 @@ from typing import cast
 
 from flask import current_app
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy_utils import create_database, database_exists, drop_database
 from werkzeug.local import LocalProxy
+
+
+def create_db() -> None:
+    """Create the database if it does not already exist."""
+    db_uri = current_app.config["SQLALCHEMY_DATABASE_URI"]
+    if not database_exists(db_uri):
+        create_database(db_uri)
+
+
+def drop_db() -> None:
+    """Drop the database if it exists."""
+    db_uri = current_app.config["SQLALCHEMY_DATABASE_URI"]
+    if database_exists(db_uri):
+        drop_database(db_uri)
 
 
 def load_models() -> None:
