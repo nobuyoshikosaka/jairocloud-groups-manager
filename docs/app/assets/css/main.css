@@ -3,6 +3,7 @@
 
 @theme static {
   --font-sans: 'Noto Sans JP', system-ui, sans-serif;
+  --font-mono: 'Source Code Pro', ui-monospace, monospace;
 }
 
 :root {

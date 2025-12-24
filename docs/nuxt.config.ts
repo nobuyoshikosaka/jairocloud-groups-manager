@@ -8,6 +8,20 @@ export default defineNuxtConfig({
   ssr: true,
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
+
+  content: {
+    build: {
+      markdown: {
+        highlight: {
+          theme: {
+            default: 'github-light',
+            dark: 'github-dark',
+          },
+          langs: ['python'],
+        },
+      },
+    },
+  },
   devServer: { port: 4040 },
 
   compatibilityDate: '2025-01-15',
