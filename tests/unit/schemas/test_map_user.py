@@ -51,22 +51,12 @@ def test_validate():
     assert user.meta
     assert user.meta.resource_type == "User"
     assert user.meta.created == datetime.fromisoformat(json_data["meta"]["created"])
-    assert user.meta.last_modified == datetime.fromisoformat(
-        json_data["meta"]["lastModified"]
-    )
+    assert user.meta.last_modified == datetime.fromisoformat(json_data["meta"]["lastModified"])
     assert user.meta.created_by == json_data["meta"]["createdBy"]
     assert user.edu_person_principal_names
-    assert len(user.edu_person_principal_names) == len(
-        json_data["eduPersonPrincipalNames"]
-    )
-    assert (
-        user.edu_person_principal_names[0].value
-        == json_data["eduPersonPrincipalNames"][0]["value"]
-    )
-    assert (
-        user.edu_person_principal_names[0].idp_entity_id
-        == json_data["eduPersonPrincipalNames"][0]["idpEntityId"]
-    )
+    assert len(user.edu_person_principal_names) == len(json_data["eduPersonPrincipalNames"])
+    assert user.edu_person_principal_names[0].value == json_data["eduPersonPrincipalNames"][0]["value"]
+    assert user.edu_person_principal_names[0].idp_entity_id == json_data["eduPersonPrincipalNames"][0]["idpEntityId"]
     assert user.emails
     assert len(user.emails) == len(json_data["emails"])
     assert user.emails[0].value == json_data["emails"][0]["value"]
@@ -93,22 +83,12 @@ def test_validate_json_data():
     assert user.meta
     assert user.meta.resource_type == "User"
     assert user.meta.created == datetime.fromisoformat(json_data["meta"]["created"])
-    assert user.meta.last_modified == datetime.fromisoformat(
-        json_data["meta"]["lastModified"]
-    )
+    assert user.meta.last_modified == datetime.fromisoformat(json_data["meta"]["lastModified"])
     assert user.meta.created_by == json_data["meta"]["createdBy"]
     assert user.edu_person_principal_names
-    assert len(user.edu_person_principal_names) == len(
-        json_data["eduPersonPrincipalNames"]
-    )
-    assert (
-        user.edu_person_principal_names[0].value
-        == json_data["eduPersonPrincipalNames"][0]["value"]
-    )
-    assert (
-        user.edu_person_principal_names[0].idp_entity_id
-        == json_data["eduPersonPrincipalNames"][0]["idpEntityId"]
-    )
+    assert len(user.edu_person_principal_names) == len(json_data["eduPersonPrincipalNames"])
+    assert user.edu_person_principal_names[0].value == json_data["eduPersonPrincipalNames"][0]["value"]
+    assert user.edu_person_principal_names[0].idp_entity_id == json_data["eduPersonPrincipalNames"][0]["idpEntityId"]
     assert user.emails
     assert len(user.emails) == len(json_data["emails"])
     assert user.emails[0].value == json_data["emails"][0]["value"]

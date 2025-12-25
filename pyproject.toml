@@ -51,14 +51,7 @@ preview = true
 select = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = [
-  "ANN",
-  "S101",
-  "CPY001",
-  "TC006",
-  "ARG001",
-  "D",
-]
+"__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]
 # refer to https://docs.astral.sh/ruff/settings/#lintisort
