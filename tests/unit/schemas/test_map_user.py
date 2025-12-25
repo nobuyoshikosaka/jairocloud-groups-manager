@@ -4,14 +4,18 @@ import pytest
 
 from pydantic_core import ValidationError
 
+from server import const
 from server.schemas.map_user import EPPN, Email, Group, MapUser, Meta
 from tests.helpers import load_json_data
 
 
 def test_validate():
     json_data = load_json_data("data/map_user.json")
+
+    schema_field = MapUser.model_fields["schemas"]
+    schema_field.default = [const.MAP_USER_SCHEMA]
+
     user = MapUser(
-        schemas=json_data["schemas"],
         id=json_data["id"],
         external_id=json_data["externalId"],
         user_name=json_data["userName"],
@@ -39,7 +43,7 @@ def test_validate():
             ),
         ],
     )
-    assert user.schemas
+    assert user.schemas == [const.MAP_USER_SCHEMA]
     assert user.id == json_data["id"]
     assert user.external_id == json_data["externalId"]
     assert user.user_name == json_data["userName"]
