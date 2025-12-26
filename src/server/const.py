@@ -25,5 +25,8 @@ MAP_SERVICE_SCHEMA: Final = (
 MAP_OAUTH_ISSUE_ENDPOINT: Final = "/oauth/sslauth/issue.php"
 """Endpoint for issuing client credentials in mAP Core Authorization Server."""
 
+MAP_OAUTH_AUTHORIZE_ENDPOINT: Final = "/oauth/shib/authrequest.php"
+"""Endpoint for issuing authorization code from mAP Core Authorization Server."""
+
 MAP_OAUTH_TOKEN_ENDPOINT: Final = "/oauth/token.php"  # noqa: S105
-"""The OAuth endpoint for obtaining access tokens from mAP Core."""
+"""Endpoint for issuing access tokens from mAP Core Authorization Server."""

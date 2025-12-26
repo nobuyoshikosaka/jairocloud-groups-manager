@@ -11,6 +11,7 @@ import typing as t
 
 from contextvars import ContextVar
 
+from flask import current_app
 from pydantic import BaseModel, Field, computed_field
 from pydantic_settings import (
     BaseSettings,
@@ -170,6 +171,7 @@ def setup_config(path_or_obj: str | RuntimeConfig | None) -> RuntimeConfig:
 
 
 config = t.cast(
-    RuntimeConfig, LocalProxy(_current_config, unbound_message=_no_config_msg)
+    RuntimeConfig,
+    LocalProxy(lambda: current_app.extensions["jairocloud-groups-manager"].config),
 )
 """The global server configuration instance."""

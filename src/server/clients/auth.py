@@ -28,14 +28,15 @@ def issue_client_credentials(entity_id: str, certs: _SpCerts) -> ClientCredentia
             TLS authentication. It must contain members `crt` and `key`.
 
     Returns:
-        ClientCredentials: Issued client credentials.
+        ClientCredentials:
+            Issued client credentials. It has members `client_id` and `client_secret`.
     """
     redirect_uri = url_for("api.callback.auth_code", _external=True)
 
     response = requests.post(
         f"{config.MAP_CORE.base_url}{MAP_OAUTH_ISSUE_ENDPOINT}",
         params={
-            "entity_id": entity_id,
+            "entityid": entity_id,
             "redirect_uri": redirect_uri,
         },
         cert=(certs.crt, certs.key),
@@ -46,7 +47,7 @@ def issue_client_credentials(entity_id: str, certs: _SpCerts) -> ClientCredentia
     return ClientCredentials.model_validate(response.json())
 
 
-def issue_access_token(code: str, credentials: _ClientCreds) -> OAuthToken:
+def issue_oauth_token(code: str, credentials: _ClientCreds) -> OAuthToken:
     """Issue an OAuth access token using the authorization code.
 
     Args:
@@ -55,7 +56,9 @@ def issue_access_token(code: str, credentials: _ClientCreds) -> OAuthToken:
             Client credentials. It must contain members `client_id` and `client_secret`.
 
     Returns:
-        OAuthToken: Issued OAuth token. It has access token, refresh token, etc.
+        OAuthToken:
+            Issued OAuth token. It has members `access_token`, `token_type`,
+            `expires_in`,`refresh_token` , and `scope`.
     """
     redirect_uri = url_for("api.callback.auth_code", _external=True)
 

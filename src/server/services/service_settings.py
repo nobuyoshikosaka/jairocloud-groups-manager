@@ -21,7 +21,9 @@ def get_client_credentials() -> ClientCredentials | None:
     """Get client credentials from service settings.
 
     Returns:
-        ClientCredentials: The credentials if present and valid, otherwise None.
+        ClientCredentials:
+            The credentials if present and valid, otherwise None.
+            It has members `client_id` and `client_secret`.
 
     Raises:
         CredentialsError: If the stored credentials are invalid.
