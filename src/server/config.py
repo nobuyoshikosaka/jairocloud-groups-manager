@@ -171,7 +171,7 @@ def setup_config(path_or_obj: str | RuntimeConfig | None) -> RuntimeConfig:
 
 
 config = t.cast(
-    RuntimeConfig,
+    "RuntimeConfig",
     LocalProxy(lambda: current_app.extensions["jairocloud-groups-manager"].config),
 )
 """The global server configuration instance."""

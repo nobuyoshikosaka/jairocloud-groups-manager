@@ -4,16 +4,11 @@
 
 """API router for the server application."""
 
-import typing as t
-
 from importlib import import_module
 from pathlib import Path
 from pkgutil import iter_modules
 
-from flask import Blueprint
-
-if t.TYPE_CHECKING:
-    from flask import Flask
+from flask import Blueprint, Flask
 
 
 def create_blueprints(app: Flask) -> None:

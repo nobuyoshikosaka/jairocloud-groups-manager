@@ -6,11 +6,11 @@
 
 from flask import Blueprint, redirect
 from flask_pydantic import validate
-from werkzeug.wrappers import Response as ResponseBase  # noqa: TC002
+from werkzeug.wrappers import Response as ResponseBase
 
 from server.services import token
 
-from .schema import OAuthTokenQuery  # noqa: TC001
+from .schema import OAuthTokenQuery
 
 bp = Blueprint("callback", __name__)
 

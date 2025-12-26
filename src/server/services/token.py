@@ -64,20 +64,16 @@ def prepare_issuing_url() -> str:
         error = f"Failed to issue client credentials: {json['error_description']}"
         raise CertificatesError(error) from exc
 
-    return (
-        requests.Request(
-            "GET",
-            f"{config.MAP_CORE.base_url}{MAP_OAUTH_AUTHORIZE_ENDPOINT}",
-            params={
-                "response_type": "code",
-                "client_id": certs.client_id,
-                "redirect_uri": redirect_uri,
-                "state": entity_id,
-            },
-        )
-        .prepare()
-        .url
-    )  # pyright: ignore[reportReturnType]
+    req = requests.Request(
+        url=f"{config.MAP_CORE.base_url}{MAP_OAUTH_AUTHORIZE_ENDPOINT}",
+        params={
+            "response_type": "code",
+            "client_id": certs.client_id,
+            "redirect_uri": redirect_uri,
+            "state": entity_id,
+        },
+    )
+    return req.prepare().url  # pyright: ignore[reportReturnType]
 
 
 def issue_access_token(code: str) -> str:

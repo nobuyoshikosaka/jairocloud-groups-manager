@@ -4,15 +4,19 @@
 
 """Database utilities for the server application."""
 
+import typing as t
+
 from importlib import import_module
 from pathlib import Path
 from pkgutil import iter_modules
 from typing import cast
 
 from flask import current_app
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy_utils import create_database, database_exists, drop_database
 from werkzeug.local import LocalProxy
+
+if t.TYPE_CHECKING:
+    from flask_sqlalchemy import SQLAlchemy
 
 
 def create_db() -> None:
@@ -35,5 +39,5 @@ def load_models() -> None:
         import_module(f"{__package__}.{name}")
 
 
-db = cast(SQLAlchemy, LocalProxy(lambda: current_app.extensions["sqlalchemy"]))
+db = cast("SQLAlchemy", LocalProxy(lambda: current_app.extensions["sqlalchemy"]))
 """Database instance proxy."""

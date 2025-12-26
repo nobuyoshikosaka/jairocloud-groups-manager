@@ -6,7 +6,7 @@
 
 import typing as t
 
-from datetime import datetime  # noqa: TC003
+from datetime import datetime
 
 from pydantic import EmailStr, Field, HttpUrl
 
