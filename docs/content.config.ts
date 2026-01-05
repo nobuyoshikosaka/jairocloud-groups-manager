@@ -4,7 +4,7 @@ export default defineContentConfig({
   collections: {
     detailed: defineCollection({
       type: 'page',
-      source: 'detailed/**/*',
+      source: '01.detailed/**/*',
     }),
   },
 })
