@@ -36,3 +36,10 @@ class OAuthTokenError(ServiceSettingsError):
 
     Error caused by access token and refresh token issues.
     """
+
+
+class DatabaseError(JAIROCloudGroupsManagerError):
+    """Exception for database errors.
+
+    Errors caused by database operation issues.
+    """

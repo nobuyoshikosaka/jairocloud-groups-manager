@@ -51,24 +51,37 @@ def prepare_issuing_url() -> str:
     """
     entity_id = config.SP.entity_id
 
-    try:
-        certs = get_client_credentials()
-        if certs is None:
+    certs = get_client_credentials()
+    if certs is None:
+        try:
             certs = auth.issue_client_credentials(entity_id, config.SP)
-            save_client_credentials(certs)
+        except requests.HTTPError as exc:
+            json = exc.response.json()
+            error = f"Failed to issue client credentials: {json['error_description']}"
+            raise CertificatesError(error) from exc
 
-        redirect_uri = url_for("api.callback.auth_code", _external=True)
+        save_client_credentials(certs)
 
-    except requests.HTTPError as exc:
-        json = exc.response.json()
-        error = f"Failed to issue client credentials: {json['error_description']}"
-        raise CertificatesError(error) from exc
+    redirect_uri = url_for("api.callback.auth_code", _external=True)
+    return _create_issuing_url(certs.client_id, redirect_uri, entity_id)
 
+
+def _create_issuing_url(client_id: str, redirect_uri: str, entity_id: str) -> str:
+    """Create the URL to issue authorization code.
+
+    Args:
+        client_id (str): The client ID.
+        redirect_uri (str): The redirect URI.
+        entity_id (str): The entity ID of the Service Provider.
+
+    Returns:
+        str: The URL to redirect the user for issuing authorization code.
+    """
     req = requests.Request(
         url=f"{config.MAP_CORE.base_url}{MAP_OAUTH_AUTHORIZE_ENDPOINT}",
         params={
             "response_type": "code",
-            "client_id": certs.client_id,
+            "client_id": client_id,
             "redirect_uri": redirect_uri,
             "state": entity_id,
         },
@@ -87,13 +100,20 @@ def issue_access_token(code: str) -> str:
 
     Raises:
         CredentialsError: If client credentials are not available.
+        OAuthTokenError: If issuing the token fails.
     """
     certs = get_client_credentials()
     if certs is None:
         error = "Client credentials are not stored on the server."
         raise CredentialsError(error)
 
-    token = auth.issue_oauth_token(code, certs)
+    try:
+        token = auth.issue_oauth_token(code, certs)
+    except requests.HTTPError as exc:
+        json = exc.response.json()
+        error = f"Failed to issue OAuth token: {json['error_description']}"
+        raise OAuthTokenError(error) from exc
+
     save_oauth_token(token)
 
     return token.access_token

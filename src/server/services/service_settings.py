@@ -9,12 +9,13 @@ Provides functions to get and save service configuration data in the database.
 
 import typing as t
 
-from pydantic_core import ValidationError
+from pydantic_core import PydanticSerializationError, ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 from server.db import db
 from server.db.service_settings import ServiceSettings
 from server.entities.auth import ClientCredentials, OAuthToken
-from server.exc import CredentialsError, OAuthTokenError
+from server.exc import CredentialsError, DatabaseError, OAuthTokenError
 
 
 def get_client_credentials() -> ClientCredentials | None:
@@ -26,14 +27,18 @@ def get_client_credentials() -> ClientCredentials | None:
             It has members `client_id` and `client_secret`.
 
     Raises:
+        DatabaseError: If some problem occurs in the database operation.
         CredentialsError: If the stored credentials are invalid.
     """
-    setting = _get_setting("client_credentials")
-    if setting is None:
-        return None
-
     try:
+        setting = _get_setting("client_credentials")
+        if setting is None:
+            return None
+
         creds = ClientCredentials(**setting)
+    except SQLAlchemyError as exc:
+        error = "Failed to get client credentials from database."
+        raise DatabaseError(error) from exc
     except ValidationError as exc:
         error = "Invalid client credentials in service settings."
         raise CredentialsError(error) from exc
@@ -46,8 +51,19 @@ def save_client_credentials(credentials: ClientCredentials) -> None:
 
     Args:
         credentials (ClientCredentials): The credentials to save.
+
+    Raises:
+        DatabaseError: If some problem occurs in the database operation.
+        CredentialsError: If the provided credentials are invalid.
     """
-    _save_setting("client_credentials", credentials.model_dump(mode="json"))
+    try:
+        _save_setting("client_credentials", credentials.model_dump(mode="json"))
+    except SQLAlchemyError as exc:
+        error = "Failed to save client credentials to database."
+        raise DatabaseError(error) from exc
+    except PydanticSerializationError as exc:
+        error = "Invalid client credentials to save."
+        raise CredentialsError(error) from exc
 
 
 def get_oauth_token() -> OAuthToken | None:
@@ -57,14 +73,18 @@ def get_oauth_token() -> OAuthToken | None:
         OAuthToken: The token if present and valid, otherwise None.
 
     Raises:
+        DatabaseError: If some problem occurs in the database operation.
         OAuthTokenError: If the stored token is invalid.
     """
-    setting = _get_setting("oauth_token")
-    if setting is None:
-        return None
-
     try:
+        setting = _get_setting("oauth_token")
+        if setting is None:
+            return None
+
         token = OAuthToken(**setting)
+    except SQLAlchemyError as exc:
+        error = "Failed to get OAuth token from database."
+        raise DatabaseError(error) from exc
     except ValidationError as exc:
         error = "Invalid OAuth token in service settings."
         raise OAuthTokenError(error) from exc
@@ -77,8 +97,19 @@ def save_oauth_token(token: OAuthToken) -> None:
 
     Args:
         token (OAuthToken): The token to save.
+
+    Raises:
+        DatabaseError: If some problem occurs in the database operation.
+        OAuthTokenError: If the provided token is invalid.
     """
-    _save_setting("oauth_token", token.model_dump(mode="json"))
+    try:
+        _save_setting("oauth_token", token.model_dump(mode="json"))
+    except SQLAlchemyError as exc:
+        error = "Failed to save OAuth token to database."
+        raise DatabaseError(error) from exc
+    except PydanticSerializationError as exc:
+        error = "Invalid OAuth token to save."
+        raise OAuthTokenError(error) from exc
 
 
 def _get_setting(key: str) -> dict[str, t.Any] | None:
