@@ -36,6 +36,7 @@
   ],
 
   "onCreateCommand": "/bin/sh .devcontainer/setup_commands.sh install_deps",
+  "postStartCommand": "/bin/sh .devcontainer/setup_commands.sh genarate_ssl_key",
   "postAttachCommand": "/bin/sh .devcontainer/setup_commands.sh container_watch",
 
   "customizations": {
@@ -52,6 +53,8 @@
           },
           "editor.defaultFormatter": "charliermarsh.ruff"
         },
+        "python.useEnvironmentsExtension": false,
+        "python.terminal.activateEnvironment": true,
 
         "[typescript]": {
           "editor.rulers": [100]
@@ -80,6 +83,7 @@
         "dbaeumer.vscode-eslint",
 
         "editorconfig.editorconfig",
+        "shardulm94.trailing-spaces",
         "mhutchie.git-graph",
         "eamodio.gitlens"
       ],
