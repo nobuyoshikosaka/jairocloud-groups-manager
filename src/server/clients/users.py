@@ -76,7 +76,7 @@ def get_by_id(
         response.raise_for_status()
 
     adapter: TypeAdapter[GetMapUserResponse] = TypeAdapter(GetMapUserResponse)
-    result = adapter.validate_json(response.text, extra="ignore")
+    result = adapter.validate_json(response.text)
 
     if isinstance(result, MapError):
         return None

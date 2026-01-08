@@ -11,7 +11,7 @@ Provides validation, loading, and global access to runtime configuration.
 import typing as t
 
 from flask import current_app
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -39,6 +39,11 @@ class RuntimeConfig(BaseSettings):
 
     SP: SpConfig
     """This application's Service Provider configuration."""
+
+    RESOURCES: ResourcesConfig = Field(
+        default_factory=lambda: ResourcesConfig(),  # noqa: PLW0108
+    )
+    """Resource-related configuration values."""
 
     CELERY: CeleryConfig = Field(default_factory=lambda: CeleryConfig())  # noqa: PLW0108
     """Celery configuration values."""
@@ -104,6 +109,35 @@ class SpConfig(BaseModel):
 
     key: str
     """Path to the Service Provider's private key file."""
+
+
+class ResourcesConfig(BaseModel):
+    """Schema for resource-related configuration."""
+
+    sp_connecter_id_pattern: str = "jc_{repository_id}"
+    """SP Connecter ID pattern. It should include '{repository_id}' placeholder."""
+
+    @field_validator("sp_connecter_id_pattern")
+    @classmethod
+    def validate_sp_connecter_id_pattern(cls, v: str) -> str:
+        """Validate that the SP Connecter ID pattern includes the required placeholder.
+
+        Args:
+            v (str): The SP Connecter ID pattern to validate.
+
+        Returns:
+            str: The validated SP Connecter ID pattern.
+
+        Raises:
+            ValueError: If the pattern does not include '{repository_id}'.
+        """
+        if "{repository_id}" not in v:
+            error = (
+                "resources.sp_connecter_id_pattern must include "
+                "`{repository_id}` placeholder."
+            )
+            raise ValueError(error)
+        return v
 
 
 class MapCoreConfig(BaseModel):

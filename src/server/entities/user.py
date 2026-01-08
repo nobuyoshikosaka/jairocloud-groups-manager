@@ -11,8 +11,8 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr
 
 from .common import camel_case_config, forbid_extra_config
-from .group import GroupSummary
 from .map_user import EPPN, Email, Group, MapUser
+from .summaries import GroupSummary
 
 
 class UserDetail(BaseModel):
@@ -90,25 +90,3 @@ class UserDetail(BaseModel):
         if self.groups:
             user.groups = [Group(value=group.id) for group in self.groups]
         return user
-
-
-class UserSummary(BaseModel):
-    """Model for summary User information in mAP Core API."""
-
-    id: str
-    """The unique identifier for the user."""
-
-    user_name: str | None = None
-    """The username of the user. Alias to 'userName'."""
-
-    email: EmailStr | None = None
-    """The first email address of the user."""
-
-    eppn: str | None = None
-    """The first eduPersonPrincipalName of the user."""
-
-    lask_modified: datetime | None = None
-    """The last modification timestamp of the user. Alias to 'lastModified'."""
-
-    model_config = camel_case_config | forbid_extra_config
-    """Configure to use camelCase aliasing and forbid extra fields."""

@@ -14,6 +14,10 @@ crt = "./certs/server.crt"
 
 key = "./certs/server.key"
 
+[resources]
+# SP connecter ID pattern. It should include '{repository_id}' placeholder.
+sp_connecter_id_pattern = "jc_{repository_id}"
+
 [map_core]
 # Base URL for the mAP Core service.
 base_url = "https://sptest.cg.gakunin.jp"

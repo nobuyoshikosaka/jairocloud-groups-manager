@@ -39,8 +39,8 @@ class MapService(BaseModel):
     meta: t.Annotated[Meta | None, Field(frozen=True)] = None
     """Metadata about the service."""
 
-    entity_id: list[ServiceEntityID] | None = None
-    """The entity IDs associated with the service. Alias for 'entityID'."""
+    entity_ids: list[ServiceEntityID] | None = None
+    """The entity IDs associated with the service. Alias for 'entityIDs'."""
 
     administrators: list[Administrator] | None = None
     """The administrators of the service."""
@@ -87,7 +87,7 @@ class Administrator(BaseModel):
             ...,
             # NOTE: not using `alias` because it changes the constructor arguments.
             validation_alias="$ref",
-            serialization_alias="$ref",
+            exclude=True,
         ),
     ] = None
     """URI of the corresponding User resource. Alias for '$ref'."""
@@ -111,7 +111,7 @@ class Group(BaseModel):
             ...,
             # NOTE: not using `alias` because it changes the constructor arguments.
             validation_alias="$ref",
-            serialization_alias="$ref",
+            exclude=True,
         ),
     ] = None
     """URI of the corresponding Group resource. Alias for '$ref'."""
