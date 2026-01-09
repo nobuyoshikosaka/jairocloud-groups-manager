@@ -24,6 +24,9 @@ MAP_SERVICE_SCHEMA: Final = (
 MAP_ERROR_SCHEMA: Final = "urn:ietf:params:scim:schemas:mace:gakunin.jp:core:2.0:Error"
 """Schema URI for mAP Error resources."""
 
+MAP_PATCH_SCHEMA: Final = "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+"""Schema URI for PATCH request payloads."""
+
 
 MAP_OAUTH_ISSUE_ENDPOINT: Final = "/oauth/sslauth/issue.php"
 """Endpoint for issuing client credentials in mAP Core Authorization Server."""

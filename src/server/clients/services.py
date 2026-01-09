@@ -16,6 +16,7 @@ from server.config import config
 from server.const import MAP_SERVICES_ENDPOINT
 from server.entities.map_error import MapError
 from server.entities.map_service import MapService
+from server.entities.patch_request import PatchOperation, PatchRequestPayload
 
 from .utils import compute_signature, get_time_stamp
 
@@ -193,6 +194,72 @@ def put_by_id(
 
     response = requests.put(
         f"{config.MAP_CORE.base_url}{MAP_SERVICES_ENDPOINT}/{service.id}",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
+        json={"request": auth_params} | payload | attributes_params,
+        timeout=config.MAP_CORE.timeout,
+    )
+
+    if response.status_code > HTTPStatus.BAD_REQUEST:
+        response.raise_for_status()
+
+    return adapter.validate_json(response.text)
+
+
+def patch_by_id(
+    service_id: str,
+    operations: list[PatchOperation],
+    /,
+    include: set[str] | None = None,
+    exclude: set[str] | None = None,
+    *,
+    access_token: str,
+    client_secret: str,
+) -> GetMapServiceResponse:
+    """Patch a Service resource by its ID in mAP API.
+
+    Args:
+        service_id (str): ID of the Service resource to patch.
+        operations (list[PatchOperation]): List of patch operations to apply.
+        include (set[str] | None):
+            Attribute names to include in patch. Optional.
+        exclude (set[str] | None):
+            Attribute names to exclude from patch. Optional.
+        access_token (str): OAuth access token for authorization.
+        client_secret (str): Client secret for Authentication.
+
+    Returns:
+        GetMapServiceResponse:
+            The patched Service resource if successful, otherwise Error response.
+    """
+    time_stamp = get_time_stamp()
+    signature = compute_signature(client_secret, access_token, time_stamp)
+    auth_params = {
+        "time_stamp": time_stamp,
+        "signature": signature,
+    }
+
+    for op in operations:
+        op.path = alias_generator(op.path)
+    payload = PatchRequestPayload(operations=operations).model_dump(
+        mode="json",
+        by_alias=True,
+        exclude_unset=False,
+    )
+
+    attributes_params: dict[str, str] = {}
+    if include:
+        attributes_params[alias_generator("attributes")] = ",".join([
+            alias_generator(name) for name in include
+        ])
+    if exclude:
+        attributes_params[alias_generator("excluded_attributes")] = ",".join([
+            alias_generator(name) for name in exclude
+        ])
+
+    response = requests.patch(
+        f"{config.MAP_CORE.base_url}{MAP_SERVICES_ENDPOINT}/{service_id}",
         headers={
             "Authorization": f"Bearer {access_token}",
         },

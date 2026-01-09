@@ -17,6 +17,7 @@ from pydantic_core import ValidationError
 from server.clients import users
 from server.const import MAP_NOT_FOUND_PATTERN
 from server.entities.map_error import MapError
+from server.entities.patch_request import PatchOperation
 from server.entities.user import UserDetail
 from server.exc import (
     CredentialsError,
@@ -186,6 +187,71 @@ def create(user: UserDetail) -> UserDetail:
 
     if isinstance(result, MapError):
         current_app.logger.info(result.detail)
+        raise ResourceInvalid(result.detail)
+
+    return UserDetail.from_map_user(result)
+
+
+def update(user: UserDetail) -> UserDetail:
+    """Update a User resource.
+
+    Args:
+        user (UserDetail): The User resource to update.
+
+    Returns:
+        MapUser: The updated User resource.
+
+    Raises:
+        OAuthTokenError: If the access token is invalid or expired.
+        CredentialsError: If the client credentials are invalid.
+        ResourceInvalid: If the User resource data is invalid.
+        ResourceNotFound: If the User resource is not found.
+        UnexpectedResponseError: If response from mAP Core API is unexpected.
+    """
+    try:
+        access_token = get_access_token()
+        client_secret = get_client_secret()
+
+        operations: list[PatchOperation] = [
+            # Create patch operations for all updatable fields.
+        ]
+        result: MapUser | MapError = users.patch_by_id(
+            user.id,
+            operations,
+            exclude={"meta"},
+            access_token=access_token,
+            client_secret=client_secret,
+        )
+
+    except requests.HTTPError as exc:
+        code = exc.response.status_code
+        if code == HTTPStatus.UNAUTHORIZED:
+            error = "Access token is invalid or expired."
+            raise OAuthTokenError(error) from exc
+
+        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
+            error = "mAP Core API server error."
+            raise UnexpectedResponseError(error) from exc
+
+        error = "Failed to update User resource in mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except requests.RequestException as exc:
+        error = "Failed to communicate with mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except ValidationError as exc:
+        error = "Failed to parse User resource from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except OAuthTokenError, CredentialsError:
+        raise
+
+    if isinstance(result, MapError):
+        current_app.logger.info(result.detail)
+        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            raise ResourceNotFound(result.detail)
+
         raise ResourceInvalid(result.detail)
 
     return UserDetail.from_map_user(result)

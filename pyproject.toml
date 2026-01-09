@@ -66,6 +66,9 @@ select = ["ALL"]
 combine-as-imports = true
 lines-between-types = 1
 
+[tool.ruff.lint.pylint]
+max-args = 6
+
 [tool.ruff.analyze]
 # refer to https://docs.astral.sh/ruff/settings/#analyze
 detect-string-imports = true

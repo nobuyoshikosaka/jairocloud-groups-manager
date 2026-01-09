@@ -260,6 +260,72 @@ def put_by_id(
     return adapter.validate_json(response.text)
 
 
+def patch_by_id(
+    user_id: str,
+    operations: list[PatchOperation],
+    /,
+    include: set[str] | None = None,
+    exclude: set[str] | None = None,
+    *,
+    access_token: str,
+    client_secret: str,
+) -> GetMapUserResponse:
+    """Patch a User resource by its ID in mAP API.
+
+    Args:
+        user_id (str): ID of the User resource.
+        operations (list[PatchOperation]): List of patch operations to apply.
+        include (set[str] | None):
+            Attribute names to include in update. Optional.
+        exclude (set[str] | None):
+            Attribute names to exclude from update. Optional.
+        access_token (str): OAuth access token for authorization.
+        client_secret (str): Client secret for Basic Authentication.
+
+    Returns:
+        GetMapUserResponse:
+            The updated User resource if successful, otherwise Error response.
+    """
+    time_stamp = get_time_stamp()
+    signature = compute_signature(client_secret, access_token, time_stamp)
+    auth_params = {
+        "time_stamp": time_stamp,
+        "signature": signature,
+    }
+
+    for op in operations:
+        op.path = alias_generator(op.path)
+    payload = PatchRequestPayload(operations=operations).model_dump(
+        mode="json",
+        by_alias=True,
+        exclude_unset=False,
+    )
+
+    attributes_params: dict[str, str] = {}
+    if include:
+        attributes_params[alias_generator("attributes")] = ",".join([
+            alias_generator(name) for name in include
+        ])
+    if exclude:
+        attributes_params[alias_generator("excluded_attributes")] = ",".join([
+            alias_generator(name) for name in exclude
+        ])
+
+    response = requests.patch(
+        f"{config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}/{user_id}",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
+        json={"request": auth_params} | payload | attributes_params,
+        timeout=config.MAP_CORE.timeout,
+    )
+
+    if response.status_code > HTTPStatus.BAD_REQUEST:
+        response.raise_for_status()
+
+    return adapter.validate_json(response.text)
+
+
 def _get_alias_generator() -> t.Callable[[str], str]:
     generator = MapUser.model_config.get("alias_generator")
     if generator and not callable(generator):
