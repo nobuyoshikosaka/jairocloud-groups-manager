@@ -1,4 +1,9 @@
 {
+  "button": {
+    "create-new": "Create new",
+    "reload": "Reload",
+    "upload-users": "Upload"
+  },
   "cache-groups": {
     "description": "You can manage the cache status of group information used by WEKO3.",
     "title": "Caching Groups"
@@ -27,7 +32,19 @@
     "title": "Repositories"
   },
   "users": {
+    "button": {
+      "selected-users-actions": "Actions for selected users",
+      "selected-users-add-to-group": "Add to group",
+      "selected-users-export": "Export users",
+      "selected-users-remove-from-group": "Remove from group"
+    },
     "description": "You can manage users for your repositories.",
+    "list": {
+      "no-users-description": "Your repository does not have any users. Please create a user or upload a file first.",
+      "no-users-title": "No users found",
+      "search-placeholder": "Search...",
+      "title": "Users List"
+    },
     "roles": {
       "system-admin": "System Administrator"
     },

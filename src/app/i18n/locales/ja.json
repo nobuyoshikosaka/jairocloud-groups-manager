@@ -1,4 +1,9 @@
 {
+  "button": {
+    "create-new": "新規作成",
+    "reload": "再読み込み",
+    "upload-users": "アップロード"
+  },
   "cache-groups": {
     "description": "WEKO3が利用するグループ情報のキャッシュ状況を管理できます。",
     "title": "グループキャッシュ"
@@ -27,7 +32,19 @@
     "title": "リポジトリ"
   },
   "users": {
+    "button": {
+      "selected-users-actions": "選択ユーザーへのアクション",
+      "selected-users-add-to-group": "グループに追加",
+      "selected-users-export": "エクスポート",
+      "selected-users-remove-from-group": "グループから除外"
+    },
     "description": "あなたのリポジトリのユーザーを管理できます。",
+    "list": {
+      "no-users-description": "あなたのリポジトリにはユーザーがいません。まずはユーザーを作成するか、ファイルをアップロードしてください。",
+      "no-users-title": "ユーザーが見つかりません",
+      "search-placeholder": "検索...",
+      "title": "ユーザー一覧"
+    },
     "roles": {
       "system-admin": "システム管理者"
     },
