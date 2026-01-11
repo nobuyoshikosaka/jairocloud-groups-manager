@@ -112,4 +112,13 @@ const wayf = {
   ] as { name: string, entityID: string }[],
 }
 
-export default { serverName, baseURL, header, wayf }
+export default {
+  /** Server hostname of this application */
+  serverName,
+  /** Base URL of this application */
+  baseURL,
+  /** Header configuration */
+  header,
+  /** WAYF (Embedded DS) configuration */
+  wayf,
+}

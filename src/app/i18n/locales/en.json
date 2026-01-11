@@ -1,5 +1,6 @@
 {
   "cache-groups": {
+    "description": "You can manage the cache status of group information used by WEKO3.",
     "title": "Caching Groups"
   },
   "footer": {
@@ -7,12 +8,14 @@
     "terms-of-use": "Terms of Use"
   },
   "groups": {
+    "description": "You can manage groups in your repository.",
     "title": "Groups"
   },
   "header": {
     "logoAlt": "Header App Logo"
   },
   "history": {
+    "description": "You can check the history of file uploads and downloads.",
     "title": "History"
   },
   "menu": {
@@ -24,6 +27,10 @@
     "title": "Repositories"
   },
   "users": {
+    "description": "You can manage users for your repositories.",
+    "roles": {
+      "system-admin": "System Administrator"
+    },
     "title": "Users"
   }
 }

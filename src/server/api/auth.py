@@ -4,18 +4,24 @@
 
 """API router for authentication endpoints."""
 
-from flask import Blueprint, Response, jsonify
+from flask import Blueprint
+from flask_pydantic import validate
+
+from server.entities.login_user import LoginUser
 
 
 bp = Blueprint("auth", __name__)
 
 
 @bp.get("/check")
-def check() -> tuple[Response, int]:
+@validate(response_by_alias=True)
+def check() -> tuple[LoginUser, int]:
     """Check the authentication status.
 
     Returns:
         dict: Authentication status.
     """
     # NOTE: Placeholder to keep the session alive.
-    return jsonify(id="anonymous", name="Anonymous User"), 200
+    return LoginUser(
+        id="anonymous", user_name="Anonymous User", is_system_admin=True
+    ), 200

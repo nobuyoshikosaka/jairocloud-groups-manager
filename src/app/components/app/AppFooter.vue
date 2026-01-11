@@ -5,25 +5,12 @@
 <script setup lang="ts">
 import { author } from '@@/package.json'
 
-import type { FooterColumn } from '@nuxt/ui'
-
 const { isAuthenticated } = useAuth()
-
-const { management, other } = useMenu()
-const columns = computed<FooterColumn[]>(() => [
-  {
-    label: management.value.label,
-    children: management.value.children,
-  },
-  {
-    label: other.value.label,
-    children: other.value.children,
-  },
-])
+const { footer: columns } = useMenu()
 </script>
 
 <template>
-  <USeparator icon="i-lucide-ellipsis" class="h-px" />
+  <USeparator icon="i-lucide-ellipsis" :ui="{ root: 'h-px' }" />
 
   <UFooter :ui="{ top: 'border-b border-default' }">
     <template

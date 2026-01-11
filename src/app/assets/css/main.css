@@ -4,3 +4,7 @@
 @theme static {
   --font-sans: 'Noto Sans JP', system-ui, sans-serif;
 }
+
+:root {
+  --ui-container: 90rem;
+}

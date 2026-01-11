@@ -13,7 +13,6 @@ const loggedinRedirectPath = '/repositories'
  * Composable for managing authentication state and actions
  */
 export function useAuth() {
-  const route = useRoute()
   const router = useRouter()
 
   const authStore = useAuthStore()
@@ -69,6 +68,7 @@ export function useAuth() {
   }
 
   const checkout = () => {
+    const route = useRoute()
     authStore.unsetUser()
     const next = encodeURIComponent(route.fullPath.replace(/\/$/, ''))
     router.push({ path: '/login', query: next ? { next } : {} })
