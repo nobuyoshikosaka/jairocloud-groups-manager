@@ -11,7 +11,12 @@ Provides validation, loading, and global access to runtime configuration.
 import typing as t
 
 from flask import current_app
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    StringConstraints,
+    computed_field,
+)
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -40,8 +45,11 @@ class RuntimeConfig(BaseSettings):
     SP: SpConfig
     """This application's Service Provider configuration."""
 
-    RESOURCES: ResourcesConfig
-    """Resource-related configuration values."""
+    REPOSITORIES: RepositoriesConfig
+    """Repository related configuration values."""
+
+    GROUPS: GroupsConfig
+    """Group related configuration values."""
 
     CELERY: CeleryConfig = Field(default_factory=lambda: CeleryConfig())  # noqa: PLW0108
     """Celery configuration values."""
@@ -109,68 +117,47 @@ class SpConfig(BaseModel):
     """Path to the Service Provider's private key file."""
 
 
-class ResourcesConfig(BaseModel):
-    """Schema for resource-related configuration."""
+class RepositoriesConfig(BaseModel):
+    """Schema for repository related configuration."""
 
-    sp_connecter_id_pattern: str
+    id_patterns: RepositoriesIdPatternsConfig
+    """Patterns for repository-related IDs."""
+
+
+class RepositoriesIdPatternsConfig(BaseModel):
+    """Schema for repository-related ID patterns."""
+
+    sp_connecter: HasRepoId
     """SP Connecter ID pattern. It should include `{repository_id}` placeholder."""
 
-    group: GroupConfig
-    """Group resource configuration."""
 
-    @field_validator("sp_connecter_id_pattern")
-    @classmethod
-    def validate_sp_connecter_id_pattern(cls, v: str) -> str:
-        """Validate that the SP Connecter ID pattern includes the required placeholder.
+class GroupsConfig(BaseModel):
+    """Schema for Group resource ID configuration."""
 
-        Args:
-            v (str): The SP Connecter ID pattern to validate.
-
-        Returns:
-            str: The validated SP Connecter ID pattern.
-
-        Raises:
-            ValueError: If the pattern does not include '{repository_id}'.
-        """
-        if "{repository_id}" not in v:
-            error = (
-                "resources.sp_connecter_id_pattern must include "
-                "`{repository_id}` placeholder."
-            )
-            raise ValueError(error)
-        return v
+    id_patterns: GroupIdPatternsConfig
+    """Patterns for Group resource IDs."""
 
 
-class GroupConfig(BaseModel):
-    """Schema for Group resource configuration."""
+class GroupIdPatternsConfig(BaseModel):
+    """Schema for Group resource ID patterns."""
 
-    system_admin_group_id: str
+    system_admin: str
     """ID of the system administrator group."""
 
-    repository_admin_group_id_pattern: str
-    """Pattern for repository administrator group IDs.
-    It should include `{repository_id}` placeholder.
-    """
+    repository_admin: HasRepoId
+    """Pattern for repository administrator group IDs."""
 
-    community_admin_group_id_pattern: str
-    """Pattern for community administrator group IDs.
-    It should include `{repository_id}` placeholder.
-    """
+    community_admin: HasRepoId
+    """Pattern for community administrator group IDs."""
 
-    contributor_group_id_pattern: str
-    """Pattern for contributor group IDs.
-    It should include `{repository_id}` placeholder.
-    """
+    contributor: HasRepoId
+    """Pattern for contributor group IDs."""
 
-    general_user_group_id_pattern: str
-    """Pattern for general user group IDs.
-    It should include `{repository_id}` placeholder.
-    """
+    general_user: HasRepoId
+    """Pattern for general user group IDs."""
 
-    custom_group_id_pattern: str
-    """Pattern for custom group IDs.
-    It should include `{repository_id}` and `{custom_id}` placeholders.
-    """
+    custom_group: HasRepoAndCustomId
+    """Pattern for custom group IDs."""
 
 
 class MapCoreConfig(BaseModel):
@@ -210,6 +197,20 @@ class PostgresConfig(BaseModel):
 
     db: str = "jcgroups"
     """Name of the PostgreSQL database."""
+
+
+HasRepoId = t.Annotated[str, StringConstraints(pattern=r".*\{repository_id\}.*")]
+"""Pattern for role-based group IDs.
+It should include `{repository_id}` placeholder.
+"""
+
+
+HasRepoAndCustomId = t.Annotated[
+    str, StringConstraints(pattern=r".*\{repository_id\}.*\{custom_id\}.*")
+]
+"""Pattern for custom group IDs.
+It should include `{repository_id}` followed by `{custom_id}` placeholders.
+"""
 
 
 def setup_config(path_or_obj: str | RuntimeConfig | None) -> RuntimeConfig:

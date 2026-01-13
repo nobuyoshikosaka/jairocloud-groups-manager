@@ -42,6 +42,21 @@ def test_config():
             "base_url": "https://mapcore.test.jp",
             "timeout": 3,
         },
+        "REPOSITORIES": {
+            "id_patterns": {
+                "sp_connecter": "jc_{repository_id}_test",
+            },
+        },
+        "GROUPS": {
+            "id_patterns": {
+                "system_admin": "jc_roles_sysadm_test",
+                "repository_admin": "jc_{repository_id}_roles_repoadm_test",
+                "community_admin": "jc_{repository_id}_roles_comadm_test",
+                "contributor": "jc_{repository_id}_roles_contributor_test",
+                "general_user": "jc_{repository_id}_roles_generaluser_test",
+                "custom_group": "jc_{repository_id}_groups_{custom_id}_test",
+            }
+        },
         "POSTGRES": {"db": "jctest", "host": db_host},
     })
 

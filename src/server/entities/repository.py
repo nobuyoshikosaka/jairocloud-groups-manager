@@ -115,7 +115,7 @@ def resolve_repository_id(
     Raises:
         ValueError: If neither `fqdn` nor `resource_id` is provided.
     """
-    pattern = config.RESOURCES.sp_connecter_id_pattern
+    pattern = config.REPOSITORIES.id_patterns.sp_connecter
     prefix = pattern.split("{repository_id}")[0]
     suffix = pattern.split("{repository_id}")[1]
 
@@ -149,7 +149,7 @@ def resolve_service_id(
     Raises:
         ValueError: If neither `fqdn` nor `repository_id` is provided.
     """
-    pattern = config.RESOURCES.sp_connecter_id_pattern
+    pattern = config.REPOSITORIES.id_patterns.sp_connecter
 
     if fqdn is not None:
         repository_id = resolve_repository_id(fqdn=fqdn)
