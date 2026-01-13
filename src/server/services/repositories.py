@@ -17,7 +17,7 @@ from pydantic_core import ValidationError
 from server.clients import services
 from server.const import MAP_NOT_FOUND_PATTERN
 from server.entities.map_error import MapError
-from server.entities.repository import RepositoryDetail
+from server.entities.repository_detail import RepositoryDetail
 from server.exc import (
     CredentialsError,
     OAuthTokenError,

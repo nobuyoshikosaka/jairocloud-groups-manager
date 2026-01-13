@@ -17,7 +17,7 @@ from pydantic_core import ValidationError
 from server.clients import users
 from server.const import MAP_NOT_FOUND_PATTERN
 from server.entities.map_error import MapError
-from server.entities.user import UserDetail
+from server.entities.user_detail import UserDetail
 from server.exc import (
     CredentialsError,
     OAuthTokenError,
