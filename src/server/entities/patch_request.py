@@ -28,13 +28,14 @@ class PatchRequestPayload(BaseModel):
     """Configure to forbid extra fields."""
 
 
-type PatchOperation = t.Annotated[
-    AddOperation | RemoveOperation | ReplaceOperation, Field(discriminator="op")
+type PatchOperation[T] = t.Annotated[
+    AddOperation[T] | RemoveOperation[T] | ReplaceOperation[T],
+    Field(discriminator="op"),
 ]
 """Union type for patch operations based on the 'op' field."""
 
 
-class AddOperation(BaseModel):
+class AddOperation[T](BaseModel):
     """Model for 'add' patch operations."""
 
     op: t.Literal["add"] = "add"
@@ -50,7 +51,7 @@ class AddOperation(BaseModel):
     """Configure to forbid extra fields."""
 
 
-class RemoveOperation(BaseModel):
+class RemoveOperation[T](BaseModel):
     """Model for 'remove' patch operations."""
 
     op: t.Literal["remove"] = "remove"
@@ -63,7 +64,7 @@ class RemoveOperation(BaseModel):
     """Configure to forbid extra fields."""
 
 
-class ReplaceOperation(BaseModel):
+class ReplaceOperation[T](BaseModel):
     """Model for 'replace' patch operations."""
 
     op: t.Literal["replace"] = "replace"

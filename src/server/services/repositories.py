@@ -171,7 +171,7 @@ def update(repository: RepositoryDetail) -> RepositoryDetail:
         error = f"'{repository.id}' Not Found"
         raise ResourceNotFound(error)
 
-    operations: list[PatchOperation] = build_patch_operations(
+    operations: list[PatchOperation[MapService]] = build_patch_operations(
         current.to_map_service(),
         repository.to_map_service(),
         exclude={"schemas", "meta"},

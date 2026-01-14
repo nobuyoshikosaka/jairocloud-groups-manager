@@ -213,7 +213,7 @@ def update(user: UserDetail) -> UserDetail:
         error = f"'{user.id}' Not Found"
         raise ResourceNotFound(error)
 
-    operations: list[PatchOperation] = build_patch_operations(
+    operations: list[PatchOperation[MapUser]] = build_patch_operations(
         current.to_map_user(),
         user.to_map_user(),
         exclude={"schemas", "meta"},

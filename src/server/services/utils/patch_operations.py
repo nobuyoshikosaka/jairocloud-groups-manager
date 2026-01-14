@@ -22,7 +22,7 @@ def build_patch_operations[T: BaseModel](
     *,
     include: set[str] | None = None,
     exclude: set[str] | None = None,
-) -> list[PatchOperation]:
+) -> list[PatchOperation[T]]:
     """Generate patch operations to transform `original` model into `updated` model.
 
     Args:
