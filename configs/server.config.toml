@@ -71,14 +71,6 @@ base_url = "https://sptest.cg.gakunin.jp"
 timeout = 20
 
 
-[celery]
-# URL of the Celery message broker.
-broker_url = "amqp://guest:guest@rabbitmq:5672//"
-
-# URL of the Celery result backend.
-result_backend = "redis://redis:6379/2"
-
-
 [postgres]
 # Database user name for authentication.
 user = "jcgroups"
@@ -94,3 +86,52 @@ port = 5432
 
 # Name of the PostgreSQL database.
 db = "jcgroups"
+
+
+[redis]
+# Type of caching backend to use. Possible values: "RedisCache" or "RedisSentinelCache"
+cache_type = "RedisCache"
+
+# Default timeout (in seconds) for cached items.
+# Use in caching mAP API responses.
+default_timeout = 300
+
+# Prefix for cache keys used by app-cache and account-store.
+key_prefix = "jcgroups_"
+
+# Redis database number to use.
+[redis.database]
+# Database number for application cache.
+app_cache = 0
+
+# Database number for storing account information.
+account_store = 1
+
+# Database number for Celery result backend.
+result_backend = 2
+
+# Configuration for single Redis server, when cache_type is "RedisCache".
+[redis.single]
+# URL of the Redis server.
+base_url = "redis://redis:6379"
+
+# Configuration for Redis Sentinel, when cache_type is "RedisSentinelCache".
+[redis.sentinel]
+# Name of the Redis Sentinel master node.
+master_name = "mymaster"
+
+# List of Redis Sentinel nodes.
+[[redis.sentinel.nodes]]
+# Hostname or IP address of a Redis Sentinel node.
+host = ""
+port = 26379
+
+[[redis.sentinel.nodes]]
+# Hostname or IP address of a Redis Sentinel node.
+host = ""
+port = 26379
+
+
+[rabbitmq]
+# Hostname or IP address of the RabbitMQ server for Celery broker.
+url = "amqp://guest:guest@rabbitmq:5672//"

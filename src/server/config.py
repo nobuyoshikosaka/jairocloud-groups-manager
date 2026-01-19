@@ -8,6 +8,7 @@ Provides validation, loading, and global access to runtime configuration.
 """
 
 # ruff: noqa: S105, N802
+
 import typing as t
 
 from flask import current_app
@@ -56,14 +57,17 @@ class RuntimeConfig(BaseSettings):
     GROUPS: GroupsConfig
     """Group related configuration values."""
 
-    CELERY: CeleryConfig = Field(default_factory=lambda: CeleryConfig())  # noqa: PLW0108
-    """Celery configuration values."""
-
     POSTGRES: PostgresConfig = Field(
         default_factory=lambda: PostgresConfig(),  # noqa: PLW0108
         exclude=True,
     )
     """PostgreSQL database configuration values."""
+
+    REDIS: RedisConfig
+    """Redis cache configuration values."""
+
+    RABBITMQ: RabbitmqConfig
+    """RabbitMQ configuration values."""
 
     @computed_field
     @property
@@ -73,6 +77,33 @@ class RuntimeConfig(BaseSettings):
         return make_url(
             f"postgresql+psycopg://{pg.user}:{pg.password}@{pg.host}:{pg.port}/{pg.db}"
         )
+
+    @computed_field
+    @property
+    def CELERY(self) -> dict[str, t.Any]:
+        """Celery configuration dictionary.
+
+        Returns:
+            dict[str, Any]: Configuration dictionary for Celery.
+        """
+        cache_type = self.REDIS.cache_type
+        database = self.REDIS.database.result_backend
+        config: dict[str, t.Any] = {"broker_url": self.RABBITMQ.url}
+
+        if cache_type == "RedisCache" and self.REDIS.single:
+            base_url = self.REDIS.single.base_url.rstrip("/")
+            config["result_backend"] = f"{base_url}/{database}"
+
+        elif cache_type == "RedisSentinelCache" and self.REDIS.sentinel:
+            sentinels = [
+                f"sentinel://{node.host}:{node.port}"
+                for node in self.REDIS.sentinel.sentinels
+            ]
+            master_name = self.REDIS.sentinel.master_name
+            config["result_backend"] = f"{';'.join(sentinels)}/{database}"
+            config["result_backend_transport_options"] = {"master_name": master_name}
+
+        return config
 
     @t.override
     @classmethod
@@ -192,16 +223,6 @@ class MapCoreConfig(BaseModel):
     """Timeout (in seconds) for requests to mAP Core service."""
 
 
-class CeleryConfig(BaseModel):
-    """Celery configuration."""
-
-    broker_url: str = "redis://localhost:6379/0"
-    """URL of the Celery message broker."""
-
-    result_backend: str = "redis://localhost:6379/0"
-    """URL of the Celery result backend."""
-
-
 class PostgresConfig(BaseModel):
     """Schema for PostgreSQL database configuration."""
 
@@ -219,6 +240,77 @@ class PostgresConfig(BaseModel):
 
     db: str = "jcgroups"
     """Name of the PostgreSQL database."""
+
+
+class RedisConfig(BaseModel):
+    """Schema for Redis cache configuration."""
+
+    cache_type: t.Literal["RedisCache", "RedisSentinelCache"] = "RedisCache"
+    """Type of cache backend to use.
+
+    Possible values are 'RedisCache' and 'RedisSentinelCache'.
+    """
+
+    default_timeout: t.Annotated[int, "seconds"] = 300
+    """Default timeout (in seconds) for cached items."""
+
+    key_prefix: str = "jcgroups_"
+    """Prefix for cache keys used by the application."""
+
+    database: RedisDatabaseConfig = Field(
+        default_factory=lambda: RedisDatabaseConfig(),  # noqa: PLW0108
+    )
+
+    single: RedisSingleConfig | None = None
+    """Configuration for single Redis server, when cache_type is "RedisCache"."""
+
+    sentinel: RedisSentinelCacheConfig | None = None
+    """Configuration for Redis Sentinel, when cache_type is "RedisSentinelCache"."""
+
+
+class RedisDatabaseConfig(BaseModel):
+    """Schema for Redis database configuration."""
+
+    app_cache: int = 0
+    """Database number for application cache."""
+
+    account_store: int = 1
+    """Database number for storing account information."""
+
+    result_backend: int = 2
+    """Database number for Celery result backend."""
+
+
+class RedisSingleConfig(BaseModel):
+    """Schema for single Redis server configuration."""
+
+    base_url: str = "redis://localhost:6379"
+
+
+class RedisSentinelCacheConfig(BaseModel):
+    """Schema for Redis Sentinel configuration."""
+
+    master_name: str = "mymaster"
+    """Name of the Redis Sentinel master node."""
+
+    sentinels: list[SentinelNodeConfig] = Field(default_factory=list)
+
+
+class SentinelNodeConfig(BaseModel):
+    """Schema for Redis Sentinel node configuration."""
+
+    host: str
+    """Hostname or IP address of the Sentinel node."""
+
+    port: int
+    """Port number of the Sentinel node."""
+
+
+class RabbitmqConfig(BaseModel):
+    """Schema for RabbitMQ configuration."""
+
+    url: str = "amqp://guest:guest@localhost:5672//"
+    """Hostname or IP address of the RabbitMQ server for Celery broker."""
 
 
 type HasRepoId = t.Annotated[str, StringConstraints(pattern=HAS_REPO_ID_PATTERN)]
