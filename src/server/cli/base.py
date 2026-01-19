@@ -10,6 +10,7 @@ from importlib import import_module
 from pathlib import Path
 from pkgutil import iter_modules
 
+
 if t.TYPE_CHECKING:
     from flask import Flask
 

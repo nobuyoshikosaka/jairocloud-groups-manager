@@ -9,6 +9,7 @@ These types are used in client arguments.
 
 import typing as t
 
+
 # ruff: noqa: PYI046
 
 

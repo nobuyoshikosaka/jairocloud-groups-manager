@@ -15,6 +15,7 @@ from .db.utils import load_models
 from .exc import ConfigurationError
 from .logger import setup_logger
 
+
 if t.TYPE_CHECKING:
     from flask import Flask
 

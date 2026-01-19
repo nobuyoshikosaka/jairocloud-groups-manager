@@ -14,6 +14,7 @@ from server.services.service_settings import (
     save_client_credentials,
 )
 
+
 if t.TYPE_CHECKING:
     from pytest_mock import MockerFixture
 

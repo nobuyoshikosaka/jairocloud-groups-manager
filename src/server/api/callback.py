@@ -12,6 +12,7 @@ from server.services import token
 
 from .schema import OAuthTokenQuery
 
+
 bp = Blueprint("callback", __name__)
 
 

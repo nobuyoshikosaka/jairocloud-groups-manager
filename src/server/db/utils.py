@@ -15,6 +15,7 @@ from flask import current_app
 from sqlalchemy_utils import create_database, database_exists, drop_database
 from werkzeug.local import LocalProxy
 
+
 if t.TYPE_CHECKING:
     from flask_sqlalchemy import SQLAlchemy
 

@@ -9,6 +9,7 @@
 from enum import StrEnum
 from typing import Final
 
+
 DEFAULT_CONFIG_PATH: Final = "configs/server.config.toml"
 """Default path to the server configuration TOML file."""
 

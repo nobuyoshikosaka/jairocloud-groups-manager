@@ -40,7 +40,7 @@ source = ["src/server"]
 
 [tool.coverage.report]
 omit = ["__init__.py", "tests/*"]
-exclude_lines = [
+exclude_also = [
   "if t.TYPE_CHECKING:",
 ]
 
@@ -61,10 +61,12 @@ select = ["ALL"]
 "__init__.py" = ["F401"]
 "**/api/**.py" = ["TC001", "TC002", "TC003"]
 "**/entities/**.py" = ["TC001", "TC002", "TC003"]
+"*.pyi" = ["CPY001"]
 
 [tool.ruff.lint.isort]
 # refer to https://docs.astral.sh/ruff/settings/#lintisort
 combine-as-imports = true
+lines-after-imports = 2
 lines-between-types = 1
 
 [tool.ruff.lint.pylint]

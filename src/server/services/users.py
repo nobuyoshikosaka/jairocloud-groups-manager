@@ -32,6 +32,7 @@ from .utils import build_patch_operations
 
 if t.TYPE_CHECKING:
     from server.entities.map_user import MapUser
+    from server.entities.patch_request import PatchOperation
 
 
 def get_by_id(user_id: str) -> UserDetail | None:

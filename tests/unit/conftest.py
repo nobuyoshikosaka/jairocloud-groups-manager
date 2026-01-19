@@ -8,6 +8,7 @@ from server import const
 from server.config import RuntimeConfig
 from server.factory import create_app
 
+
 if t.TYPE_CHECKING:
     from flask import Flask
 

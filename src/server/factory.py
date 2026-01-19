@@ -11,6 +11,7 @@ from flask import Flask
 
 from .ext import JAIROCloudGroupsManager
 
+
 if t.TYPE_CHECKING:
     from .config import RuntimeConfig
 
