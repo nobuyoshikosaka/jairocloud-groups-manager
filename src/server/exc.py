@@ -45,6 +45,13 @@ class DatabaseError(JAIROCloudGroupsManagerError):
     """
 
 
+class DatastoreError(JAIROCloudGroupsManagerError):
+    """Exception for datastore errors.
+
+    Errors caused by datastore operation issues.
+    """
+
+
 class ApiClientError(JAIROCloudGroupsManagerError):
     """Exception for mAP Core API errors.
 

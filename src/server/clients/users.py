@@ -18,6 +18,7 @@ from server.entities.map_error import MapError
 from server.entities.map_user import MapUser
 from server.entities.patch_request import PatchOperation, PatchRequestPayload
 
+from .decoraters import cache_resource
 from .utils import compute_signature, get_time_stamp
 
 
@@ -25,6 +26,7 @@ type GetMapUserResponse = MapUser | MapError
 adapter: TypeAdapter[GetMapUserResponse] = TypeAdapter(GetMapUserResponse)
 
 
+@cache_resource
 def get_by_id(
     user_id: str,
     /,
@@ -80,6 +82,7 @@ def get_by_id(
     return adapter.validate_json(response.text)
 
 
+@cache_resource
 def get_by_eppn(
     eppn: str,
     include: set[str] | None = None,
@@ -248,17 +251,26 @@ def put_by_id(
 
     response = requests.put(
         f"{config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}/{user.id}",
+        params=attributes_params,
         headers={
             "Authorization": f"Bearer {access_token}",
         },
-        json={"request": auth_params} | payload | attributes_params,
+        json={"request": auth_params} | payload,
         timeout=config.MAP_CORE.timeout,
     )
 
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()
 
-    return adapter.validate_json(response.text)
+    resource = adapter.validate_json(response.text)
+
+    if isinstance(resource, MapUser):
+        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
+        get_by_eppn.clear_cache(  # pyright: ignore[reportFunctionMemberAccess]
+            *[eppn.value for eppn in resource.edu_person_principal_names or []]
+        )
+
+    return resource
 
 
 def patch_by_id(
@@ -312,17 +324,26 @@ def patch_by_id(
 
     response = requests.patch(
         f"{config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}/{user_id}",
+        params=attributes_params,
         headers={
             "Authorization": f"Bearer {access_token}",
         },
-        json={"request": auth_params} | payload | attributes_params,
+        json={"request": auth_params} | payload,
         timeout=config.MAP_CORE.timeout,
     )
 
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()
 
-    return adapter.validate_json(response.text)
+    resource = adapter.validate_json(response.text)
+
+    if isinstance(resource, MapUser):
+        get_by_id.clear_cache(user_id)  # pyright: ignore[reportFunctionMemberAccess]
+        get_by_eppn.clear_cache(  # pyright: ignore[reportFunctionMemberAccess]
+            *[eppn.value for eppn in resource.edu_person_principal_names or []]
+        )
+
+    return resource
 
 
 def _get_alias_generator() -> t.Callable[[str], str]:

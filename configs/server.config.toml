@@ -97,7 +97,7 @@ cache_type = "RedisCache"
 default_timeout = 300
 
 # Prefix for cache keys used by app-cache and account-store.
-key_prefix = "jcgroups_"
+key_prefix = "jcgroups-"
 
 # Redis database number to use.
 [redis.database]

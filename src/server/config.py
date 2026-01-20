@@ -261,10 +261,10 @@ class RedisConfig(BaseModel):
         default_factory=lambda: RedisDatabaseConfig(),  # noqa: PLW0108
     )
 
-    single: RedisSingleConfig | None = None
+    single: RedisSingleConfig
     """Configuration for single Redis server, when cache_type is "RedisCache"."""
 
-    sentinel: RedisSentinelCacheConfig | None = None
+    sentinel: RedisSentinelCacheConfig
     """Configuration for Redis Sentinel, when cache_type is "RedisSentinelCache"."""
 
 

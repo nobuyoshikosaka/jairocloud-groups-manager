@@ -18,6 +18,7 @@ from server.entities.map_error import MapError
 from server.entities.map_service import MapService
 from server.entities.patch_request import PatchOperation, PatchRequestPayload
 
+from .decoraters import cache_resource
 from .utils import compute_signature, get_time_stamp
 
 
@@ -25,6 +26,7 @@ type GetMapServiceResponse = MapService | MapError
 adapter: TypeAdapter[GetMapServiceResponse] = TypeAdapter(GetMapServiceResponse)
 
 
+@cache_resource
 def get_by_id(
     service_id: str,
     /,
@@ -80,6 +82,7 @@ def get_by_id(
     return adapter.validate_json(response.text)
 
 
+@cache_resource
 def post(
     service: MapService,
     /,
@@ -194,17 +197,23 @@ def put_by_id(
 
     response = requests.put(
         f"{config.MAP_CORE.base_url}{MAP_SERVICES_ENDPOINT}/{service.id}",
+        params=attributes_params,
         headers={
             "Authorization": f"Bearer {access_token}",
         },
-        json={"request": auth_params} | payload | attributes_params,
+        json={"request": auth_params} | payload,
         timeout=config.MAP_CORE.timeout,
     )
 
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()
 
-    return adapter.validate_json(response.text)
+    resource = adapter.validate_json(response.text)
+
+    if isinstance(resource, MapService):
+        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
+
+    return resource
 
 
 def patch_by_id(
@@ -258,17 +267,23 @@ def patch_by_id(
 
     response = requests.patch(
         f"{config.MAP_CORE.base_url}{MAP_SERVICES_ENDPOINT}/{service_id}",
+        params=attributes_params,
         headers={
             "Authorization": f"Bearer {access_token}",
         },
-        json={"request": auth_params} | payload | attributes_params,
+        json={"request": auth_params} | payload,
         timeout=config.MAP_CORE.timeout,
     )
 
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()
 
-    return adapter.validate_json(response.text)
+    resource = adapter.validate_json(response.text)
+
+    if isinstance(resource, MapService):
+        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
+
+    return resource
 
 
 def _get_alias_generator() -> t.Callable[[str], str]:
