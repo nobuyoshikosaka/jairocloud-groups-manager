@@ -10,6 +10,7 @@ from .api.router import create_api_blueprint
 from .cli.base import register_cli_commands
 from .config import RuntimeConfig, setup_config
 from .const import DEFAULT_CONFIG_PATH
+from .datastore import setup_datastore
 from .db.base import db
 from .db.utils import load_models
 from .exc import ConfigurationError
@@ -18,6 +19,7 @@ from .logger import setup_logger
 
 if t.TYPE_CHECKING:
     from flask import Flask
+    from redis import Redis
 
 
 class JAIROCloudGroupsManager:
@@ -35,6 +37,7 @@ class JAIROCloudGroupsManager:
 
         """
         self._config = config or DEFAULT_CONFIG_PATH
+        self.datastore: dict[int, Redis] = {}
 
         if app is not None:
             self.init_app(app)
@@ -49,8 +52,10 @@ class JAIROCloudGroupsManager:
         self.init_config(app)
         self.init_db_app(app)
 
-        app.register_blueprint(create_api_blueprint(), url_prefix="/api")
         setup_logger(app, self.config)
+
+        self.datastore = setup_datastore(app, self.config)
+        app.register_blueprint(create_api_blueprint(), url_prefix="/api")
         register_cli_commands(app)
 
         if app.debug or app.config.get("ENV") == "development":

@@ -40,8 +40,6 @@ def cache_resource[T: t.Callable](
     Returns:
         Callable: Decorated function with caching.
     """
-    prefix = config.REDIS.key_prefix
-    timeout = timeout or config.REDIS.default_timeout
 
     def decorator(func):
 
@@ -67,6 +65,7 @@ def cache_resource[T: t.Callable](
                 hash_input.encode(), usedforsecurity=False
             ).hexdigest()
 
+            prefix = config.REDIS.key_prefix
             cache_key = f"{prefix}:{import_name}:{identifier}:{args_hash}"
 
             cached_data: str | None = datastore.get(cache_key)  # pyright: ignore[reportAssignmentType]
@@ -77,6 +76,7 @@ def cache_resource[T: t.Callable](
             result = func(*args, **kwargs)
 
             nonlocal timeout
+            timeout = timeout or config.REDIS.default_timeout
             if isinstance(result, MapError) or timeout is None:
                 timeout = 3
 
