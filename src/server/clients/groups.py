@@ -18,17 +18,16 @@ from server.entities.map_error import MapError
 from server.entities.map_group import MapGroup
 from server.entities.patch_request import PatchOperation, PatchRequestPayload
 
+from .decoraters import cache_resource
 from .utils import compute_signature, get_time_stamp
 
 
 type GetMapGroupResponse = MapGroup | MapError
 adapter: TypeAdapter[GetMapGroupResponse] = TypeAdapter(GetMapGroupResponse)
 type DeleteMapGroupResponse = MapError | None
-delete_adapter: TypeAdapter[DeleteMapGroupResponse] = TypeAdapter(
-    DeleteMapGroupResponse
-)
 
 
+@cache_resource
 def get_by_id(
     group_id: str,
     /,
@@ -208,7 +207,12 @@ def put_by_id(
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()
 
-    return adapter.validate_json(response.text)
+    resource = adapter.validate_json(response.text)
+
+    if isinstance(resource, MapGroup):
+        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
+
+    return resource
 
 
 def patch_by_id(
@@ -272,7 +276,12 @@ def patch_by_id(
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()
 
-    return adapter.validate_json(response.text)
+    resource = adapter.validate_json(response.text)
+
+    if isinstance(resource, MapGroup):
+        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
+
+    return resource
 
 
 def delete(
@@ -311,7 +320,11 @@ def delete(
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()
 
-    return delete_adapter.validate_json(response.text)
+    if not response.text:
+        get_by_id.clear_cache(group_id)  # pyright: ignore[reportFunctionMemberAccess]
+        return None
+
+    return MapError.model_validate_json(response.text)
 
 
 def _get_alias_generator() -> t.Callable[[str], str]:
