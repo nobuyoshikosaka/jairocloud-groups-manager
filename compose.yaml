@@ -97,7 +97,7 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
-      target: dev
+      target: prod
     image: jc-groups-manager-nginx
     container_name: nginx
     ports:

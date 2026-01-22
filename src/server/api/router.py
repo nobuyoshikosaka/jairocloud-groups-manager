@@ -10,6 +10,8 @@ from pkgutil import iter_modules
 
 from flask import Blueprint
 
+from server.api.helper import refresh_session
+
 
 def create_api_blueprint() -> Blueprint:
     """Register blueprints for API routers.
@@ -25,5 +27,7 @@ def create_api_blueprint() -> Blueprint:
             bp_api.register_blueprint(
                 module.bp, url_prefix=f"/{module_name}", strict_slashes=False
             )
+
+    bp_api.before_request(refresh_session)
 
     return bp_api

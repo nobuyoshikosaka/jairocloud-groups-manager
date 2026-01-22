@@ -78,3 +78,17 @@ class UnexpectedResponseError(ApiClientError):
 
     Errors caused by unexpected response structure or data from mAP Core API server.
     """
+
+
+class ApiRequestError(JAIROCloudGroupsManagerError):
+    """Exception for the server application API errors.
+
+    Errors caused by API request issues.
+    """
+
+
+class RequestConflict(ApiRequestError):  # noqa: N818
+    """Exception for the request conflict errors.
+
+    Errors caused by conflicts in the request content.
+    """

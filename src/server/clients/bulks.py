@@ -8,7 +8,6 @@ from http import HTTPStatus
 
 import requests
 
-from entities.bulk_request import BulkOperation, BulkRequestPayload, BulkResposePayload
 from pydantic import TypeAdapter
 
 from server.clients.utils import compute_signature, get_time_stamp
@@ -16,16 +15,21 @@ from server.config import config
 from server.const import (
     MAP_BULK_ENDPOINT,
 )
+from server.entities.bulk_request import (
+    BulkOperation,
+    BulkRequestPayload,
+    BulkResponse,
+)
 from server.entities.map_error import MapError
 
 
-type BulkResponse = BulkResposePayload | MapError
-adapter: TypeAdapter[BulkResponse] = TypeAdapter(BulkResponse)
+type PostBulkResponse = BulkResponse | MapError
+adapter: TypeAdapter[PostBulkResponse] = TypeAdapter(PostBulkResponse)
 
 
 def post(
     operations: list[BulkOperation], access_token: str, client_secret: str
-) -> BulkResponse:
+) -> PostBulkResponse:
     """Post bulk request in mAP Core.
 
     Args:
@@ -34,7 +38,7 @@ def post(
         client_secret (str): Client secret for Basic Authentication.
 
     Returns:
-        Bulk: The BulkResponse resource if Bulk operation success, otherwise None.
+        PostBulkResponse: The BulkResponse resource if Bulk operation success, otherwise None.
     """
     time_stamp = get_time_stamp()
     signature = compute_signature(client_secret, access_token, time_stamp)

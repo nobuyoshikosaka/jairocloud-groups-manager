@@ -36,7 +36,7 @@ class BulkRequestPayload(BaseModel):
     """Configure camelCase aliasing and forbid extra fields."""
 
 
-class BulkResposePayload(BaseModel):
+class BulkResponse(BaseModel):
     """Bulk request entity in mAP API."""
 
     schemas: t.Annotated[t.Sequence[str], Field(frozen=True)] = [

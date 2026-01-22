@@ -164,3 +164,24 @@ def _handle_list_diff(
     )
 
     return ops
+
+
+def build_update_member_operations(
+    add: set[str], remove: set[str]
+) -> list[PatchOperation]:
+    """Make patch request body for members from group_id and operation.
+
+    Args:
+        add (list[str]): List of user IDs to add .
+        remove (list[str]): List of user IDs to remove.
+
+    Returns:
+        list[PatchOperation]: List of patch operations.
+    """
+    operations: list[PatchOperation] = []
+    operations.extend([
+        AddOperation(path="members", value={"type": "User", "value": g}) for g in add
+    ])
+    operations.extend([RemoveOperation(path=f"members[value eq {g}]") for g in remove])
+
+    return operations

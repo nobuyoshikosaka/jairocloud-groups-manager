@@ -23,6 +23,19 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2026-01-10',
 
+  vite: {
+    server: {
+      allowedHosts: [
+        't2dxtvk5-3000.asse.devtunnels.ms', 'localhost',
+      ],
+      hmr: {
+        host: 't2dxtvk5-3000.asse.devtunnels.ms',
+        protocol: 'wss',
+        port: 443,
+      },
+    },
+  },
+
   eslint: {
     config: {
       stylistic: true,
