@@ -2,7 +2,7 @@
 # Copyright (C) 2025 National Institute of Informatics.
 #
 
-"""Provides utilities for service."""
+"""Provides utilities for patch operations."""
 
 import typing as t
 

@@ -17,13 +17,82 @@ from server.const import MAP_SERVICES_ENDPOINT
 from server.entities.map_error import MapError
 from server.entities.map_service import MapService
 from server.entities.patch_request import PatchOperation, PatchRequestPayload
+from server.entities.search_request import SearchRequestParameter, SearchResponse
 
 from .decoraters import cache_resource
 from .utils import compute_signature, get_time_stamp
 
 
 type GetMapServiceResponse = MapService | MapError
+"""Type alias for response of getting a MapService."""
 adapter: TypeAdapter[GetMapServiceResponse] = TypeAdapter(GetMapServiceResponse)
+
+
+type ServicesSearchResponse = SearchResponse[MapService]
+"""Type alias for search response containing MapService resources."""
+adapter_search: TypeAdapter[ServicesSearchResponse] = TypeAdapter(
+    ServicesSearchResponse
+)
+
+
+def search(
+    query: SearchRequestParameter,
+    /,
+    include: set[str] | None = None,
+    exclude: set[str] | None = None,
+    *,
+    access_token: str,
+    client_secret: str,
+) -> ServicesSearchResponse:
+    """Search for Service resources in mAP API.
+
+    Args:
+        query (SearchRequestPayload): The search filter criteria.
+        include (set[str] | None):
+            Attribute names to include in the response. Optional.
+        exclude (set[str] | None):
+            Attribute names to exclude from the response. Optional.
+        access_token (str): OAuth access token for authorization.
+        client_secret (str): Client secret for Authentication.
+
+    Returns:
+        list[GetMapUserResponse]: List of User resources matching the search criteria.
+    """
+    time_stamp = get_time_stamp()
+    signature = compute_signature(client_secret, access_token, time_stamp)
+    auth_params = {
+        "time_stamp": time_stamp,
+        "signature": signature,
+    }
+
+    attributes_params: dict[str, str] = {}
+    if include:
+        attributes_params[alias_generator("attributes")] = ",".join([
+            alias_generator(name) for name in include | {"id"}
+        ])
+    if exclude:
+        attributes_params[alias_generator("excluded_attributes")] = ",".join([
+            alias_generator(name) for name in exclude
+        ])
+
+    query_params = query.model_dump(
+        mode="json",
+        by_alias=True,
+    )
+
+    response = requests.get(
+        f"{config.MAP_CORE.base_url}{MAP_SERVICES_ENDPOINT}",
+        params=auth_params | attributes_params | query_params,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
+        timeout=config.MAP_CORE.timeout,
+    )
+
+    if response.status_code > HTTPStatus.BAD_REQUEST:
+        response.raise_for_status()
+
+    return adapter_search.validate_json(response.text)
 
 
 @cache_resource

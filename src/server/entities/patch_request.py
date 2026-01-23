@@ -2,7 +2,7 @@
 # Copyright (C) 2025 National Institute of Informatics.
 #
 
-"""Model for PATCH request payloads."""
+"""Model for PATCH request."""
 
 import typing as t
 

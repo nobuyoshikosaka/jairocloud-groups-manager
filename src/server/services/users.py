@@ -17,9 +17,12 @@ from pydantic_core import ValidationError
 from server.clients import users
 from server.const import MAP_NOT_FOUND_PATTERN
 from server.entities.map_error import MapError
+from server.entities.search_request import SearchResult
+from server.entities.summaries import UserSummary
 from server.entities.user_detail import UserDetail
 from server.exc import (
     CredentialsError,
+    InvalidQueryError,
     OAuthTokenError,
     ResourceInvalid,
     ResourceNotFound,
@@ -27,12 +30,89 @@ from server.exc import (
 )
 
 from .token import get_access_token, get_client_secret
-from .utils import build_patch_operations
+from .utils import UsersCriteria, build_patch_operations, build_search_query
 
 
 if t.TYPE_CHECKING:
+    from server.clients.users import UsersSearchResponse
     from server.entities.map_user import MapUser
     from server.entities.patch_request import PatchOperation
+
+
+def search(criteria: UsersCriteria) -> SearchResult[UserSummary]:
+    """Search for users based on given criteria.
+
+    Args:
+        criteria (UsersCriteria): Search criteria for filtering users.
+
+    Returns:
+        SearchResult: Search result containing User summaries.
+
+    Raises:
+        InvalidQueryError: If the query construction is invalid.
+        OAuthTokenError: If the access token is invalid or expired.
+        CredentialsError: If the client credentials are invalid.
+        UnexpectedResponseError: If response from mAP Core API is unexpected.
+    """
+    default_include = {
+        "id",
+        "emails",
+        "user_name",
+        "edu_person_principal_names",
+        "meta",
+    }
+
+    try:
+        query = build_search_query(criteria)
+        access_token = get_access_token()
+        client_secret = get_client_secret()
+        results: UsersSearchResponse = users.search(
+            query,
+            include=default_include,
+            access_token=access_token,
+            client_secret=client_secret,
+        )
+    except requests.HTTPError as exc:
+        code = exc.response.status_code
+        if code == HTTPStatus.UNAUTHORIZED:
+            error = "Access token is invalid or expired."
+            raise OAuthTokenError(error) from exc
+
+        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
+            error = "mAP Core API server error."
+            raise UnexpectedResponseError(error) from exc
+
+        error = "Failed to search User resources from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except requests.RequestException as exc:
+        error = "Failed to communicate with mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except ValidationError as exc:
+        error = "Failed to parse User resources from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except InvalidQueryError, OAuthTokenError, CredentialsError:
+        raise
+
+    user_summaries = [
+        UserSummary(
+            id=result.id,
+            user_name=result.user_name,
+            emails=[email.value for email in result.emails or []],
+            eppns=[eppn.value for eppn in result.edu_person_principal_names or []],
+            last_modified=result.meta.last_modified if result.meta else None,
+        )
+        for result in results.resources
+    ]
+
+    return SearchResult(
+        total=results.total_results,
+        page_size=results.items_per_page,
+        offset=results.start_index,
+        resources=user_summaries,
+    )
 
 
 def get_by_id(user_id: str) -> UserDetail | None:

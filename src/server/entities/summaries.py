@@ -66,13 +66,13 @@ class UserSummary(BaseModel):
     user_name: str | None = None
     """The username of the user. Alias to 'userName'."""
 
-    email: EmailStr | None = None
+    emails: list[EmailStr] | None = None
     """The first email address of the user."""
 
-    eppn: str | None = None
+    eppns: list[str] | None = None
     """The first eduPersonPrincipalName of the user."""
 
-    lask_modified: datetime | None = None
+    last_modified: datetime | None = None
     """The last modification timestamp of the user. Alias to 'lastModified'."""
 
     model_config = camel_case_config | forbid_extra_config

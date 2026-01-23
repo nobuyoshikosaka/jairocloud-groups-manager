@@ -78,3 +78,10 @@ class UnexpectedResponseError(ApiClientError):
 
     Errors caused by unexpected response structure or data from mAP Core API server.
     """
+
+
+class InvalidQueryError(JAIROCloudGroupsManagerError):
+    """Exception for unexpected query construction errors.
+
+    Errors caused by unexpected query structure or data during query construction.
+    """

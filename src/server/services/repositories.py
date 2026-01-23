@@ -17,10 +17,12 @@ from pydantic_core import ValidationError
 from server.clients import services
 from server.const import MAP_NOT_FOUND_PATTERN
 from server.entities.map_error import MapError
-from server.entities.repository_detail import RepositoryDetail
+from server.entities.repository_detail import RepositoryDetail, resolve_repository_id
+from server.entities.search_request import SearchResult
 from server.entities.summaries import RepositorySummary
 from server.exc import (
     CredentialsError,
+    InvalidQueryError,
     OAuthTokenError,
     ResourceInvalid,
     ResourceNotFound,
@@ -28,17 +30,82 @@ from server.exc import (
 )
 
 from .token import get_access_token, get_client_secret
-from .utils import build_patch_operations
+from .utils import RepositoriesCriteria, build_patch_operations, build_search_query
 
 
 if t.TYPE_CHECKING:
+    from server.clients.services import ServicesSearchResponse
     from server.entities.map_service import MapService
     from server.entities.patch_request import PatchOperation
 
 
-def search(**query) -> list[RepositorySummary]:
-    # Placeholder implementation
-    return [RepositorySummary(id=repository_id) for repository_id in query["id"]]
+def search(criteria: RepositoriesCriteria) -> SearchResult[RepositorySummary]:
+    """Search for repositories based on given criteria.
+
+    Args:
+        criteria (RepositoriesCriteria): Search criteria for filtering repositories.
+
+    Returns:
+        SearchResult: Search result containing Repository summaries.
+
+    Raises:
+        InvalidQueryError: If the query construction is invalid.
+        OAuthTokenError: If the access token is invalid or expired.
+        CredentialsError: If the client credentials are invalid.
+        UnexpectedResponseError: If response from mAP Core API is unexpected.
+    """
+    default_include = {"id", "service_name", "service_url"}
+
+    try:
+        query = build_search_query(criteria)
+        access_token = get_access_token()
+        client_secret = get_client_secret()
+        results: ServicesSearchResponse = services.search(
+            query,
+            include=default_include,
+            access_token=access_token,
+            client_secret=client_secret,
+        )
+    except requests.HTTPError as exc:
+        code = exc.response.status_code
+        if code == HTTPStatus.UNAUTHORIZED:
+            error = "Access token is invalid or expired."
+            raise OAuthTokenError(error) from exc
+
+        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
+            error = "mAP Core API server error."
+            raise UnexpectedResponseError(error) from exc
+
+        error = "Failed to search Repository resources from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except requests.RequestException as exc:
+        error = "Failed to communicate with mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except ValidationError as exc:
+        error = "Failed to parse Repository resources from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except InvalidQueryError, OAuthTokenError, CredentialsError:
+        raise
+
+    repository_summaries = [
+        RepositorySummary(
+            id=resolve_repository_id(service_id=result.id),
+            display_name=result.service_name,
+            service_url=result.service_url,
+            sp_connecter_id=result.id,
+        )
+        for result in results.resources
+    ]
+
+    return SearchResult(
+        total=results.total_results,
+        page_size=results.items_per_page,
+        offset=results.start_index,
+        resources=repository_summaries,
+    )
 
 
 def get_by_id(service_id: str) -> RepositoryDetail | None:

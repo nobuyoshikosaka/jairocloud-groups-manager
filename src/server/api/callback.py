@@ -10,7 +10,7 @@ from werkzeug.wrappers import Response as ResponseBase
 
 from server.services import token
 
-from .schema import OAuthTokenQuery
+from .schemas import OAuthTokenQuery
 
 
 bp = Blueprint("callback", __name__)

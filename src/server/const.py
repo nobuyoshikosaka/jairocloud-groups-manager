@@ -38,6 +38,11 @@ MAP_SERVICE_SCHEMA: Final = (
 )
 """Schema URI for mAP Service resources."""
 
+MAP_LIST_RESPONSE_SCHEMA: Final = (
+    "urn:ietf:params:scim:schemas:mace:gakunin.jp:core:2.0:ListResponse"
+)
+"""Schema URI for mAP List Response resources."""
+
 MAP_ERROR_SCHEMA: Final = "urn:ietf:params:scim:schemas:mace:gakunin.jp:core:2.0:Error"
 """Schema URI for mAP Error resources."""
 
@@ -66,6 +71,9 @@ MAP_GROUPS_ENDPOINT: Final = "/api/v2/Groups"
 
 MAP_SERVICES_ENDPOINT: Final = "/api/v2/Services"
 """Endpoint for Service resources in mAP Core API."""
+
+MAP_DEFAULT_SEARCH_COUNT: Final = 20
+"""Default number of resources to return in search results from mAP Core API."""
 
 
 MAP_NOT_FOUND_PATTERN: Final = r"'(.*)' Not Found"
