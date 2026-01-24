@@ -11,6 +11,8 @@ Provides validation, loading, and global access to runtime configuration.
 
 import typing as t
 
+from datetime import timedelta
+
 from flask import current_app
 from pydantic import (
     BaseModel,
@@ -44,6 +46,16 @@ class RuntimeConfig(BaseSettings):
 
     LOG: LogConfig
     """Logging configuration."""
+
+    SESSION: SessionConfig = Field(
+        default_factory=lambda: SessionConfig(),  # noqa: PLW0108
+    )
+    """Session configuration."""
+
+    API: ApiConfig = Field(
+        default_factory=lambda: ApiConfig(),  # noqa: PLW0108
+    )
+    """API configuration."""
 
     MAP_CORE: MapCoreConfig
     """mAP Core service configuration."""
@@ -84,7 +96,7 @@ class RuntimeConfig(BaseSettings):
         """Celery configuration dictionary.
 
         Returns:
-            dict[str, Any]: Configuration dictionary for Celery.
+            dict: Configuration dictionary for Celery.
         """
         cache_type = self.REDIS.cache_type
         database = self.REDIS.database.result_backend
@@ -104,6 +116,30 @@ class RuntimeConfig(BaseSettings):
             config["result_backend_transport_options"] = {"master_name": master_name}
 
         return config
+
+    @computed_field
+    @property
+    def PERMANENT_SESSION_LIFETIME(self) -> timedelta:
+        """Duration (in seconds) for permanent sessions."""
+        return timedelta(seconds=self.SESSION.absolute_lifetime)
+
+    @computed_field
+    @property
+    def REMEMBER_COOKIE_DURATION(self) -> timedelta:
+        """Duration (in seconds) for 'remember me' cookies."""
+        match self.SESSION.strategy:
+            case "absolute":
+                lifetime = timedelta(seconds=self.SESSION.absolute_lifetime)
+            case "sliding":
+                lifetime = timedelta(seconds=self.SESSION.sliding_lifetime)
+
+        return lifetime
+
+    @computed_field
+    @property
+    def REMEMBER_COOKIE_REFRESH_EACH_REQUEST(self) -> bool:
+        """Whether to refresh 'remember me' cookies on each request."""
+        return self.SESSION.strategy == "sliding"
 
     @t.override
     @classmethod
@@ -155,6 +191,26 @@ class LogConfig(BaseModel):
     """Date format string for log timestamps.
     If not provided, the default format will be used.
     """
+
+
+class SessionConfig(BaseModel):
+    """Schema for session configuration."""
+
+    strategy: t.Literal["absolute", "sliding"] = "sliding"
+    """Strategy for session expiration."""
+
+    sliding_lifetime: t.Annotated[int, "seconds"] = 1 * 60 * 60
+    """Sliding session lifetime (in seconds)."""
+
+    absolute_lifetime: t.Annotated[int, "seconds"] = 24 * 60 * 60
+    """Absolute session lifetime (in seconds)."""
+
+
+class ApiConfig(BaseModel):
+    """Schema for API configuration."""
+
+    max_upload_size: t.Annotated[int, "bytes"] = 10 * 1024**2
+    """Maximum allowed file upload size (in bytes)."""
 
 
 class SpConfig(BaseModel):
