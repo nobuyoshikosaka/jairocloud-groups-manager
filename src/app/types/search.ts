@@ -2,6 +2,15 @@
  * Types related to recourse search
  */
 
+/** Filter option for search queries */
+interface FilterOption {
+  key: string
+  description?: string
+  type: 'string' | 'number' | 'date'
+  multiple: boolean
+  items?: { value: string | number, label: string }[]
+}
+
 /** Users query parameters */
 interface UsersSearchQuery {
   q?: string
@@ -39,6 +48,7 @@ type GroupsSearchResult = SearchResult<GroupSummary>
 type UsersSearchResult = SearchResult<UserSummary>
 
 export type {
+  FilterOption,
   UsersSearchQuery, UsersSortableKeys,
   SortOrder,
   SearchResult, UsersSearchResult, GroupsSearchResult, RepositoriesSearchResult,

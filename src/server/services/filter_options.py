@@ -50,8 +50,8 @@ def search_users_options() -> list[FilterOption[UserSummary]]:
         ),
     ]
 
-    repos: list[tuple[str, str]] = [
-        (repo.id, t.cast("str", repo.service_name))
+    repos: list[dict[str, str]] = [
+        {"value": repo.id, "label": t.cast("str", repo.service_name)}
         for repo in repositories.search(
             make_criteria_object("repositories", l=-1)
         ).resources
@@ -65,12 +65,12 @@ def search_users_options() -> list[FilterOption[UserSummary]]:
                 description=_get_description(UsersCriteria, "r"),
                 type=_get_type(UsersCriteria, "r"),
                 multiple=_allow_multiple(UsersCriteria, "r"),
-                items=dict(repos),
+                items=repos,
             )
         )
 
-    gros: list[tuple[str, str]] = [
-        (group.id, t.cast("str", group.display_name))
+    gros: list[dict[str, str]] = [
+        {"value": group.id, "label": t.cast("str", group.display_name)}
         for group in groups.search(make_criteria_object("groups", l=-1)).resources
     ]
 
@@ -82,7 +82,7 @@ def search_users_options() -> list[FilterOption[UserSummary]]:
                 description=_get_description(UsersCriteria, "g"),
                 type=_get_type(UsersCriteria, "g"),
                 multiple=_allow_multiple(UsersCriteria, "g"),
-                items=dict(gros),
+                items=gros,
             )
         )
 
@@ -94,11 +94,11 @@ def search_users_options() -> list[FilterOption[UserSummary]]:
             description=_get_description(UsersCriteria, "a"),
             type=_get_type(UsersCriteria, "a"),
             multiple=_allow_multiple(UsersCriteria, "a"),
-            items={
-                str(i): alias(name)
+            items=[
+                {"value": i, "label": alias(name)}
                 for i, name in enumerate(roles)
                 if is_system_admin or name != USER_ROLES.SYSTEM_ADMIN
-            },
+            ],
         )
     )
 
@@ -123,7 +123,7 @@ def search_users_options() -> list[FilterOption[UserSummary]]:
             description=_get_description(UsersCriteria, "k"),
             type=_get_type(UsersCriteria, "k"),
             multiple=_allow_multiple(UsersCriteria, "k"),
-            items={alias(key): key for key in user_sortable_keys},
+            items=[{"value": alias(key)} for key in user_sortable_keys],
         ),
         # sort order
         FilterOption(
@@ -131,7 +131,10 @@ def search_users_options() -> list[FilterOption[UserSummary]]:
             description=_get_description(UsersCriteria, "d"),
             type=_get_type(UsersCriteria, "d"),
             multiple=_allow_multiple(UsersCriteria, "d"),
-            items={"asc": "Ascending", "desc": "Descending"},
+            items=[
+                {"value": "asc", "label": "Ascending"},
+                {"value": "desc", "label": "Descending"},
+            ],
         ),
         # page number
         FilterOption(

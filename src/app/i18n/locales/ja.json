@@ -37,13 +37,16 @@
     },
     "actions-label": "アクション",
     "display-columns-label": "表示項目",
-    "page-size-label": "表示件数："
+    "filter-button-label": "フィルター",
+    "page-size-label": "表示件数：",
+    "selected": "選択"
   },
   "user": {
     "actions": {
       "copy-eppn": "ePPN をコピー",
       "copy-id": "ユーザーIDをコピー"
     },
+    "roles-title": "ロール",
     "title": "ユーザー詳細"
   },
   "users": {
@@ -57,6 +60,7 @@
     "roles": {
       "community-admin": "コミュニティ管理者",
       "contributor": "投稿ユーザー",
+      "general-user": "一般ユーザー",
       "repository-admin": "リポジトリ管理者",
       "system-admin": "システム管理者"
     },

@@ -96,7 +96,7 @@ class FilterOption[T: BaseModel](BaseModel):
     multiple: bool
     """Whether multiple selections are allowed for the filter option."""
 
-    items: dict[str, str] | None = None
+    items: t.Sequence[t.Mapping[str, str | int]] | None = None
     """The items of the filter option as a dictionary of value-label pairs."""
 
     _alias_generator: t.ClassVar[t.Callable[[str], str]] = to_camel

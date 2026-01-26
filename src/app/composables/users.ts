@@ -2,8 +2,11 @@
  * Composable for user-related operations
  */
 
+import { DateFormatter, getLocalTimeZone, parseDate } from '@internationalized/date'
+
 import { UButton, UCheckbox, UDropdownMenu, UIcon, ULink, UTooltip } from '#components'
 
+import type { CalendarDate } from '@internationalized/date'
 import type { Row } from '@tanstack/table-core'
 import type { ButtonProps, DropdownMenuItem, TableColumn, TableRow } from '@nuxt/ui'
 
@@ -28,8 +31,15 @@ const useUsersTable = () => {
   }
 
   const searchTerm = ref(query.value.q)
+  const specifiedIds = ref(query.value.i)
+  const specifiedRepos = ref(query.value.r)
+  const specifiedGroups = ref(query.value.g)
+  const specifiedRoles = ref(query.value.a)
+  const startDate = ref(query.value.s)
+  const endDate = ref(query.value.e)
   const sortKey = computed(() => query.value.k)
   const sortOrder = computed(() => query.value.d)
+  const pageNumber = ref(query.value.p)
   const pageSize = ref(query.value.l)
 
   const searchIdentityKey = computed(() => {
@@ -38,7 +48,7 @@ const useUsersTable = () => {
   })
 
   const selectedMap = useState<Record<string, boolean>>(
-    `selection:${searchIdentityKey.value}`, () => ({}),
+    `selection-users:${searchIdentityKey.value}`, () => ({}),
   )
 
   /** Number of selected users */
@@ -84,9 +94,7 @@ const useUsersTable = () => {
       label: $t('button.reload'),
       color: 'neutral',
       variant: 'subtle',
-      onClick: () => {
-        refreshNuxtData()
-      },
+      onClick: () => {},
     },
   ])
 
@@ -96,7 +104,7 @@ const useUsersTable = () => {
       icon: 'i-lucide-download',
       label: $t('users.button.selected-users-export'),
       onSelect() {
-      // Export selected users
+      // TODO: Export selected users
       },
     },
     {
@@ -107,7 +115,7 @@ const useUsersTable = () => {
       label: $t('users.button.selected-users-add-to-group'),
       color: 'neutral',
       onSelect() {
-      // Open add users modal
+      // TODO: Open add users modal
       },
     },
     {
@@ -115,15 +123,15 @@ const useUsersTable = () => {
       label: $t('users.button.selected-users-remove-from-group'),
       color: 'error',
       onSelect() {
-      // Open remove users modal
+      // TODO: Open remove users modal
       },
     },
   ])
 
   type badgableRoles = 'systemAdmin' | 'repositoryAdmin' | 'communityAdmin' | 'contributor'
-  const isBadge = (role: UserRole): role is badgableRoles => {
+  const isBadge = (role: UserRole | undefined): role is badgableRoles => {
     const roles = new Set(['systemAdmin', 'repositoryAdmin', 'communityAdmin', 'contributor'])
-    return roles.has(role)
+    return role ? roles.has(role) : false
   }
 
   type UserTableColumn = TableColumn<UserSummary>
@@ -156,24 +164,28 @@ const useUsersTable = () => {
       cell: ({ row }) => {
         const name = row.original.userName
         const role = row.original.role
-        const labelMap = {
+        const labelMap: Record<badgableRoles, { label: string, icon: string, color: string }> = {
           systemAdmin: {
             label: $t('users.roles.system-admin'),
+            icon: 'i-lucide-shield-check',
             color: 'error',
           },
           repositoryAdmin: {
             label: $t('users.roles.repository-admin'),
-            color: 'primary',
+            icon: 'i-lucide-shield-check',
+            color: 'secondary',
           },
           communityAdmin: {
             label: $t('users.roles.community-admin'),
+            icon: 'i-lucide-badge-check',
             color: 'warning',
           },
           contributor: {
             label: $t('users.roles.contributor'),
+            icon: 'i-lucide-user-check',
             color: 'neutral',
           },
-        } as const
+        }
 
         return h(ULink,
           {
@@ -182,14 +194,14 @@ const useUsersTable = () => {
           },
           [
             h('span', { class: 'group-hover:underline' }, name),
-            role && isBadge(role) && h(UTooltip, {
+            isBadge(role) && h(UTooltip, {
               text: labelMap[role].label,
               class: 'ml-2',
               arrow: true,
             }, () => h(
               UIcon, {
-                name: 'i-lucide-badge-check',
-                class: ['size-4.5', 'shrink-0', `text-${labelMap[role!].color}`],
+                name: labelMap[role].icon,
+                class: ['size-4.5', 'shrink-0', `text-${labelMap[role].color}`],
               },
             )),
           ].filter(Boolean),
@@ -277,7 +289,7 @@ const useUsersTable = () => {
           copy(row.original.id)
 
           toast.add({
-            title: 'User ID copied to clipboard!',
+            title: $t('user.actions.copy-id-success'),
             color: 'success',
             icon: 'i-lucide-circle-check',
           })
@@ -290,7 +302,7 @@ const useUsersTable = () => {
           copy(row.original.eppns?.[0] || '')
 
           toast.add({
-            title: 'EPPN copied to clipboard!',
+            title: $t('user.actions.copy-eppn-success'),
             color: 'success',
             icon: 'i-lucide-circle-check',
           })
@@ -310,11 +322,107 @@ const useUsersTable = () => {
 
   const columnVisibility = ref({ id: false })
 
+  const UserRoleNames = computed(() => ({
+    systemAdmin: $t('users.roles.system-admin'),
+    repositoryAdmin: $t('users.roles.repository-admin'),
+    communityAdmin: $t('users.roles.community-admin'),
+    contributor: $t('users.roles.contributor'),
+    generalUser: $t('users.roles.general-user'),
+  }))
+
+  const makeAttributeFilters = (data: Ref<FilterOption[] | undefined>) => {
+    const options = computed(() => (
+      Object.fromEntries(data.value?.map(option => [option.key, option]) ?? [],
+      ) as Record<keyof UsersSearchQuery, FilterOption>
+    ))
+
+    const filters = computed(() => [
+      {
+        key: 'r',
+        placeholder: $t('repositories.title'),
+        icon: 'i-lucide-folder',
+        items: options.value.r.items ?? [],
+        multiple: options.value.r.multiple ?? false,
+        searchInput: true,
+        onUpdated: (values: unknown) => {
+          updateQuery({ r: (values as { value: string }[]).map(v => v.value), p: 1 })
+        },
+      },
+      {
+        key: 'a',
+        placeholder: $t('user.roles-title'),
+        icon: 'i-lucide-shield-check',
+        items: options.value.a.items?.map(item => ({
+          value: item.value,
+          label: UserRoleNames.value[item.label as UserRole],
+        })) ?? [],
+        multiple: options.value.a.multiple ?? false,
+        searchInput: false,
+        onUpdated: (values: unknown) => {
+          updateQuery({ a: (values as { value: UserRoleValue }[]).map(v => v.value), p: 1 })
+        },
+      },
+      {
+        key: 'g',
+        placeholder: $t('groups.title'),
+        icon: 'i-lucide-users',
+        items: options.value.g.items ?? [],
+        multiple: options.value.g.multiple ?? false,
+        searchInput: true,
+        onUpdated: (values: unknown) => {
+          updateQuery({ g: (values as { value: string }[]).map(v => v.value), p: 1 })
+        },
+      },
+    ])
+
+    return filters
+  }
+
+  const dateRange = shallowRef<{ start: CalendarDate | undefined, end: CalendarDate | undefined }>({
+    start: startDate.value ? parseDate(startDate.value) : undefined,
+    end: endDate.value ? parseDate(endDate.value) : undefined,
+  })
+  const df = new DateFormatter('ja-JP', {
+    dateStyle: 'medium',
+  })
+  const formattedDateRange = computed(() => {
+    if (!dateRange.value.start) return $t('users.table.column.last-modified')
+
+    const from = df.format(dateRange.value.start.toDate(getLocalTimeZone()))
+    const to = dateRange.value.end
+      ? df.format(dateRange.value.end.toDate(getLocalTimeZone()))
+      : undefined
+
+    return to ? `${from} - ${to}` : from
+  })
+
+  const makePageInfo = (result: Ref<UsersSearchResult | undefined>) => {
+    return computed(() => {
+      const start = result.value?.offset ?? 1
+      const total = result.value?.total ?? 0
+      const end = Math.min(start + pageSize.value!, total)
+      const count = selectedCount.value
+
+      if (count > 0)
+        return `${start} - ${end} / ${total} (${$t('table.selected')} ${count})`
+      return `${start} - ${end} / ${total}`
+    })
+  }
+
   return {
     query,
     updateQuery,
     criteria: {
       searchTerm,
+      specifiedIds,
+      specifiedRepos,
+      specifiedGroups,
+      specifiedRoles,
+      startDate,
+      endDate,
+      sortKey,
+      sortOrder,
+      pageNumber,
       pageSize,
     },
     creationButtons,
@@ -324,6 +432,13 @@ const useUsersTable = () => {
     columns,
     columnNames,
     columnVisibility,
+    UserRoleNames,
+    makeAttributeFilters,
+    dateFilter: {
+      dateRange,
+      formattedDateRange,
+    },
+    makePageInfo,
   }
 }
 

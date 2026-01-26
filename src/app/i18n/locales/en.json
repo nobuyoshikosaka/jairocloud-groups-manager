@@ -37,13 +37,16 @@
     },
     "actions-label": "Action",
     "display-columns-label": "Columns",
-    "page-size-label": "Page size:"
+    "filter-button-label": "Filter",
+    "page-size-label": "Page size:",
+    "selected": "selected"
   },
   "user": {
     "actions": {
       "copy-eppn": "Copy ePPN to clipboard",
       "copy-id": "Copy ID to clipboard"
     },
+    "roles-title": "Roles",
     "title": "User Details"
   },
   "users": {
@@ -59,6 +62,7 @@
     "roles": {
       "community-admin": "Community Administrator",
       "contributor": "Contributor",
+      "general-user": "General User",
       "repository-admin": "Repository Administrator",
       "system-admin": "System Administrator"
     },
