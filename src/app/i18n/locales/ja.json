@@ -8,6 +8,9 @@
     "description": "WEKO3が利用するグループ情報のキャッシュ状況を管理できます。",
     "title": "グループキャッシュ"
   },
+  "common": {
+    "loading": "読み込み中…"
+  },
   "footer": {
     "privacy-policy": "プライバシーポリシー",
     "terms-of-use": "利用ガイドライン"
@@ -20,8 +23,37 @@
     "logoAlt": "ヘッダーロゴ"
   },
   "history": {
-    "description": "ファイルのアップロード・ダウウンロードに履歴を確認できます。",
-    "title": "履歴"
+    "cancel": "中止件数",
+    "description": "ファイルのアップロード・ダウウンロードの履歴を確認できます。",
+    "empty": "検索条件に一致するデータが見つかりませんでした",
+    "expired": "期限切れ",
+    "failed": "失敗",
+    "failed-count": "失敗件数",
+    "file": "ファイル",
+    "filter": "フィルター",
+    "first-download": "初回ダウンロード",
+    "group-count": "グループ数",
+    "operation": "実行条件",
+    "operation-date": "実行日時",
+    "operator": "実行ユーザー",
+    "private": "非公開にする",
+    "progress": "処理中",
+    "public": "公開にする",
+    "re-download": "再ダウンロード",
+    "re-download-count": "再DL",
+    "reset": "リセット",
+    "show-detail": "詳細を表示",
+    "status": "ステータス",
+    "succes": "成功",
+    "success-count": "成功件数",
+    "sum": "総ダウンロード回数 | 総アップロード回数",
+    "table-title": "履歴一覧",
+    "target": "ダウンロード対象 | アップロード対象",
+    "title": "履歴",
+    "tub": "ダウンロード履歴 | アップロード履歴",
+    "uploaded-at": "アップロード日時",
+    "user-count": "ユーザー数",
+    "view": "表示件数"
   },
   "menu": {
     "management": "管理",
@@ -30,6 +62,9 @@
   "repositories": {
     "description": "あなたが管理しているリポジトリの情報を確認できます。",
     "title": "リポジトリ"
+  },
+  "table": {
+    "count": "件"
   },
   "users": {
     "button": {

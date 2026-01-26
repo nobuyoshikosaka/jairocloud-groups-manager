@@ -20,8 +20,37 @@
     "logoAlt": "Header App Logo"
   },
   "history": {
+    "cancel": "Number of cancellations",
     "description": "You can check the history of file uploads and downloads.",
-    "title": "History"
+    "empty": "No data matching your search criteria was found",
+    "expired": "Expired",
+    "failed": "failure",
+    "failed-count": "Number of failures",
+    "file": "file",
+    "filter": "filter",
+    "first-download": "First download",
+    "group-count": "Number of groups",
+    "operation": "Execution conditions",
+    "operation-date": "Execution date and time",
+    "operator": "Execution user",
+    "private": "make private",
+    "progress": "Processing",
+    "public": "Make it public",
+    "re-download": "re-download",
+    "re-download-count": "Re-DL",
+    "reset": "reset",
+    "show-detail": "Show details",
+    "status": "status",
+    "succes": "success",
+    "success-count": "Number of successes",
+    "sum": "Total number of downloads | Total number of uploads",
+    "table-title": "History list",
+    "target": "Download target | Upload target",
+    "title": "History",
+    "tub": "Download history | Upload history",
+    "uploaded-at": "Upload date and time",
+    "user-count": "Number of users",
+    "view": "Number of items displayed"
   },
   "menu": {
     "management": "Management",
@@ -30,6 +59,9 @@
   "repositories": {
     "description": "You can check information about the repositories you manage.",
     "title": "Repositories"
+  },
+  "table": {
+    "count": "subject"
   },
   "users": {
     "button": {

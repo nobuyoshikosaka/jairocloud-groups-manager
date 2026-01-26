@@ -9,7 +9,11 @@ let { next } = route.query
 if (Array.isArray(next)) {
   next = next[0]
 }
+<<<<<<< Updated upstream
 const imageUrl = ref<string | undefined>('/Logo_JAIRO_Cloud-2.png')
+=======
+const imageUrl = ref<string | undefined>('/logo.png')
+>>>>>>> Stashed changes
 const handleImageError = () => {
   imageUrl.value = undefined
 }
@@ -56,6 +60,7 @@ onMounted(() => {
       </template>
       <template #body>
         <EmbeddedDs :next="next as (string | undefined)" />
+        <UseTerm />
       </template>
     </UPageSection>
   </UPage>

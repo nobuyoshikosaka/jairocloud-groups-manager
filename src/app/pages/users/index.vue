@@ -13,7 +13,7 @@ const creationButtons = computed<ButtonProps[]>(() => [
   {
     icon: 'i-lucide-file-up',
     label: $t('button.upload-users'),
-    to: '/upload',
+    to: '/bulk',
     color: 'primary',
     variant: 'solid',
   },
