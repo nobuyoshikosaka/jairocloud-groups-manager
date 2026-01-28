@@ -8,7 +8,6 @@ import type { ButtonProps, DropdownMenuItem, TableColumn, TableRow } from '@nuxt
 
 const useRepositoriesTable = () => {
   const route = useRoute()
-  const router = useRouter()
 
   const toast = useToast()
   const { t: $t } = useI18n()
@@ -17,8 +16,8 @@ const useRepositoriesTable = () => {
   /** Reactive query object */
   const query = computed<RepositoriesSearchQuery>(() => normalizeRepositoriesQuery(route.query))
   /** Update query parameters and push to router */
-  const updateQuery = (newQuery: Partial<RepositoriesSearchQuery>) => {
-    router.push({
+  const updateQuery = async (newQuery: Partial<RepositoriesSearchQuery>) => {
+    await navigateTo({
       query: {
         ...route.query,
         ...newQuery,
@@ -27,7 +26,7 @@ const useRepositoriesTable = () => {
   }
 
   const searchTerm = ref(query.value.q)
-  const spConnectorIds = ref(query.value.i)
+  const spConnectorId = ref(query.value.i)
   const sortKey = computed(() => query.value.k)
   const sortOrder = computed(() => query.value.d)
   const pageNumber = ref(query.value.p)
@@ -221,7 +220,7 @@ const useRepositoriesTable = () => {
     updateQuery,
     criteria: {
       searchTerm,
-      spConnectorIds,
+      spConnectorId,
       sortKey,
       sortOrder,
       pageNumber,

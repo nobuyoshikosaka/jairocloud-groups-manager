@@ -12,7 +12,6 @@ import type { ButtonProps, DropdownMenuItem, TableColumn, TableRow } from '@nuxt
 
 const useUsersTable = () => {
   const route = useRoute()
-  const router = useRouter()
 
   const toast = useToast()
   const { t: $t } = useI18n()
@@ -21,8 +20,8 @@ const useUsersTable = () => {
   /** Reactive query object */
   const query = computed<UsersSearchQuery>(() => normalizeUsersQuery(route.query))
   /** Update query parameters and push to router */
-  const updateQuery = (newQuery: Partial<UsersSearchQuery>) => {
-    router.push({
+  const updateQuery = async (newQuery: Partial<UsersSearchQuery>) => {
+    await navigateTo({
       query: {
         ...route.query,
         ...newQuery,

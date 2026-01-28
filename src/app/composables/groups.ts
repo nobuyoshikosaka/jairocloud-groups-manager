@@ -9,7 +9,6 @@ import type { ButtonProps, DropdownMenuItem, TableColumn, TableRow } from '@nuxt
 
 const useGroupsTable = () => {
   const route = useRoute()
-  const router = useRouter()
 
   const toast = useToast()
   const { t: $t } = useI18n()
@@ -18,8 +17,8 @@ const useGroupsTable = () => {
   /** Reactive query object */
   const query = computed<GroupsSearchQuery>(() => normalizeGroupsQuery(route.query))
   /** Update query parameters and push to router */
-  const updateQuery = (newQuery: Partial<GroupsSearchQuery>) => {
-    router.push({
+  const updateQuery = async (newQuery: Partial<GroupsSearchQuery>) => {
+    await navigateTo({
       query: {
         ...route.query,
         ...newQuery,
