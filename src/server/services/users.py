@@ -35,6 +35,87 @@ if t.TYPE_CHECKING:
     from server.entities.patch_request import PatchOperation
 
 
+@t.overload
+def search(criteria: UsersCriteria) -> SearchResult[UserSummary]: ...
+@t.overload
+def search(
+    criteria: UsersCriteria,
+    *,
+    raw: t.Literal[True],
+) -> SearchResult[MapUser]: ...
+
+
+def search(criteria: UsersCriteria, *, raw: bool = False) -> SearchResult[UserSummary]:
+    """Search for users based on given criteria.
+
+    Args:
+        criteria (UsersCriteria): Search criteria for filtering users.
+
+    Returns:
+        SearchResult: Search result containing User summaries.
+
+    Raises:
+        InvalidQueryError: If the query construction is invalid.
+        OAuthTokenError: If the access token is invalid or expired.
+        CredentialsError: If the client credentials are invalid.
+        UnexpectedResponseError: If response from mAP Core API is unexpected.
+    """
+    default_include = {
+        "id",
+        "user_name",
+        "meta",
+        "edu_person_principal_names",
+        "emails",
+        "groups",
+    }
+
+    try:
+        query = build_search_query(criteria)
+        access_token = get_access_token()
+        client_secret = get_client_secret()
+        results: UsersSearchResponse = users.search(
+            query,
+            include=default_include,
+            access_token=access_token,
+            client_secret=client_secret,
+        )
+    except requests.HTTPError as exc:
+        code = exc.response.status_code
+        if code == HTTPStatus.UNAUTHORIZED:
+            error = "Access token is invalid or expired."
+            raise OAuthTokenError(error) from exc
+
+        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
+            error = "mAP Core API server error."
+            raise UnexpectedResponseError(error) from exc
+
+        error = "Failed to search User resources from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except requests.RequestException as exc:
+        error = "Failed to communicate with mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except ValidationError as exc:
+        error = "Failed to parse User resources from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except InvalidQueryError, OAuthTokenError, CredentialsError:
+        raise
+
+    if raw:
+        resources = results.resources
+    else:
+        resources = [UserSummary.from_map_user(result) for result in results.resources]
+
+    return SearchResult(
+        total=results.total_results,
+        page_size=results.items_per_page,
+        offset=results.start_index,
+        resources=resources,
+    )
+
+
 def get_by_id(user_id: str) -> UserDetail | None:
     """Get a User detail by its ID.
 

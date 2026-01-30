@@ -25,8 +25,14 @@ services:
           path: Dockerfile
     volumes:
       - type: bind
-        source: ${LOCAL_WORKSPACE_FOLDER}/src/server/
-        target: /code/src/server
+        source: ${LOCAL_WORKSPACE_FOLDER}/src/
+        target: /code/src
+      - /code/src/app
+      - type: bind
+        source: ${LOCAL_WORKSPACE_FOLDER}/uploads
+        target: /code/uploads
+    environment:
+      - UPLOAD_DIR=/code/uploads
     networks:
       - default
 
@@ -56,6 +62,12 @@ services:
           path: uv.lock
         - action: rebuild
           path: Dockerfile
+    volumes:
+      - type: bind
+        source: ${LOCAL_WORKSPACE_FOLDER}/uploads
+        target: /code/uploads
+    environment:
+      - UPLOAD_DIR=/code/uploads
     networks:
       - default
 
@@ -139,6 +151,7 @@ services:
 
 volumes:
   pgdata:
+  upload_data:
 
 networks:
   default:

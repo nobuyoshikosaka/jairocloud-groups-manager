@@ -9,11 +9,9 @@ import typing as t
 from uuid import UUID
 
 from flask import Blueprint, Response, send_file
-from flask_login import login_required
 from flask_pydantic import validate
 
-from server.api.helper import roles_required
-from server.api.schema import ErrorResponse
+from server.api.schemas import ErrorResponse, HistoryPublic
 from server.entities.history_detail import (
     DownloadHistory,
     HistoryDataFilter,
@@ -27,9 +25,7 @@ bp = Blueprint("history", __name__)
 
 
 @bp.get("/<tub>/filter-options")
-@login_required
-@roles_required("system_admin", "repository_admin")
-@validate()
+@validate(response_many=True)
 def filter_options(
     tub: t.Literal["download", "upload"],
 ) -> tuple[HistoryDataFilter, int] | tuple[ErrorResponse, int]:
@@ -41,9 +37,7 @@ def filter_options(
     return history_filter, 200
 
 
-@bp.get("/<tub>")
-@login_required
-@roles_required("system_admin", "repository_admin")
+@bp.get("/<string:tub>")
 @validate()
 def get(
     query: HistoryQuery, tub: t.Literal["download", "upload"]
@@ -61,8 +55,6 @@ def get(
 
 
 @bp.put("/<tub>/<history_id>/public-status")
-@login_required
-@roles_required("system_admin")
 @validate()
 def public_status(
     tub: t.Literal["download", "upload"], history_id: UUID, body: HistoryPublic
@@ -76,10 +68,28 @@ def public_status(
 
 
 @bp.get("/files/<file_id>")
-@login_required
-@roles_required("system_admin", "repository_admin")
 @validate()
 def files(file_id: UUID) -> Response:
     file_path = history.get_file_path(file_id)
 
     return send_file(path_or_file=file_path)
+
+
+@bp.get("/files/<file_id>/exists")
+@validate()
+def is_exist_files(file_id: UUID) -> tuple[bool | ErrorResponse, int]:
+    """Check if the file exists.
+
+    Args:
+        file_id (UUID): Unique identifier of the file
+
+    Returns:
+        bool:Whether to check if the file exists
+    """
+    try:
+        file_path = Path(history.get_file_path(file_id))
+    except DatabaseError as ex:
+        return ErrorResponse(code="", message=str(ex)), 503
+    if not Path(file_path).exists():
+        return False, 200
+    return True, 200

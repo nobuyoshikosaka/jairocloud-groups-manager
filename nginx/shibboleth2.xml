@@ -3,7 +3,7 @@
     clockSkew="180">
 
     <OutOfProcess />
-    <UnixListener address="/tmp/shibd.sock" />
+    <UnixListener address="/var/run/shibboleth/shibd.sock" />
 
     <!--
     By default, in-memory StorageService, ReplayCache, ArtifactMap, and SessionCache

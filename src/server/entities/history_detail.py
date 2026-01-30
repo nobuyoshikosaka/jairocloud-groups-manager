@@ -137,11 +137,16 @@ class Results(BaseModel):
     user_name: str
     """"""
     group: list[str]
-    """"""
-    status: str
-    """"""
-    code: str
-    """"""
+    """Group list."""
+
+    status: t.Literal["create", "delete", "error", "skip", "update"]
+    """Status of the upload operation."""
+
+    code: str | None
+    """Error code if the upload failed."""
+
+    model_config = camel_case_config
+    """Configure to use camelCase aliasing."""
 
 
 class HistorySummary(BaseModel):

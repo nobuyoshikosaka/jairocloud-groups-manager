@@ -120,3 +120,56 @@ class UserDetail(BaseModel):
         if self.groups:
             user.groups = [Group(value=group.id) for group in self.groups]
         return user
+
+    def __add__(self, other: UserDetail) -> UserDetail:
+        if not isinstance(other, UserDetail):
+            return NotImplemented
+        if self.id != other.id:
+            raise ValueError(f"Cannot merge different users: {self.id} != {other.id}")
+
+        def choose_scalar(lhs, rhs):
+            # 右辺が None なら lhs、文字列は空なら lhs、それ以外は rhs
+            if rhs is None:
+                return lhs
+            if isinstance(rhs, str) and rhs.strip() == "":
+                return lhs
+            return rhs
+
+        def merge_list(lhs: t.Sequence | None, rhs: t.Sequence | None):
+            if not lhs and not rhs:
+                return None
+            s = set(lhs or [])
+            s.update(rhs or [])
+            return list(s)
+
+        def merge_models_by_id(
+            lhs: t.Sequence[BaseModel] | None, rhs: t.Sequence[BaseModel] | None
+        ):
+            if not lhs and not rhs:
+                return None
+            by_id: dict[str, BaseModel] = {}
+            for x in lhs or []:
+                by_id[x.id] = x
+            for x in rhs or []:
+                by_id[x.id] = x
+            out = list(by_id.values())
+            out.sort(key=lambda m: m.id)
+            return out
+
+        return UserDetail(
+            id=self.id,
+            eppns=merge_list(self.eppns, other.eppns),
+            user_name=choose_scalar(self.user_name, other.user_name),
+            emails=merge_list(self.emails, other.emails),
+            preferred_language=choose_scalar(
+                self.preferred_language, other.preferred_language
+            ),
+            is_system_admin=choose_scalar(self.is_system_admin, other.is_system_admin),
+            repositories=merge_models_by_id(self.repositories, other.repositories),
+            groups=merge_models_by_id(self.groups, other.groups),
+            created=choose_scalar(self.created, other.created),
+            last_modified=choose_scalar(self.last_modified, other.last_modified),
+        )
+
+    def __iadd__(self, other: UserDetail) -> UserDetail:
+        return self + other

@@ -71,7 +71,7 @@ def celery_init_app(app: Flask) -> Celery:
         @t.override
         def apply_async(self, *args, task_id=None, **kwargs):
             task_id = task_id or str(uuid7())
-            return super().apply_async(args, kwargs, task_id=task_id)
+            return super().apply_async(*args, **kwargs, task_id=task_id)
 
     celery_app = Celery(app.name, task_cls=FlaskTask)
     celery_app.config_from_object(app.config["CELERY"])
