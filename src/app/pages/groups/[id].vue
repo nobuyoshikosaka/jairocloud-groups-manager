@@ -5,15 +5,13 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 
-const { currentUser } = useAuth()
+const groupId = computed(() => route.params.id as string)
+const mode = 'edit'
 
-const repositoryId = computed(() => route.params.id as string)
-const mode = computed(() => (currentUser.value?.isSystemAdmin ? 'edit' : 'view'))
+const { defaultData, defaultForm, state } = useGroupForm()
 
-const { defaultData, state } = useRepositoryForm()
-
-const { data: repository, refresh } = useFetch<RepositoryDetail>(
-  `/api/repositories/${repositoryId.value}`, {
+const { data: group, refresh } = useFetch<GroupDetail>(
+  `/api/groups/${groupId.value}`, {
     method: 'GET',
     server: false,
     default: () => defaultData,
@@ -21,7 +19,7 @@ const { data: repository, refresh } = useFetch<RepositoryDetail>(
       if (response.status === 404) {
         showError({
           statusCode: 404,
-          statusMessage: $t('repository.error.not-found'),
+          statusMessage: $t('group.error.not-found'),
         })
       }
       toast.add({
@@ -35,50 +33,44 @@ const { data: repository, refresh } = useFetch<RepositoryDetail>(
 
 const indicators = computed(() => [
   {
-    title: $t('repository.number-of-groups'),
-    count: repository.value?.groupsCount ?? 0,
+    title: $t('group.number-of-users'),
+    count: group.value?.usersCount ?? defaultData.usersCount,
     color: 'primary' as const,
-    icon: 'i-lucide-users',
-    to: `/groups?r=${repositoryId.value}`,
-  },
-  {
-    title: $t('repository.number-of-users'),
-    count: repository.value?.usersCount ?? 0,
-    color: 'secondary' as const,
     icon: 'i-lucide-user',
-    to: `/users?r=${repositoryId.value}`,
+    to: `/users?g=${groupId.value}`,
   },
 ])
 
-watch(repository, (newRepo: RepositoryDetail) => {
-  if (!newRepo) return
+watch(group, (newGroup: GroupDetail) => {
+  if (!newGroup) return
 
-  const date = newRepo.created ? new Date(newRepo.created) : undefined
+  const created = newGroup.created ? new Date(newGroup.created) : undefined
   Object.assign(state, {
-    id: newRepo.id,
-    serviceName: newRepo.serviceName,
-    serviceUrl: newRepo.serviceUrl?.replace(/^https?:\/\//, '') || defaultData.serviceUrl,
-    entityIds: newRepo.entityIds?.length ? [...newRepo.entityIds] : [...defaultData.entityIds],
-    spConnectorId: newRepo.spConnectorId || defaultData.spConnectorId,
-    active: newRepo.active ?? defaultData.active,
-    created: date ? dateFormatter.format(date) : defaultData.created,
-  })
+    id: newGroup.id,
+    displayName: newGroup.displayName || defaultForm.displayName,
+    description: newGroup.description || defaultForm.description,
+    repository: newGroup.repository
+      ? { id: newGroup.repository.id, label: newGroup.repository.serviceName }
+      : defaultForm.repository,
+    public: newGroup.public ?? defaultForm.public,
+    memberListVisibility: newGroup.memberListVisibility || defaultForm.memberListVisibility,
+    created: created ? dateFormatter.format(created) : defaultForm.created,
+  } as GroupUpdateForm)
 }, { immediate: true })
 
-const onSubmit = async (data: RepositoryUpdatePayload) => {
+const onSubmit = async (data: GroupUpdatePayload) => {
   try {
-    await $fetch(`/api/repositories/${repositoryId.value}`, {
+    await $fetch(`/api/groups/${groupId.value}`, {
       method: 'PUT',
       body: data,
     })
 
     toast.add({
       title: $t('success.updated.title'),
-      description: $t('success.repository.updated-description'),
+      description: $t('success.group.updated-description'),
       color: 'success',
     })
-
-    router.push('/repositories')
+    await router.replace({ name: 'groups-id', params: { id: groupId.value } })
   }
   catch (error) {
     if (error instanceof FetchError) {
@@ -127,8 +119,8 @@ const onCancel = () => {
 
 <template>
   <UPageHeader
-    :title="repository?.serviceName || ''"
-    :description="$t('repositories.description')"
+    :title="group?.displayName || ''"
+    :description="$t('groups.description')"
     :ui="{ root: 'py-2 mb-6', description: 'mt-4' }"
   />
 
@@ -145,7 +137,7 @@ const onCancel = () => {
       <template #header>
         <div class="flex items-center justify-between">
           <h2 class="text-2xl font-semibold">
-            {{ $t('repository.details-title') }}
+            {{ $t('group.details-title') }}
           </h2>
 
           <UButton
@@ -158,9 +150,9 @@ const onCancel = () => {
         </div>
       </template>
 
-      <RepositoryForm
+      <GroupForm
         v-model="state" :mode="mode"
-        @submit="(data) => onSubmit(data as RepositoryUpdatePayload)" @cancel="onCancel"
+        @submit="onSubmit" @cancel="onCancel"
       />
     </UCard>
   </div>

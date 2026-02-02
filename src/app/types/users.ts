@@ -25,20 +25,41 @@ interface UserSummary {
   role?: UserRole
   emails?: string[]
   eppns?: string[]
-  lastModified?: Date
+  lastModified?: string
 }
 
+const PREFERRED_LANGUAGE = ['', 'en', 'ja'] as const
+type PreferredLanguage = (typeof PREFERRED_LANGUAGE)[number]
+
 /** Repository affiliated with user including role */
-type AffiliatedRepository = RepositorySummary & {
-  userRole?: UserRoleValue
+interface RepositoryRole {
+  id?: string
+  serviceName?: string
+  userRole?: UserRole
 }
 
 /** User detailed information */
-interface UserDetails extends UserSummary {
-  preferredLanguage?: 'en' | 'ja' | ''
+interface UserDetail extends Omit<UserSummary, 'role'> {
+  preferredLanguage?: PreferredLanguage
   isSystemAdmin?: boolean
-  repositoryRoles?: AffiliatedRepository[]
+  repositoryRoles?: RepositoryRole[]
+  groups?: { id: string, displayName: string }[]
+  created?: string
 }
 
-export { USER_ROLES }
-export type { UserRole, UserRoleValue, UserSummary, UserDetails, AffiliatedRepository }
+type UserForm = Omit<Required<UserDetail>, 'repositoryRoles' | 'groups'> & {
+  repositoryRoles: { id: string, label: string, userRole?: UserRole }[]
+  groups: { id: string, label: string }[]
+}
+
+type UserCreateForm = Omit<UserForm, 'id' | 'created' | 'lastModified'>
+type UserCreatePayload = Omit<UserCreateForm, 'repositoryRoles' | 'groups'> & {
+  repositoryRoles: { id: string, userRole?: UserRole }[]
+  groups: { id: string }[]
+}
+
+export { USER_ROLES, PREFERRED_LANGUAGE }
+export type {
+  PreferredLanguage, UserRole, UserRoleValue, UserSummary, UserDetail,
+  RepositoryRole, UserForm, UserCreateForm, UserCreatePayload,
+}

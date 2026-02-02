@@ -39,6 +39,24 @@ const table = {
   },
 }
 
+const repositories = {
+  /**
+   * Maximum length of the URL ID entered in the repository creation form \
+   * (excluding “https://”, the “jc_” prefix assigned to the ID, and additional padding) \
+   * [Mandatory]
+   */
+  maxUrlLength: 50 - 'https://'.length - 'jc_'.length - 9,
+}
+
+const groups = {
+  /**
+   * Maximum length of the URL ID entered in the group creation form \
+   * (excluding the “jc_” prefix assigned to the ID and additional padding) \
+   * [Mandatory]
+   */
+  maxUrlLength: 50 - 'jc_'.length - '_groups_'.length - 4,
+}
+
 const wayf = {
   /**
    * URL of the WAYF to use \
@@ -132,6 +150,8 @@ export default {
   header,
   /** Table configuration */
   table,
+  /** Repository configuration */
+  repositories,
   /** WAYF (Embedded DS) configuration */
   wayf,
 }

@@ -14,7 +14,7 @@ const emit = defineEmits<{
   'cancel': []
 }>()
 
-const { schema } = useRepositorySchema(() => properties.mode)
+const { schema, maxUrlLength } = useRepositorySchema(() => properties.mode)
 const { handleFormError } = useFormError()
 
 const state = computed({
@@ -60,15 +60,12 @@ const onCancel = () => {
       name="serviceName"
       :label="$t('repository.service-name')"
       :description="$t('repository.service-name-description')"
-      :ui="{ wrapper: 'mb-2' }"
-      :required="mode === 'edit'"
+      :ui="{ wrapper: 'mb-2' }" :required="mode !== 'view'"
     >
       <UInput
-        v-model="state.serviceName"
+        v-model="state.serviceName" size="xl"
         :placeholder="$t('repository.placeholders.service-name')"
-        :ui="{ root: 'w-full' }"
-        size="xl"
-        :disabled="mode === 'view'"
+        :ui="{ root: 'w-full' }" :disabled="mode === 'view'"
       />
     </UFormField>
 
@@ -76,38 +73,38 @@ const onCancel = () => {
       name="serviceUrl"
       :label="$t('repository.service-url')"
       :description="$t('repository.service-url-description')"
-      :ui="{ wrapper: 'mb-2' }"
-      :required="mode === 'edit'"
+      :ui="{ wrapper: 'mb-2' }" :required="mode !== 'view'"
     >
       <UInput
-        v-model="state.serviceUrl"
+        v-model="state.serviceUrl" size="xl"
         :placeholder="$t('repository.placeholders.service-url')"
-        :ui="{ root: 'w-full' }"
-        size="xl"
-        :disabled="mode === 'view'"
-      />
+        :ui="{ root: 'w-full', base: 'pl-17' }" :disabled="mode === 'view'"
+      >
+        <template #leading>
+          <span class="text-base">https://</span>
+        </template>
+
+        <template #trailing>
+          {{ state.serviceUrl.length }} / {{ maxUrlLength }}
+        </template>
+      </UInput>
     </UFormField>
 
     <UFormField
-      name="entityIds"
+      name="entityIds" :error-pattern="/entityIds\..*/"
       :label="$t('repository.entity-ids')"
       :description="$t('repository.entity-ids-description')"
-      :error-pattern="/entityIds\..*/"
       :ui="{
         wrapper: 'mb-2',
         hint: 'flex justify-end items-center px-2',
         container: 'space-y-3',
         error: 'mt-0',
-      }"
-      :required="mode === 'edit'"
+      }" :required="mode !== 'view'"
     >
-      <template v-if="mode === 'edit'" #hint>
+      <template v-if="mode !== 'view'" #hint>
         <UButton
           :label="$t('button.add')"
-          icon="i-lucide-plus"
-          variant="ghost"
-          color="neutral"
-          size="sm"
+          icon="i-lucide-plus" variant="ghost" color="neutral" size="sm"
           :ui="{ base: 'p-0' }"
           @click="addEntityId"
         />
@@ -115,19 +112,13 @@ const onCancel = () => {
 
       <UInput
         v-for="(entityId, index) in state.entityIds"
-        :key="index"
-        v-model="state.entityIds[index]"
+        :key="index" v-model="state.entityIds[index]" size="xl"
         :placeholder="$t('repository.placeholders.entity-ids')"
-        :ui="{ root: 'w-full' }"
-        size="xl"
-        :disabled="mode === 'view'"
+        :ui="{ root: 'w-full' }" :disabled="mode === 'view'"
       >
-        <template v-if="mode === 'edit' && state.entityIds.length > 1" #trailing>
+        <template v-if="mode !== 'view' && state.entityIds.length > 1" #trailing>
           <UButton
-            icon="i-lucide-x"
-            variant="ghost"
-            color="neutral"
-            size="sm"
+            icon="i-lucide-x" variant="ghost" color="neutral" size="sm"
             :ui="{ base: 'p-0' }"
             @click="removeEntityId(index)"
           />
@@ -179,26 +170,18 @@ const onCancel = () => {
     <div v-if="mode !== 'view'" class="flex justify-between items-center mt-2">
       <UButton
         :label="$t('button.cancel')"
-        icon="i-lucide-ban"
-        color="neutral"
-        variant="subtle"
+        icon="i-lucide-ban" color="neutral" variant="subtle"
         @click="onCancel"
       />
       <UButton
         v-if="mode === 'new'"
-        type="submit"
         :label="$t('button.save')"
-        icon="i-lucide-save"
-        color="info"
-        variant="subtle"
+        type="submit" icon="i-lucide-save" color="info" variant="subtle"
       />
       <UButton
         v-else
-        type="submit"
         :label="$t('button.update')"
-        icon="i-lucide-save"
-        color="info"
-        variant="subtle"
+        type="submit" icon="i-lucide-save" color="info" variant="subtle"
       />
     </div>
   </UForm>

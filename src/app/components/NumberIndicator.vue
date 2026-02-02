@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { title, number, color, icon, to } = defineProps<{
+defineProps<{
   title: string
   number: number
   color: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info'
@@ -10,9 +10,7 @@ const { title, number, color, icon, to } = defineProps<{
 
 <template>
   <UPageCard
-    :title="title"
-    :to="to"
-    :description="String(number)"
+    :title="title" :description="String(number)" :to="to"
     orientation="horizontal" reverse
     :ui="{
       container: 'grid grid-cols-3 lg:grid-cols-3 gap-2',

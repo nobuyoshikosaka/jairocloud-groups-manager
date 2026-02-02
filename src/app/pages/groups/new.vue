@@ -1,31 +1,22 @@
 <script setup lang="ts">
 import { FetchError } from 'ofetch'
 
-const { currentUser } = useAuth()
+const { stateAsCreate: state } = useGroupForm()
 
-if (!currentUser.value?.isSystemAdmin) {
-  showError({
-    status: 403,
-    statusText: $t('repository.error.forbidden'),
-  })
-}
-
-const { stateAsCreate: state } = useRepositoryForm()
-
-const onSubmit = async (data: RepositoryCreatePayload) => {
+const onSubmit = async (data: GroupCreatePayload) => {
   const toast = useToast()
   try {
-    await $fetch('/api/repositories', {
+    await $fetch('/api/groups', {
       method: 'POST',
       body: data,
     })
 
     toast.add({
       title: $t('success.creation.title'),
-      description: $t('success.repository.created-description'),
+      description: $t('success.group.created-description'),
       color: 'success',
     })
-    await navigateTo('/repositories')
+    await navigateTo('/groups')
   }
   catch (error) {
     if (error instanceof FetchError) {
@@ -33,13 +24,6 @@ const onSubmit = async (data: RepositoryCreatePayload) => {
         toast.add({
           title: $t('error.validation.title'),
           description: error?.data?.message ?? $t('error.validation.description'),
-          color: 'error',
-        })
-      }
-      else if (error.status === 409) {
-        toast.add({
-          title: $t('error.conflict.title'),
-          description: $t('error.conflict.description'),
           color: 'error',
         })
       }
@@ -64,8 +48,8 @@ const onSubmit = async (data: RepositoryCreatePayload) => {
 
 <template>
   <UPageHeader
-    :title="$t('repository.new-title')"
-    :description="$t('repository.new-description')"
+    :title="$t('group.new-title')"
+    :description="$t('group.new-description')"
     :ui="{ root: 'py-2 mb-6', description: 'mt-4' }"
   />
 
@@ -74,17 +58,17 @@ const onSubmit = async (data: RepositoryCreatePayload) => {
       <template #header>
         <div class="flex items-center justify-between">
           <h2 class="text-2xl font-semibold">
-            {{ $t('repository.details-title') }}
+            {{ $t('group.details-title') }}
           </h2>
           <div />
         </div>
       </template>
 
-      <RepositoryForm
-        v-model="state"
+      <GroupForm
+        :model-value="state"
         mode="new"
-        @submit="onSubmit"
-        @cancel="() => navigateTo('/repositories')"
+        @submit="(data) => onSubmit(data as GroupCreatePayload)"
+        @cancel="() => navigateTo('/groups')"
       />
     </UCard>
   </div>

@@ -14,6 +14,10 @@
     "title": "グループキャッシュ"
   },
   "error": {
+    "conflict": {
+      "description": "入力内容に競合がありました。",
+      "title": "競合エラー"
+    },
     "server": {
       "description": "サーバーで予期せぬエラーが発生しました。",
       "title": "サーバーエラー"
@@ -31,6 +35,49 @@
     "privacy-policy": "プライバシーポリシー",
     "terms-of-use": "利用ガイドライン"
   },
+  "group": {
+    "description": "説明",
+    "description-description": "グループについて自由に記述できます。",
+    "details-basic-section": "基本情報",
+    "details-title": "グループ詳細",
+    "display-name": "表示名",
+    "display-name-description": "グループの表示名です。実際のリポジトリ内でのグループ名とはリンクしません。",
+    "error": {
+      "not-found": "グループが見つかりません。"
+    },
+    "id": "グループ ID",
+    "member-list-visibility": {
+      "hidden": "非公開",
+      "private": "メンバーにのみ公開",
+      "public": "公開"
+    },
+    "new-description": "ユーザーをまとめて管理するグループを作成できます。",
+    "new-title": "グループの作成",
+    "placeholder": {
+      "display-name": "ジャイロ研究科",
+      "id": "グループの ID です。実際のリポジトリで使用されます。",
+      "repository": "リポジトリを選択してください。"
+    },
+    "public-status": {
+      "private": "非公開",
+      "public": "公開"
+    },
+    "repository": "@:repositories.title",
+    "repository-description": "グループを作成するリポジトリを選択します。",
+    "validation": {
+      "displayName": {
+        "required": "表示名は必須項目です。"
+      },
+      "memberListVisibility": {
+        "invalid": "メンバーの公開状態はドロップダウンリストから選択してください。"
+      },
+      "repository": {
+        "id": {
+          "required": "リポジトリの選択は必須です。"
+        }
+      }
+    }
+  },
   "groups": {
     "actions": {
       "copy-id": "グループ ID をコピー",
@@ -44,13 +91,13 @@
     "table": {
       "cell": {
         "public": {
-          "private": "非公開",
-          "public": "公開"
+          "private": "@:group.public-status.private",
+          "public": "@:group.public-status.public"
         },
         "visibility": {
-          "hidden": "非公開",
-          "private": "メンバーにのみ公開する",
-          "public": "公開"
+          "hidden": "@:group.member-list-visibility.hidden",
+          "private": "@:group.member-list-visibility.private",
+          "public": "@:group.member-list-visibility.public"
         }
       },
       "column": {
@@ -81,7 +128,6 @@
     },
     "description": "あなたが管理しているリポジトリの情報を確認できます。",
     "entity-id-label": "Entity ID：",
-    "new-description": "リポジトリの SP コネクタを作成できます。",
     "table": {
       "column": {
         "entity-ids": "Entity ID",
@@ -108,18 +154,19 @@
     "entity-ids": "EntityID",
     "entity-ids-description": "リポジトリに紐づけられている SP の EntityID です。",
     "error": {
-      "conflict-description": "入力内容に競合がありました。",
-      "conflict-title": "競合エラー",
+      "conflict": {
+      },
       "forbidden": "リポジトリを作成する権限がありません。",
       "not-found": "リポジトリが見つかりません。"
     },
+    "new-description": "リポジトリの SP コネクタを作成できます。",
     "new-title": "リポジトリの作成",
     "number-of-groups": "グループ数",
     "number-of-users": "ユーザー数",
     "placeholders": {
-      "entity-ids": "例：https://jairo.repo.nii.ac.jp/shibboleth-sp",
-      "service-name": "例：ジャイロ大学リポジトリ",
-      "service-url": "例：https://jairo.repo.nii.ac.jp"
+      "entity-ids": "https://jairo.repo.nii.ac.jp/shibboleth-sp",
+      "service-name": "ジャイロ大学リポジトリ",
+      "service-url": "jairo.repo.nii.ac.jp"
     },
     "service-name": "リポジトリ名",
     "service-name-description": "このリポジトリの表示名です。実際のサービス名とは連動しません。",
@@ -129,7 +176,7 @@
     "sp-connector-description": "リポジトリに紐づく SP コネクタの識別子です。",
     "suspended": "稼働状態",
     "suspended-active": "稼働",
-    "suspended-description": "SP コネクタの稼働状態です。",
+    "suspended-description": "ユーザーにシステム管理者のロールを付与します。ユーザーがどのリポジトリにも所属していない必要があります。",
     "suspended-inactive": "休止",
     "validation": {
       "entityIds": {
@@ -144,6 +191,7 @@
       },
       "serviceUrl": {
         "invalid": "URL が不正です。",
+        "max-length": "URLは {max} 文字で入寮する必要があります。",
         "required": "URL は必須項目です。"
       }
     }
@@ -152,12 +200,19 @@
     "creation": {
       "title": "作成成功"
     },
+    "group": {
+      "created-description": "グループの作成に成功しました。",
+      "updated-description": "グループ情報の更新に成功しました。"
+    },
     "repository": {
       "created-description": "リポジトリの SP コネクタの作成に成功しました。",
       "updated-description": "リポジトリ情報の更新に成功しました。"
     },
     "updated": {
       "title": "更新成功"
+    },
+    "user": {
+      "created-description": "ユーザーの作成に成功しました。"
     }
   },
   "table": {
@@ -173,6 +228,9 @@
     "switch-to-card-view": "カード表示へ切り替え",
     "switch-to-table-view": "テーブル表示に切り替え"
   },
+  "toast": {
+    "success-title": "成功"
+  },
   "user": {
     "actions": {
       "copy-eppn": "ePPN をコピー",
@@ -180,8 +238,71 @@
       "copy-id": "ユーザー ID をコピー",
       "copy-id-success": "クリップボードにユーザー ID がコピーされました。"
     },
+    "affiliated-repositories": "所属リポジトリ",
+    "affiliated-repositories-description": "ユーザーが所属するリポジトリとロールを指定します。",
+    "created": "作成日時",
+    "details-affiliation-authority-section": "所属・権限",
+    "details-basic-section": "基本情報",
+    "details-title": "ユーザー詳細",
+    "emails": "メールアドレス",
+    "emails-description": "ユーザーのメールアドレスです。",
+    "eppns": "ePPN",
+    "eppns-description": "IdP によりユーザーに割り当てられた一意で永続的な識別子です。",
+    "error": {
+      "conflict-description": "入力内容に競合がありました。",
+      "conflict-title": "競合エラー",
+      "not-found": "ユーザーが見つかりません。"
+    },
+    "groups": "所属グループ",
+    "groups-description": "ユーザーを所属させるグループを選択します。",
+    "id": "ユーザー ID",
+    "last-modified": "最終更新日時",
+    "new-description": "あなたのリポジトリに新しいユーザーを作成できます。",
+    "new-title": "ユーザーの作成",
+    "placeholder": {
+      "emails": "information.taro{'@'}university.ac.jp",
+      "eppns": "information.taro{'@'}idp.university.ac.jp",
+      "group-name": "グループを選択してください。",
+      "preferred-language": "言語を選択してください",
+      "repository-name": "リポジトリを選択してください。",
+      "role": "ロールを選択してください。",
+      "userName": "情報太郎"
+    },
+    "preferred-language": "優先言語",
+    "preferred-language-en": "英語",
+    "preferred-language-ja": "日本語",
+    "privileged": "特権",
     "roles-title": "ロール",
-    "title": "ユーザー詳細"
+    "title": "ユーザー詳細",
+    "userName-description": "ユーザーの表示名です。実際のユーザーのアカウント名とは連動しません。",
+    "username": "ユーザー名",
+    "validation": {
+      "emails": {
+        "at-least-one": "メールアドレスは 1 つ以上必須な項目です。",
+        "invalid": "メールアドレスが不正です。",
+        "required": "メールアドレスは必須項目です。"
+      },
+      "eppns": {
+        "at-least-one": "ePPN は 1 つ以上必須な項目です。",
+        "required": "ePPN は必須項目です。"
+      },
+      "preferredLanguage": {
+        "invalid": "優先言語はドロップダウンリストから選択してください。"
+      },
+      "repositoryRoles": {
+        "at-least-one": "ユーザーは少なくとも 1 つのリポジトリに所属する必要があります。",
+        "id": {
+          "required": "所属リポジトリは必須項目です。"
+        },
+        "must-be-empty-for-system-admin": "システム管理者はどのリポジトリにも所属していない必要があります。",
+        "userRole": {
+          "required": "ユーザーのロールはドロップダウンリストから選択してください。"
+        }
+      },
+      "userName": {
+        "required": "ユーザー名は必須項目です。"
+      }
+    }
   },
   "users": {
     "button": {

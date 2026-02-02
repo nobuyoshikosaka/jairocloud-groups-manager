@@ -1,31 +1,23 @@
 <script setup lang="ts">
 import { FetchError } from 'ofetch'
 
-const { currentUser } = useAuth()
+const toast = useToast()
 
-if (!currentUser.value?.isSystemAdmin) {
-  showError({
-    status: 403,
-    statusText: $t('repository.error.forbidden'),
-  })
-}
+const { stateAsCreate: state } = useUserForm()
 
-const { stateAsCreate: state } = useRepositoryForm()
-
-const onSubmit = async (data: RepositoryCreatePayload) => {
-  const toast = useToast()
+const onSubmit = async (data: UserCreatePayload) => {
   try {
-    await $fetch('/api/repositories', {
+    await $fetch('/api/users', {
       method: 'POST',
       body: data,
     })
 
     toast.add({
       title: $t('success.creation.title'),
-      description: $t('success.repository.created-description'),
+      description: $t('success.user.created-description'),
       color: 'success',
     })
-    await navigateTo('/repositories')
+    await navigateTo('/users')
   }
   catch (error) {
     if (error instanceof FetchError) {
@@ -38,8 +30,8 @@ const onSubmit = async (data: RepositoryCreatePayload) => {
       }
       else if (error.status === 409) {
         toast.add({
-          title: $t('error.conflict.title'),
-          description: $t('error.conflict.description'),
+          title: $t('user.error.conflict-title'),
+          description: $t('user.error.conflict-description'),
           color: 'error',
         })
       }
@@ -64,8 +56,8 @@ const onSubmit = async (data: RepositoryCreatePayload) => {
 
 <template>
   <UPageHeader
-    :title="$t('repository.new-title')"
-    :description="$t('repository.new-description')"
+    :title="$t('user.new-title')"
+    :description="$t('user.new-description')"
     :ui="{ root: 'py-2 mb-6', description: 'mt-4' }"
   />
 
@@ -74,17 +66,17 @@ const onSubmit = async (data: RepositoryCreatePayload) => {
       <template #header>
         <div class="flex items-center justify-between">
           <h2 class="text-2xl font-semibold">
-            {{ $t('repository.details-title') }}
+            {{ $t('user.details-title') }}
           </h2>
           <div />
         </div>
       </template>
 
-      <RepositoryForm
+      <UserForm
         v-model="state"
         mode="new"
         @submit="onSubmit"
-        @cancel="() => navigateTo('/repositories')"
+        @cancel="() => navigateTo('/users')"
       />
     </UCard>
   </div>
