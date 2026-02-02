@@ -97,19 +97,29 @@ def build_repositories_search_query(
             ])
         )
 
+    # all repositories must have system admin group
+    system_admin_group = config.GROUPS.id_patterns.system_admin
+    filter_expr.append(f'{path("groups.value")} eq "{system_admin_group}"')
+
+    specified = set(criteria.i or [])
     if is_current_user_system_admin():
         pass  # no additional filter for system admin
     elif permitted := get_permitted_repository_ids():
         # force filter by logged-in user's permitted repository IDs
+        specified = permitted.intersection(specified) if specified else permitted
+        if not specified:
+            filter_expr.append(_empty_filter(path("id")))
+    else:
+        # no permitted repositories for non-admin user
+        filter_expr.append(_empty_filter(path("id")))
+
+    if specified:
         filter_expr.append(
             " or ".join([
                 f'{path("id")} eq "{resolve_service_id(repository_id=repo_id)}"'
-                for repo_id in permitted
+                for repo_id in specified
             ])
         )
-    else:
-        # no permitted repositories for non-system admin user
-        filter_expr.append(_empty_filter(path("id")))
 
     filter_str = _combine_filter_exprs(filter_expr)
 
@@ -327,9 +337,13 @@ def _user_groups_filter(criteria: UsersCriteria, path: str) -> str:
     if not permitted:
         return _empty_filter(path)
 
-    return _repository_admin_user_groups_filter(
-        criteria, path, permitted, specified_roles
-    )
+    filter_expr = [
+        _repository_admin_user_groups_filter(
+            criteria, path, permitted, specified_roles
+        ),
+        f'{path} ne "{config.GROUPS.id_patterns.system_admin}"',
+    ]
+    return t.cast("str", _combine_filter_exprs(filter_expr))
 
 
 def _system_admin_user_groups_filter(  # noqa: PLR0911
@@ -537,7 +551,7 @@ def _get_prefix_patterns() -> set[str]:
     return {
         match.group(1)
         for group_types in id_patterns.model_fields_set
-        if (match := re.match(pattern, getattr(id_patterns, group_types))) and match
+        if (match := re.match(pattern, getattr(id_patterns, group_types)))
     }
 
 
