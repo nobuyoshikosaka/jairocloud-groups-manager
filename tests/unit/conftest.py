@@ -32,8 +32,13 @@ def instance_path(tmp_path: Path) -> Path:
 @pytest.fixture
 def test_config():
     db_host = "postgres" if is_running_in_docker() else "localhost"
+    redis_host = "redis" if is_running_in_docker() else "localhost"
+    amqp_host = "rabbitmq" if is_running_in_docker() else "localhost"
     return RuntimeConfig.model_validate({
         "SECRET_KEY": "test_secret_key",
+        "LOG": {
+            "level": "INFO",
+        },
         "SP": {
             "entity_id": "https://test/shibboleth-sp",
             "crt": "/test/server.crt",
@@ -59,6 +64,11 @@ def test_config():
             }
         },
         "POSTGRES": {"db": "jctest", "host": db_host},
+        "REDIS": {
+            "cache_type": "RedisCache",
+            "single": {"base_url": f"redis://{redis_host}:6379/0"},
+        },
+        "RABBITMQ": {"url": f"amqp://guest:guest@{amqp_host}:5672//"},
     })
 
 
