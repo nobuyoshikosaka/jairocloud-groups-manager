@@ -46,7 +46,10 @@ def detect_affiliations(group_ids: list[str]) -> Affiliations:
 
     return Affiliations(
         roles=[
-            _RoleGroup(repository_id=repo_id, role=get_highest_role(roles))
+            _RoleGroup(
+                repository_id=repo_id,
+                role=t.cast("USER_ROLES", get_highest_role(roles)),
+            )
             for repo_id, roles in aggregated.items()
         ],
         groups=[aff for aff in detect_affiliations if aff.type == "group"],
