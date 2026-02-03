@@ -23,7 +23,7 @@ from server.const import USER_ROLES
 from server.datastore import account_store
 from server.entities.login_user import LoginUser
 from server.services import permissions, users
-from server.services.utils.affiliations import detect_affiliations
+from server.services.utils import affiliations
 
 
 bp = Blueprint("auth", __name__)
@@ -61,14 +61,15 @@ def login() -> Response:
     if not is_member_of or not user_name:
         user = users.get_by_eppn(eppn)
         if not user:
-            return make_response(redirect("/?error=401"))
+            return make_response(redirect("/?error=404"))
         groups = [group.id for group in user.groups or []]
         user_name = user.user_name or "Unknown User"
         is_member_of = ";".join(
             f"https://cg.gakunin.jp/gr/{quote(g, safe='')}" for g in groups
         )
-    groups = permissions.extract_group_ids(is_member_of)
-    user_roles, _ = detect_affiliations(groups)
+    else:
+        groups = permissions.extract_group_ids(is_member_of)
+    user_roles = affiliations.detect_affiliations(groups).roles
     if not any(
         role in {USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN}
         for r in user_roles
@@ -107,4 +108,4 @@ def logout() -> Response:
         account_store.delete(key)
     logout_user()
 
-    return make_response(redirect("/login"))
+    return make_response(redirect("/"))
