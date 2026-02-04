@@ -9,12 +9,59 @@ import typing as t
 
 from functools import wraps
 
-from flask import jsonify, make_response, request
+from flask import abort, jsonify, make_response, request
 from flask_pydantic.core import _sanitize_ctx_errors  # noqa: PLC2701
 from pydantic import BaseModel, ValidationError
 from werkzeug.datastructures import FileStorage
 
 from server.config import config
+from server.services import permissions
+
+
+def roles_required[**P, R](
+    *roles: str,
+) -> t.Callable[[t.Callable[P, R]], t.Callable[P, R]]:
+    """Verify that the user has the requested role.
+
+    Args:
+        *roles: List of role names to grant access to.
+
+    Returns:
+        Callable: A decorator that returns a decorated function.
+    """
+
+    def decorator(func: t.Callable[P, R]) -> t.Callable[P, R]:
+        """Inner decorator that handles the function wrapping.
+
+        Args:
+            func (t.Callable[P, R]): The function to be decorated.
+
+        Returns:
+            t.Callable[P, R]: The wrapped function with role-based access control.
+        """
+
+        @wraps(func)
+        def decorated_view(*args: P.args, **kwargs: P.kwargs) -> R:
+            """The actual view function that performs the role check.
+
+            Args:
+                *args (P.args): Positional arguments for the decorated function.
+                **kwargs (P.kwargs): Keyword arguments for the decorated function.
+
+            Returns:
+                R: The result of the decorated function.
+            """
+            res = permissions.get_login_user_roles()
+            user_roles = res[0] if res else []
+
+            if not any(role in user_roles for role in roles):
+                abort(403)
+
+            return func(*args, **kwargs)
+
+        return decorated_view
+
+    return decorator
 
 
 def validate_files(func: t.Callable) -> t.Callable:  # noqa: C901

@@ -7,63 +7,16 @@
 import typing as t
 
 from datetime import UTC, datetime
-from functools import wraps
 
-from flask import abort, session
-from flask_login import current_user
+from flask import session
+from flask_login import LoginManager, current_user
 
 from server.config import config
 from server.datastore import account_store
 from server.entities.login_user import LoginUser
-from server.services import permissions
 
 
-P = t.ParamSpec("P")
-R = t.TypeVar("R")
-
-
-def roles_required(*roles: str) -> t.Callable[[t.Callable[P, R]], t.Callable[P, R]]:
-    """Verify that the user has the requested role.
-
-    Args:
-        *roles: List of role names to grant access to.
-
-    Returns:
-        Callable: A decorator that returns a decorated function.
-    """
-
-    def decorator(func: t.Callable[P, R]) -> t.Callable[P, R]:
-        """Inner decorator that handles the function wrapping.
-
-        Args:
-            func (t.Callable[P, R]): The function to be decorated.
-
-        Returns:
-            t.Callable[P, R]: The wrapped function with role-based access control.
-        """
-
-        @wraps(func)
-        def decorated_view(*args: P.args, **kwargs: P.kwargs) -> R:
-            """The actual view function that performs the role check.
-
-            Args:
-                *args (P.args): Positional arguments for the decorated function.
-                **kwargs (P.kwargs): Keyword arguments for the decorated function.
-
-            Returns:
-                R: The result of the decorated function.
-            """
-            res = permissions.get_login_user_roles()
-            user_roles = res[0] if res else []
-
-            if not any(role in user_roles for role in roles):
-                abort(403)
-
-            return func(*args, **kwargs)
-
-        return decorated_view
-
-    return decorator
+login_manager = LoginManager()
 
 
 def refresh_session() -> None:
@@ -71,24 +24,25 @@ def refresh_session() -> None:
     if not current_user.is_authenticated:
         return
 
-    session_id = getattr(current_user, "_session_id", None) or session.get("_id")
-    if not session_id:
-        return
+    session_id: str = t.cast("LoginUser", current_user).session_id or session["_id"]
 
     key = build_account_store_key(session_id)
     login_date_raw = account_store.hget(key, "loginDate")
     if not isinstance(login_date_raw, str):
         return
+
     login_date = datetime.fromisoformat(login_date_raw)
-    login_time = datetime.now(UTC) - login_date
-    if login_time.total_seconds() > config.SESSION.absolute_lifetime:
+    time_since_login = datetime.now(UTC) - login_date
+    if time_since_login.total_seconds() > config.SESSION.absolute_lifetime:
         account_store.delete(key)
         return
+
     session_ttl: int = config.SESSION.sliding_lifetime
     if session_ttl >= 0:
         account_store.expire(key, session_ttl)
 
 
+@login_manager.user_loader
 def load_user(user_id: str) -> LoginUser | None:
     """Load a user from the session using the user_id.
 
@@ -119,8 +73,8 @@ def load_user(user_id: str) -> LoginUser | None:
         login_date=data["login_date"],
         user_name=data["user_name"],
         is_member_of=data["is_member_of"],
+        session_id=session_id,
     )
-    user._session_id = session_id  # noqa: SLF001
     return user
 
 

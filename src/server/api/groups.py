@@ -8,7 +8,7 @@ from flask import Blueprint, url_for
 from flask_login import current_user, login_required
 from flask_pydantic import validate
 
-from server.api.helper import roles_required
+from server.api.helpers import roles_required
 from server.const import USER_ROLES
 from server.entities.group_detail import GroupDetail
 from server.entities.search_request import FilterOption, SearchResult

@@ -10,17 +10,12 @@ from uuid import uuid7
 
 from celery import Celery, Task
 from flask import Flask
-from flask_login import LoginManager
-
-from server.api.helper import load_user
 
 from .ext import JAIROCloudGroupsManager
 
 
 if t.TYPE_CHECKING:
     from .config import RuntimeConfig
-
-login_manager = LoginManager()
 
 
 @t.overload
@@ -50,9 +45,7 @@ def create_app(
     app = Flask(import_name)
     JAIROCloudGroupsManager(app, config=config or config_path)
     celery_init_app(app)
-    login_manager.init_app(app)
 
-    login_manager.user_loader(load_user)
     return app
 
 

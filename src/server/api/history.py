@@ -13,7 +13,7 @@ from flask import Blueprint, Response, send_file
 from flask_login import login_required
 from flask_pydantic import validate
 
-from server.api.helper import roles_required
+from server.api.helpers import roles_required
 from server.api.schemas import ErrorResponse, HistoryPublic
 from server.const import USER_ROLES
 from server.entities.history_detail import (

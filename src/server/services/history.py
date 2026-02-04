@@ -355,7 +355,7 @@ def get_filters(tub: t.Literal["download", "upload"]) -> list[FilterOption]:
     ]
 
     repository_items: list[t.Mapping[str, str]] = [
-        {r.id: r.display_name or ""} for r in target_repositories
+        {r.id: r.service_name or ""} for r in target_repositories
     ]
 
     group_items: list[t.Mapping[str, str]] = [
