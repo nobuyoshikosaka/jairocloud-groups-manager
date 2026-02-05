@@ -13,9 +13,7 @@ if t.TYPE_CHECKING:
 
 
 def test_auth_code_redirect(mocker: MockerFixture):
-    """
-    Normal case: valid code should redirect
-    """
+    """Normal case: valid code should redirect"""
     mock_issue = mocker.patch("server.services.token.issue_access_token")
     query = OAuthTokenQuery(code="valid_code", state="abc123")
     expected_status_code = 302
@@ -30,9 +28,7 @@ def test_auth_code_redirect(mocker: MockerFixture):
 
 
 def test_auth_code_credentials_error(mocker: MockerFixture):
-    """
-    Error case: token.issue_access_token raises CredentialsError
-    """
+    """Error case: token.issue_access_token raises CredentialsError"""
     mocker.patch("server.services.token.issue_access_token", side_effect=CredentialsError("Invalid code"))
     query = OAuthTokenQuery(code="", state="abc123")
 
@@ -42,9 +38,7 @@ def test_auth_code_credentials_error(mocker: MockerFixture):
 
 
 def test_auth_code_oauth_token_error(mocker: MockerFixture):
-    """
-    Error case: token.issue_access_token raises OAuthTokenError
-    """
+    """Error case: token.issue_access_token raises OAuthTokenError"""
     mocker.patch("server.services.token.issue_access_token", side_effect=OAuthTokenError("Invalid code"))
     query = OAuthTokenQuery(code="", state="abc123")
 

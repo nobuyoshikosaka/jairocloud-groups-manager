@@ -17,12 +17,11 @@ if t.TYPE_CHECKING:
 
 
 def test_issue_client_credentials(app: Flask, mocker: MockerFixture) -> None:
-    """
-    Test that correct client ID and secret are issued from client certificate.
-    """
+    """Test that correct client ID and secret are issued from client certificate."""
     entity_id = "https://entity"
     certs = t.cast(_SpCerts, SimpleNamespace(crt="server.crt", key="server.key"))
     expected_creds = ClientCredentials(client_id="cid", client_secret="sec")
+
     mock_post = mocker.patch("server.clients.auth.requests.post")
     mock_resp = MagicMock()
     mock_resp.json.return_value = {"client_id": expected_creds.client_id, "client_secret": expected_creds.client_secret}
@@ -35,9 +34,7 @@ def test_issue_client_credentials(app: Flask, mocker: MockerFixture) -> None:
 
 
 def test_issue_client_credentials_http_error(app: Flask, mocker: MockerFixture) -> None:
-    """
-    Test that issue_client_credentials raises HTTPError when requests.post fails.
-    """
+    """Test that issue_client_credentials raises HTTPError when requests.post fails."""
     mocker.patch("server.clients.auth.requests.post", side_effect=requests.HTTPError)
     certs = t.cast(_SpCerts, SimpleNamespace(crt="server.crt", key="server.key"))
 
@@ -46,9 +43,7 @@ def test_issue_client_credentials_http_error(app: Flask, mocker: MockerFixture) 
 
 
 def test_issue_client_credentials_json_decode_error(app: Flask, mocker: MockerFixture) -> None:
-    """
-    Test that issue_client_credentials raises JSONDecodeError when response is invalid JSON.
-    """
+    """Test that issue_client_credentials raises JSONDecodeError when response is invalid JSON."""
     mock_post = mocker.patch("server.clients.auth.requests.post")
     mock_resp = MagicMock()
     mock_resp.json.side_effect = requests.JSONDecodeError("msg", "doc", 0)
@@ -61,14 +56,13 @@ def test_issue_client_credentials_json_decode_error(app: Flask, mocker: MockerFi
 
 
 def test_issue_oauth_token(app: Flask, mocker: MockerFixture) -> None:
-    """
-    Test that a valid OAuth token is issued from authorization code and client credentials.
-    """
+    """Test that a valid OAuth token is issued from authorization code and client credentials."""
     code = "code"
     creds = t.cast(_ClientCreds, SimpleNamespace(client_id="cid", client_secret="sec"))
     expected_token = OAuthToken(
         access_token="tok", token_type="bearer", expires_in=3600, refresh_token="rft", scope="scope"
     )
+
     mock_post = mocker.patch("server.clients.auth.requests.post")
     mock_resp = MagicMock()
     mock_resp.json.return_value = {
@@ -87,9 +81,7 @@ def test_issue_oauth_token(app: Flask, mocker: MockerFixture) -> None:
 
 
 def test_issue_oauth_token_http_error(app: Flask, mocker: MockerFixture) -> None:
-    """
-    Test that issue_oauth_token raises HTTPError when requests.post fails.
-    """
+    """Test that issue_oauth_token raises HTTPError when requests.post fails."""
     mocker.patch("server.clients.auth.requests.post", side_effect=requests.HTTPError)
     creds = t.cast(_ClientCreds, SimpleNamespace(client_id="cid", client_secret="sec"))
 
@@ -98,9 +90,7 @@ def test_issue_oauth_token_http_error(app: Flask, mocker: MockerFixture) -> None
 
 
 def test_issue_oauth_token_json_decode_error(app: Flask, mocker: MockerFixture) -> None:
-    """
-    Test that issue_oauth_token raises JSONDecodeError when response is invalid JSON.
-    """
+    """Test that issue_oauth_token raises JSONDecodeError when response is invalid JSON."""
     mock_post = mocker.patch("server.clients.auth.requests.post")
     mock_resp = MagicMock()
     mock_resp.json.side_effect = requests.JSONDecodeError("msg", "doc", 0)
@@ -113,14 +103,13 @@ def test_issue_oauth_token_json_decode_error(app: Flask, mocker: MockerFixture) 
 
 
 def test_refresh_oauth_token(app: Flask, mocker: MockerFixture) -> None:
-    """
-    Test that a new OAuth token is issued from refresh token and client credentials.
-    """
+    """Test that a new OAuth token is issued from refresh token and client credentials."""
     refresh_token = "rft"
     creds = t.cast(_ClientCreds, SimpleNamespace(client_id="cid", client_secret="sec"))
     expected_token = OAuthToken(
         access_token="tok", token_type="bearer", expires_in=3600, refresh_token="rft", scope="scope"
     )
+
     mock_post = mocker.patch("server.clients.auth.requests.post")
     mock_resp = MagicMock()
     mock_resp.json.return_value = {
@@ -138,9 +127,7 @@ def test_refresh_oauth_token(app: Flask, mocker: MockerFixture) -> None:
 
 
 def test_refresh_oauth_token_http_error(app: Flask, mocker: MockerFixture) -> None:
-    """
-    Test that refresh_oauth_token raises HTTPError when requests.post fails.
-    """
+    """Test that refresh_oauth_token raises HTTPError when requests.post fails."""
 
     mocker.patch("server.clients.auth.requests.post", side_effect=requests.HTTPError)
     creds = t.cast(_ClientCreds, SimpleNamespace(client_id="cid", client_secret="sec"))
@@ -150,9 +137,7 @@ def test_refresh_oauth_token_http_error(app: Flask, mocker: MockerFixture) -> No
 
 
 def test_refresh_oauth_token_json_decode_error(app: Flask, mocker: MockerFixture) -> None:
-    """
-    Test that refresh_oauth_token raises JSONDecodeError when response is invalid JSON.
-    """
+    """Test that refresh_oauth_token raises JSONDecodeError when response is invalid JSON."""
 
     mock_post = mocker.patch("server.clients.auth.requests.post")
     mock_resp = MagicMock()
