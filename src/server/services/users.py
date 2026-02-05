@@ -283,7 +283,8 @@ def update(user: UserDetail) -> UserDetail:
         ResourceNotFound: If the User resource is not found.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
-    current: UserDetail | None = get_by_id(user.id)
+    user_id = t.cast("str", user.id)
+    current: UserDetail | None = get_by_id(user_id)
     if current is None:
         error = f"'{user.id}' Not Found"
         raise ResourceNotFound(error)
@@ -298,7 +299,7 @@ def update(user: UserDetail) -> UserDetail:
         access_token = get_access_token()
         client_secret = get_client_secret()
         result: MapUser | MapError = users.patch_by_id(
-            user.id,
+            user_id,
             operations,
             exclude={"meta"},
             access_token=access_token,

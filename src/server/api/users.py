@@ -10,8 +10,7 @@ from flask_pydantic import validate
 
 from server.const import USER_ROLES
 from server.entities.search_request import FilterOption, SearchResult
-from server.entities.summaries import RepositorySummary
-from server.entities.user_detail import UserDetail
+from server.entities.user_detail import RepositoryRole, UserDetail
 from server.exc import (
     ResourceInvalid,
     ResourceNotFound,
@@ -69,20 +68,14 @@ def post(
         - If other error, status code 500
 
     """
-    user = users.get_by_id(body.id)
-    if user is not None:
-        return ErrorResponse(code="", message="id already exist"), 409
-
-    if body.eppns is not None:
-        for eppn in body.eppns:
-            user = users.get_by_eppn(eppn)
-            if user is not None:
-                return ErrorResponse(code="", message="eppn already exist"), 409
-
     if not has_permission(body.repository_roles):
         return ErrorResponse(code="", message="not has permission"), 403
 
-    created = users.create(body)
+    try:
+        created = users.create(body)
+    except ResourceInvalid as exv:
+        return ErrorResponse(code="", message=str(exv)), 409
+
     header = {
         "Location": url_for("api.users.id_get", user_id=created.id, _external=True)
     }

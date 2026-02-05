@@ -108,13 +108,17 @@ def get_login_user_roles() -> Affiliations:
 def remove_info_outside_system(
     entity: MapService | MapGroup | MapUser,
 ) -> MapService | MapGroup | MapUser:
-    """Remove information from the entity that is outside the system based on user permissions.
+    """Remove external information.
+
+    Remove information from the entity that is outside the system based
+    on user permissions.
 
     Args:
         entity (MapService | MapGroup | MapUser): The entity to process.
 
     Returns:
-        MapService | MapGroup | MapUser: The entity with external information removed as appropriate.
+        MapService | MapGroup | MapUser:
+            The entity with external information removed as appropriate.
     """
     if isinstance(entity, MapService):
         return remove_external_info_service(entity)
@@ -130,7 +134,8 @@ def remove_external_info_service(entity: MapService) -> MapService:
         entity (MapService): The target MapService entity.
 
     Returns:
-        MapService: The MapService entity with external information removed as appropriate.
+        MapService:
+            The MapService entity with external information removed as appropriate.
     """
     from .utils.affiliations import detect_affiliations  # noqa: PLC0415
 
