@@ -15,7 +15,6 @@ from server.const import USER_ROLES
 
 from .common import camel_case_config, forbid_extra_config
 from .map_user import EPPN, Email, Group, MapUser
-from .repository_detail import resolve_service_id
 from .summaries import GroupSummary
 
 

@@ -148,12 +148,7 @@ def get_upload_history_data(query: HistoryQuery) -> list[UploadHistoryData]:
     return data
 
 
-def _parse_upload_results(results_json: t.Any) -> tuple[HistorySummary, list[Results]]:
-    def blank_summary() -> HistorySummary:
-        return HistorySummary(create=0, update=0, delete=0, skip=0, error=0)
-
-    if not isinstance(results_json, dict):
-        return blank_summary(), []
+def _parse_upload_results(results_json: dict) -> tuple[HistorySummary, list[Results]]:
 
     s = results_json.get("summary") or {}
     try:
@@ -164,8 +159,8 @@ def _parse_upload_results(results_json: t.Any) -> tuple[HistorySummary, list[Res
             skip=int(s.get("skip", 0)),
             error=int(s.get("error", 0)),
         )
-    except Exception:
-        summary = blank_summary()
+    except ValueError, TypeError:
+        summary = HistorySummary(create=0, update=0, delete=0, skip=0, error=0)
 
     items = results_json.get("results") or []
     result_list: list[Results] = []
@@ -193,7 +188,6 @@ def get_download_history_data(query: HistoryQuery) -> list[DownloadHistoryData]:
 
     Returns:
         list[DownloadHistoryData]:
-
     """
     filters: list[t.Any] = []
 
@@ -355,7 +349,7 @@ def get_filters(tub: t.Literal["download", "upload"]) -> list[FilterOption]:
     ]
 
     repository_items: list[t.Mapping[str, str]] = [
-        {r.id: r.display_name or ""} for r in target_repositories
+        {r.id: r.service_name or ""} for r in target_repositories
     ]
 
     group_items: list[t.Mapping[str, str]] = [

@@ -201,7 +201,9 @@ class HistoryPublic(BaseModel):
     """Public status."""
 
 
-class TagetRepository(BaseModel):
+class TargetRepository(BaseModel):
+    """Schema for target repository."""
+
     repository_id: str
     """ID of the target repository."""
 
@@ -253,5 +255,5 @@ class UploadQuery(BaseModel):
     p: int | None = None
     """Page number for pagination."""
 
-    l: int | None = None
+    l: int | None = None  # noqa: E741
     """Number of users per page for pagination."""

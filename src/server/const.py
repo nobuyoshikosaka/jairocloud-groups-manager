@@ -119,3 +119,9 @@ HAS_REPO_ID_AND_USER_DEFINED_ID_PATTERN: Final = (
 
 It should include `{repository_id}`, followed by `{user_defined_id}` placeholders.
 """
+
+
+class ValidationEntity:
+    """Constants for validation entities."""
+
+    USER_NAME_MAX_LENGTH: Final = 50

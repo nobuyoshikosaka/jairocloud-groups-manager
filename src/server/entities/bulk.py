@@ -123,25 +123,55 @@ class ResultSummary(BaseModel):
 
 
 class UserAggregated(RootModel):
+    """Model for aggregated user data."""
+
     root: list[UserDetail]
+    """List of user details."""
 
 
 class Aggregated(t.TypedDict):
+    """Model for aggregated data."""
+
     summary: dict[str, int]
+    """Summary of the aggregation."""
+
     results: list[CheckResult]
+    """List of check results."""
+
     missing_user: list[UserDetail]
+    """List of missing users."""
 
 
 class FileContent(t.TypedDict):
+    """Model for file content as dictionary."""
+
     repositories: dict[str, str]
+    """Dictionary of repositories."""
+
     groups: dict[str, str]
+    """Dictionary of groups."""
+
     users: dict[str, str]
+    """Dictionary of users."""
 
 
 class FileUserDict(t.TypedDict, total=False):
+    """Model for user data in file as dictionary."""
+
     user_name: list[str]
+    """List of usernames."""
+
     groups_ids: list[str]
+    """List of group IDs."""
+
     groups_names: list[str]
+    """List of group names."""
+
     eppns: list[str]
+    """List of eduPersonPrincipalNames."""
+
     emails: list[str]
+    """List of e-mails."""
+
     preferred_language: list[str]
+    """List of preferred languages."""

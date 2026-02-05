@@ -52,28 +52,28 @@ class BulkResponse(BaseModel):
 
 
 class BulkOperation(BaseModel):
-    """Each operation corresponds to a single HTTP request against a resource endpoint."""
+    """Handles a single HTTP request to the resource endpoint."""
 
     method: t.Literal["POST", "PUT", "PATCH", "DELETE"]
-    """ The HTTP method of the current operation. """
+    """The HTTP method of the current operation."""
 
     bulk_id: str | None = None
-    """ REQUIRED when "method" is "POST". """
+    """REQUIRED when "method" is "POST". """
 
     path: str
-    """ The resource's relative path to the SCIM service provider's root. """
+    """The resource's relative path to the SCIM service provider's root."""
 
     data: MapService | MapGroup | MapUser | PatchOperation | None = None
-    """ The resource data as it would appear for a single SCIM POST, PUT, or PATCH operation. """
+    """Resource data used in a single operation."""
 
     location: str | None = None
-    """ The resource endpoint URL. """
+    """The resource endpoint URL."""
 
     response: MapError | MapService | MapGroup | MapUser | None = None
-    """ The HTTP response body. """
+    """The HTTP response body."""
 
     status: str | None = None
-    """ The HTTP response status code. """
+    """The HTTP response status code."""
 
     model_config = camel_case_config | forbid_extra_config
     """Configure camelCase aliasing and forbid extra fields."""

@@ -4,12 +4,11 @@
 
 """API router for bulk endpoints."""
 
-import traceback
-
 from pathlib import Path
 from uuid import UUID, uuid7
 
 from flask import Blueprint, current_app
+from flask_login import current_user
 from flask_pydantic import validate
 from redis import exceptions
 
@@ -17,35 +16,29 @@ from server.api.helpers import validate_files
 from server.api.schemas import (
     BulkBody,
     ErrorResponse,
-    TagetRepository,
+    TargetRepository,
     UploadBody,
     UploadFiles,
     UploadQuery,
 )
-
-# from server.config import config
+from server.config import config
 from server.entities.bulk import ResultSummary, ValidateSummary
 from server.services import bulks, history_table
 
 
-config_temp_file_dir = "/code/uploads"
-
 bp = Blueprint("bulk", __name__)
-
-
-STATUS_MAP = {0: "create", 1: "delete", 2: "error", 3: "skip", 4: "update"}
 
 
 @bp.post("/upload-file")
 @validate_files
 @validate(response_by_alias=True)
 def upload_file(
-    form: TagetRepository, files: UploadFiles
+    form: TargetRepository, files: UploadFiles
 ) -> tuple[BulkBody | ErrorResponse, int]:
     """Upload a file for bulk processing.
 
     Args:
-        form (TagetRepository): Target repository ID for upload.
+        form (TargetRepository): Target repository ID for upload.
         files (UploadFiles): File to upload.
 
     Returns:
@@ -53,28 +46,24 @@ def upload_file(
         ErrorResponse: The response containing task ID or error message.
     """
     temp_id = uuid7()
-    temp_dir = Path(config_temp_file_dir)
+    temp_dir = Path(config.temp_file_dir)
     current_app.logger.info("files %s", files)
     original_filename = files.bulk_file.filename or "upload_file"
-    operator_id = "test-user"  # current_user.id
-    operator_name = "test user"  # current_user.user_name
+    operator_id = current_user.id
+    operator_name = current_user.user_name
     new_filename = f"{temp_id}_{Path(original_filename).name}"
     file_path = temp_dir / new_filename
-    try:
-        files.bulk_file.save(str(file_path))
-        file_content = {"repositories": [{"id": form.repository_id}]}
-        history_table.create_file(
-            file_id=temp_id, file_path=str(file_path), file_content=file_content
-        )
+    files.bulk_file.save(str(file_path))
+    file_content = {"repositories": [{"id": form.repository_id}]}
+    history_table.create_file(
+        file_id=temp_id, file_path=str(file_path), file_content=file_content
+    )
 
-        bulks.delete_temporary_file.apply_async((str(temp_id),), countdown=3600)  # pyright: ignore[reportCallIssue]
-        async_result = bulks.validate_upload_data.delay(
-            temp_file_id=temp_id, operator_id=operator_id, operator_name=operator_name
-        )  # pyright: ignore[reportCallIssue]
-        return BulkBody(task_id=async_result.id, temp_file_id=temp_id), 200
-    except Exception as e:
-        traceback.print_exc()
-        return ErrorResponse(code="", message=str(e)), 400
+    bulks.delete_temporary_file.apply_async((str(temp_id),), countdown=3600)  # pyright: ignore[reportCallIssue]
+    async_result = bulks.validate_upload_data.delay(
+        temp_file_id=temp_id, operator_id=operator_id, operator_name=operator_name
+    )  # pyright: ignore[reportCallIssue]
+    return BulkBody(task_id=async_result.id, temp_file_id=temp_id), 200
 
 
 @bp.get("/validate/status/<string:task_id>")
@@ -123,11 +112,18 @@ def validate_result(
     if not res.successful():
         return ErrorResponse(code="", message="Task not successful."), 400
     history_id = res.result
-    status_filters = [STATUS_MAP[c] for c in query.f] if query.f else []
+    status_filter = (
+        [
+            {0: "create", 1: "update", 2: "delete", 3: "skip", 4: "error"}[status]
+            for status in query.f
+        ]
+        if query.f
+        else []
+    )
     offset = query.p or 1
     size = query.l or 20
     return bulks.get_validate_result(
-        history_id=history_id, status_filter=status_filters, offset=offset, size=size
+        history_id=history_id, status_filter=status_filter, offset=offset, size=size
     ), 200
 
 
@@ -161,7 +157,9 @@ def execute(body: UploadBody) -> tuple[BulkBody | ErrorResponse, int]:
     """Execute a bulk upload.
 
     Args:
-        body (UploadBody): The request body containing temporary ID, repository ID, task ID, and users to delete.
+        body (UploadBody):
+          The request body containing temporary ID, repository ID, task ID,
+          and users to delete.
 
     Returns:
         BulkBody: The response containing task ID
@@ -205,13 +203,20 @@ def result(
 
     Args:
         history_id (UUID):ID of the history to get.
-        query(UPloadQuery): Query parameters for filtering results.
+        query(UploadQuery): Query parameters for filtering results.
 
     Returns:
         ResultSummary: Summary of displayed history If the get is successful
-        ErrorResponse: If the get is failde
+        ErrorResponse: If the get is failed
     """
-    status_filter = [STATUS_MAP[c] for c in query.f] if query.f else []
+    status_filter = (
+        [
+            {0: "create", 1: "update", 2: "delete", 3: "skip", 4: "error"}[status]
+            for status in query.f
+        ]
+        if query.f
+        else []
+    )
     offset = query.p or 1
     size = query.l or 10
     return bulks.get_upload_result(

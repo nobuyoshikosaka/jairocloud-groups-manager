@@ -14,15 +14,33 @@ from sqlalchemy.orm import selectinload
 
 from server.db import db
 from server.db.history import Files, UploadHistory
+from server.exc import InvalidQueryError
 
 
-def get_upload_by_id(history_id: UUID):
+def get_upload_by_id(history_id: UUID) -> UploadHistory | None:
+    """Get an upload history record by its ID.
+
+    Args:
+        history_id (UUID): The ID of the upload history.
+
+    Returns:
+        UploadHistory | None: The upload history record, or None if not found.
+    """
     return db.session.get(
         UploadHistory, history_id, options=[selectinload(UploadHistory.file)]
     )
 
 
-def get_upload_results(history_id: UUID, attribute: str):
+def get_upload_results(history_id: UUID, attribute: str) -> dict:
+    """Get upload results by history ID and attribute.
+
+    Args:
+        history_id (UUID): The ID of the upload history.
+        attribute (str): The attribute to retrieve from results.
+
+    Returns:
+        dict: The upload results for the specified attribute.
+    """
     result = (
         db.session
         .query(UploadHistory.results[attribute])
@@ -34,9 +52,24 @@ def get_upload_results(history_id: UUID, attribute: str):
 
 def get_paginated_upload_results(
     history_id: UUID, offset: int, size: int, status_filter: list[str]
-):
+) -> list[dict]:
+    """Get paginated upload results with optional status filtering.
+
+    Args:
+        history_id (UUID): The ID of the upload history.
+        offset (int): The page number (1-based).
+        size (int): The number of items per page.
+        status_filter (list[str]): List of status strings to filter results.
+
+    Returns:
+        list[dict]: A list of upload result items.
+
+    Raises:
+        InvalidQueryError: If offset or size is less than 1.
+    """
     if offset < 1 or size < 1:
-        raise ValueError("Invalid offset or size")
+        error_message = "Invalid offset or size"
+        raise InvalidQueryError(error_message)
 
     elements = func.jsonb_array_elements(
         UploadHistory.results["results"]
@@ -58,7 +91,20 @@ def get_paginated_upload_results(
     return [r[0] for r in raw_results]
 
 
-def create_upload(file_id: UUID, results: dict, operator_id: str, operator_name: str):
+def create_upload(
+    file_id: UUID, results: dict, operator_id: str, operator_name: str
+) -> UUID:
+    """Create a new upload history record.
+
+    Args:
+        file_id (UUID): The ID of the associated file.
+        results (dict): The results of the upload operation.
+        operator_id (str): The ID of the operator performing the upload.
+        operator_name (str): The name of the operator performing the upload.
+
+    Returns:
+        UUID: The ID of the newly created upload history record.
+    """
     history_record = UploadHistory()
     history_record.file_id = file_id
     history_record.results = results
@@ -74,7 +120,16 @@ def update_upload_status(
     status: t.Literal["P", "S", "F"],
     new_results: dict | None = None,
     file_id: UUID | None = None,
-):
+) -> None:
+    """Update the status of an upload history record.
+
+    Args:
+        history_id (UUID): The ID of the history record to update.
+        status (Literal["P", "S", "F"]):
+          The new status ("P": Progress, "S": Success, "F": Failed).
+        new_results (dict | None): New results to update, if any.
+        file_id (UUID | None): New file ID to update, if any.
+    """
     obj = db.session.get(UploadHistory, history_id)
     if obj is None:
         return
@@ -94,20 +149,53 @@ def update_upload_status(
     db.session.commit()
 
 
-def get_history_by_file_id(file_id: UUID):
+def get_history_by_file_id(file_id: UUID) -> UploadHistory:
+    """Get a history record by its file ID.
+
+    Args:
+        file_id (UUID): The ID of the file.
+
+    Returns:
+        UploadHistory: The history record.
+    """
     return db.session.query(UploadHistory).filter_by(file_id=file_id).one()
 
 
-def get_file_by_id(file_id: UUID):
+def get_file_by_id(file_id: UUID) -> Files:
+    """Get a file record by its ID.
+
+    Args:
+        file_id (UUID): The ID of the file to retrieve.
+
+    Returns:
+        Files: The file record.
+    """
     return db.session.query(Files).filter_by(id=file_id).one()
 
 
-def delete_file_by_id(file_id: UUID):
+def delete_file_by_id(file_id: UUID) -> None:
+    """Delete a file record by its ID.
+
+    Args:
+        file_id (UUID): The ID of the file to delete.
+    """
     Files.query.filter(Files.id == file_id).delete()
     db.session.commit()
 
 
-def create_file(file_path: str, file_content: dict, file_id: UUID | None = None):
+def create_file(
+    file_path: str, file_content: dict, file_id: UUID | None = None
+) -> UUID:
+    """Create or update a file record.
+
+    Args:
+        file_path (str): The path of the file.
+        file_content (dict): The content of the file.
+        file_id (UUID | None): The ID of the file to update.
+
+    Returns:
+        UUID: The ID of the created or updated file.
+    """
     file_record = Files()
     if file_id:
         file_record.id = file_id
