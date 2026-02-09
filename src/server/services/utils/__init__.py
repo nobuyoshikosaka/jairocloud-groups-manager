@@ -6,6 +6,15 @@
 
 from .affiliations import detect_affiliation, detect_affiliations
 from .patch_operations import build_patch_operations, build_update_member_operations
+from .permissions import (
+    extract_group_ids,
+    filter_permitted_group_ids,
+    get_current_user_affiliations,
+    get_permitted_repository_ids,
+    is_current_user_system_admin,
+    is_user_logged_in,
+    remove_info_outside_system,
+)
 from .roles import get_highest_role
 from .search_queries import (
     GroupsCriteria,

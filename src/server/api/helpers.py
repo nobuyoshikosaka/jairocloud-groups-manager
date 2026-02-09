@@ -16,8 +16,7 @@ from werkzeug.datastructures import FileStorage
 
 from server.config import config
 from server.const import USER_ROLES
-from server.services import permissions
-from server.services.utils import get_highest_role
+from server.services.utils import get_current_user_affiliations, get_highest_role
 
 
 def roles_required[**P, R](
@@ -53,7 +52,7 @@ def roles_required[**P, R](
             Returns:
                 R: The result of the decorated function.
             """
-            user_roles, _ = permissions.get_login_user_roles()
+            user_roles, _ = get_current_user_affiliations()
             highest = get_highest_role([repository.role for repository in user_roles])
 
             if highest not in required:

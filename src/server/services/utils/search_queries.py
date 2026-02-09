@@ -27,12 +27,12 @@ from server.entities.map_user import MapUser
 from server.entities.repository_detail import resolve_service_id
 from server.entities.search_request import SearchRequestParameter
 from server.exc import InvalidQueryError
-from server.services.permissions import (
+
+from . import (
+    detect_affiliations,
     get_permitted_repository_ids,
     is_current_user_system_admin,
 )
-
-from .affiliations import detect_affiliations
 
 
 if t.TYPE_CHECKING:

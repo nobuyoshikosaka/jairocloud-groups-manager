@@ -126,7 +126,7 @@ class USER_ROLES(StrEnum):
 
 
 HAS_REPO_ID_PATTERN: Final = r".*\{repository_id\}.*"
-"""Pattern for role-type group IDs.
+"""Regular expression pattern for role-type group IDs.
 
 It should include `{repository_id}` placeholder.
 """
@@ -134,7 +134,20 @@ It should include `{repository_id}` placeholder.
 HAS_REPO_ID_AND_USER_DEFINED_ID_PATTERN: Final = (
     r".*\{repository_id\}.*\{user_defined_id\}.*"
 )
-"""Pattern for user-defined group IDs.
+"""Regular expression pattern for user-defined group IDs.
 
 It should include `{repository_id}`, followed by `{user_defined_id}` placeholders.
+"""
+
+IS_MEMBER_OF_PATTERN: Final = r"/gr/([^/;]+)(?=;|$)(?!/admin)"
+"""Regular expression pattern to extract group IDs from isMemberOf attribute.
+
+This pattern extracts group IDs from URLs in the isMemberOf attribute under the
+following conditions:
+
+- The URL contains the path segment "/gr/".
+- The group ID is the substring immediately following "/gr/".
+- The group ID does not contain "/" or ";" characters.
+- The URL ends with a semicolon (";") or the end of the string.
+- URLs ending with "/admin" are excluded from matching.
 """

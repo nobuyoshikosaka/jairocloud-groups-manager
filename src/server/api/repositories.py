@@ -15,7 +15,7 @@ from server.entities.repository_detail import RepositoryDetail
 from server.entities.search_request import SearchResult
 from server.exc import InvalidQueryError, ResourceInvalid, ResourceNotFound
 from server.services import repositories
-from server.services.permissions import (
+from server.services.utils import (
     get_permitted_repository_ids,
     is_current_user_system_admin,
 )

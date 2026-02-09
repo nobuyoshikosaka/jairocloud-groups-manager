@@ -25,8 +25,12 @@ from server.entities.history_detail import (
 from server.entities.search_request import FilterOption
 from server.entities.summaries import GroupSummary, RepositorySummary, UserSummary
 from server.exc import DatabaseError, RecordNotFound
-from server.services import permissions, repositories
-from server.services.utils import search_queries
+from server.services import repositories
+from server.services.utils import (
+    get_permitted_repository_ids,
+    is_current_user_system_admin,
+    make_criteria_object,
+)
 
 
 def get_upload_history_data(criteria: HistoryCriteria) -> list[UploadHistoryData]:
@@ -100,7 +104,7 @@ def _build_filters_for_history(
 ) -> list[t.Any]:
     filters_model = UploadHistory if history_type == "upload" else DownloadHistory
     filters: list[t.Any] = []
-    if permissions.is_current_user_system_admin():
+    if is_current_user_system_admin():
         filters.append(
             or_(*[
                 Files.file_content["repositories"].contains([{"id": rid}])
@@ -109,7 +113,7 @@ def _build_filters_for_history(
         )
     else:
         filters.append(filters_model.public.is_(True))
-        permitted = permissions.get_permitted_repository_ids()
+        permitted = get_permitted_repository_ids()
         target_repositories = permitted & set(criteria.r) if criteria.r else permitted
         filters.append(
             or_(*[
@@ -270,8 +274,8 @@ def get_filters(tub: t.Literal["download", "upload"]) -> list[FilterOption]:
         raise RecordNotFound(error)
 
     operators = {h.operator.id: h.operator for h in history_data if h.operator}
-    repository_ids = permissions.get_permitted_repository_ids()
-    query = search_queries.make_criteria_object("repositories", i=list(repository_ids))
+    repository_ids = get_permitted_repository_ids()
+    query = make_criteria_object("repositories", i=list(repository_ids))
     target_repositories = repositories.search(query).resources
     unique_groups = {g.id: g for h in history_data for g in h.groups}
     unique_users = {u.id: u for h in history_data for u in h.users}

@@ -23,8 +23,8 @@ from server.config import config
 from server.const import SHIB_HEADERS, USER_ROLES
 from server.datastore import account_store
 from server.entities.login_user import LoginUser
-from server.services import permissions, users
-from server.services.utils.affiliations import detect_affiliations
+from server.services import users
+from server.services.utils import detect_affiliations, extract_group_ids
 
 
 bp = Blueprint("auth", __name__)
@@ -71,7 +71,7 @@ def login() -> Response:
             else is_member_of
         )
 
-    groups = permissions.extract_group_ids(is_member_of)
+    groups = extract_group_ids(is_member_of)
     user_roles, _ = detect_affiliations(groups)
     if not any(
         r.role in {USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN}
@@ -98,10 +98,10 @@ def login() -> Response:
     if session_ttl >= 0:
         account_store.expire(key, session_ttl)
 
-    next_q = request.args.get("next")
-    target = "/" if not next_q else f"/?next={next_q}"
+    next_location = request.args.get("next")
+    location = "/" if not next_location else f"/?next={next_location}"
 
-    return make_response(redirect(target))
+    return make_response(redirect(location))
 
 
 @bp.get("/logout")

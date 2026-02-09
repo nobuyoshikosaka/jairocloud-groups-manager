@@ -110,13 +110,11 @@ class UserSummary(BaseModel):
         Returns:
             UserSummary: The created UserSummary instance.
         """
-        from server.services.permissions import (  # noqa: PLC0415
-            get_permitted_repository_ids,
-            is_current_user_system_admin,
-        )
         from server.services.utils import (  # noqa: PLC0415
             detect_affiliations,
             get_highest_role,
+            get_permitted_repository_ids,
+            is_current_user_system_admin,
         )
 
         highest_role: USER_ROLES | None = None

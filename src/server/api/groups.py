@@ -19,8 +19,12 @@ from server.exc import (
     ResourceInvalid,
     ResourceNotFound,
 )
-from server.services import groups, permissions
+from server.services import groups
 from server.services.filter_options import search_groups_options
+from server.services.utils import (
+    filter_permitted_group_ids,
+    is_current_user_system_admin,
+)
 
 from .schemas import (
     DeleteGroupsRequest,
@@ -209,11 +213,9 @@ def id_delete(group_id: str) -> tuple[t.Literal[""], int] | tuple[ErrorResponse,
           status code 204
         - If logged-in user does not have permission, status code 403
     """
-    if not (
-        permissions.is_current_user_system_admin()
-        or permissions.filter_permitted_group_ids(group_id)
-    ):
+    if not has_permission(group_id):
         return ErrorResponse(code="", message=""), 403
+
     groups.delete_by_id(group_id)
     return "", 204
 
@@ -235,13 +237,11 @@ def delete_post(
           status code 204
         - If logged-in user does not have permission, status code 403
     """
-    group_id = body.group_ids
-    if not (
-        permissions.is_current_user_system_admin()
-        or permissions.filter_permitted_group_ids(*group_id)
-    ):
+    group_ids = body.group_ids
+    if not has_permission(*group_ids):
         return ErrorResponse(code="", message=""), 403
-    group_list = groups.delete_multiple(body.group_ids)
+
+    group_list = groups.delete_multiple(group_ids)
     if group_list:
         message = f"{group_list} is failed"
         return ErrorResponse(code="", message=message), 500
@@ -259,7 +259,7 @@ def filter_options() -> list[FilterOption]:
     return search_groups_options()
 
 
-def has_permission(group_id: str) -> bool:
+def has_permission(*group_id: str) -> bool:
     """Check user controll permmision.
 
     If the logged-in user is a system administrator or
@@ -273,7 +273,7 @@ def has_permission(group_id: str) -> bool:
         - True: logged-in user has permission
         - False: logged-in user does not have permission
     """
-    if permissions.is_current_user_system_admin():
+    if is_current_user_system_admin():
         return True
 
-    return bool(permissions.filter_permitted_group_ids(group_id))
+    return bool(filter_permitted_group_ids(*group_id))

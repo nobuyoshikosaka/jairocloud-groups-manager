@@ -10,7 +10,7 @@ import typing as t
 from server.const import USER_ROLES
 from server.entities.search_request import FilterOption
 from server.services import groups, repositories
-from server.services.permissions import (
+from server.services.utils import (
     is_current_user_system_admin,
 )
 from server.services.utils.search_queries import (

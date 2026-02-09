@@ -4,21 +4,28 @@
 
 """Permission-related services for the server application."""
 
+import re
 import typing as t
-
-from urllib.parse import urlparse
 
 from flask_login import current_user
 
-from server.config import config
-from server.const import USER_ROLES
+from server.auth import is_user_logged_in
+from server.const import IS_MEMBER_OF_PATTERN, USER_ROLES
 from server.entities.map_group import MapGroup
 from server.entities.map_service import MapService
+from server.entities.map_user import MapUser
+
+from .affiliations import detect_affiliations
 
 
 if t.TYPE_CHECKING:
-    from server.entities.map_user import MapUser
-    from server.services.utils.affiliations import Affiliations
+    from flask_login import AnonymousUserMixin
+
+    from server.entities.login_user import LoginUser
+
+    from .affiliations import Affiliations
+
+    type CurrentUser = LoginUser | AnonymousUserMixin
 
 
 def extract_group_ids(is_member_of: str) -> list[str]:
@@ -28,21 +35,9 @@ def extract_group_ids(is_member_of: str) -> list[str]:
         is_member_of (str):isMemberOf attribute of the login user
 
     Returns:
-        list[str]: List of groups to which the login user belongs.
+        list[str]: List of group IDs to which the login user belongs.
     """
-    groups: list[str] = []
-    for part in is_member_of.split(";"):
-        url = part.strip()
-        if not url:
-            continue
-        segs = [s for s in urlparse(url).path.split("/") if s]
-        for i, s in enumerate(segs):
-            if s.lower() == "gr" and i + 1 < len(segs):
-                group = segs[i + 1]
-                groups.append(group)
-                break
-
-    return list(dict.fromkeys(groups))
+    return re.findall(IS_MEMBER_OF_PATTERN, is_member_of)
 
 
 def is_current_user_system_admin() -> bool:
@@ -51,9 +46,10 @@ def is_current_user_system_admin() -> bool:
     Returns:
         bool: if logged-in user is a system administrator, true
     """
-    is_member_of = current_user.is_member_of
-    group_ids = extract_group_ids(is_member_of)
-    return config.GROUPS.id_patterns.system_admin in group_ids
+    if not is_user_logged_in(current_user):
+        return False
+
+    return current_user.is_system_admin
 
 
 def get_permitted_repository_ids() -> set[str]:
@@ -62,7 +58,8 @@ def get_permitted_repository_ids() -> set[str]:
     Returns:
         list[str]: List of current user's permitted repository IDs.
     """
-    from .utils.affiliations import detect_affiliations  # noqa: PLC0415
+    if not is_user_logged_in(current_user):
+        return set()
 
     is_member_of: str = current_user.is_member_of
     group_ids = extract_group_ids(is_member_of)
@@ -84,50 +81,55 @@ def filter_permitted_group_ids(*group_id: str) -> set[str]:
     Returns:
         bool: True if manageable, otherwise False.
     """
-    from .utils.affiliations import detect_affiliations  # noqa: PLC0415
-
     repository_ids = get_permitted_repository_ids()
     _, affiliations = detect_affiliations(list(group_id))
 
     return {g.group_id for g in affiliations if g.repository_id in repository_ids}
 
 
-def get_login_user_roles() -> Affiliations:
+def get_current_user_affiliations() -> Affiliations:
     """Retrieve the affiliations and roles of the currently logged-in user.
 
     Returns:
         Affiliations:
+            Detected affiliations including `roles` and `groups`.
+            - roles: list of role-type groups.
+              that is, (`repository_id`, `roles`, `type`="role")
+            - groups: list of user-defined groups
+              that is, (`repository_id`, `group_id`, `user_defined_id`, `type`="group").
     """
-    from .utils.affiliations import detect_affiliations  # noqa: PLC0415
+    is_member_of = ""
+    if is_user_logged_in(current_user):
+        is_member_of = current_user.is_member_of
 
-    is_member_of = current_user.is_member_of
     group_ids = extract_group_ids(is_member_of)
     return detect_affiliations(group_ids)
 
 
-def remove_info_outside_system(
-    entity: MapService | MapGroup | MapUser,
-) -> MapService | MapGroup | MapUser:
+def remove_info_outside_system[T = MapService | MapGroup | MapUser](entity: T) -> T:
     """Remove external information.
 
     Remove information from the entity that is outside the system based
     on user permissions.
 
     Args:
-        entity (MapService | MapGroup | MapUser): The entity to process.
+        entity (T = MapService | MapGroup | MapUser): The target entity.
 
     Returns:
-        MapService | MapGroup | MapUser:
-            The entity with external information removed as appropriate.
+        T: The entity with external information removed as appropriate.
     """
-    if isinstance(entity, MapService):
-        return remove_external_info_service(entity)
-    if isinstance(entity, MapGroup):
-        return remove_external_info_group(entity)
-    return remove_external_info_user(entity)
+    match entity:
+        case MapService():
+            return remove_info_outside_system_service(entity)
+        case MapGroup():
+            return remove_info_outside_system_group(entity)
+        case MapUser():
+            return remove_info_outside_system_user(entity)
+        case _:
+            return entity
 
 
-def remove_external_info_service(entity: MapService) -> MapService:
+def remove_info_outside_system_service(entity: MapService) -> MapService:
     """Remove external information from a MapService entity based on user permissions.
 
     Args:
@@ -137,8 +139,6 @@ def remove_external_info_service(entity: MapService) -> MapService:
         MapService:
             The MapService entity with external information removed as appropriate.
     """
-    from .utils.affiliations import detect_affiliations  # noqa: PLC0415
-
     if entity.groups:
         group_list = [g.value for g in entity.groups]
         _, groups = detect_affiliations(group_list)
@@ -154,7 +154,7 @@ def remove_external_info_service(entity: MapService) -> MapService:
     return entity
 
 
-def remove_external_info_group(entity: MapGroup) -> MapGroup:
+def remove_info_outside_system_group(entity: MapGroup) -> MapGroup:
     """Remove external information from a MapGroup entity based on user permissions.
 
     Args:
@@ -163,8 +163,6 @@ def remove_external_info_group(entity: MapGroup) -> MapGroup:
     Returns:
         MapGroup: The MapGroup entity with external information removed as appropriate.
     """
-    from .utils.affiliations import detect_affiliations  # noqa: PLC0415
-
     if entity.members:
         group_list = [g.value for g in entity.members if g.type == "Group"]
         _, groups = detect_affiliations(group_list)
@@ -180,7 +178,7 @@ def remove_external_info_group(entity: MapGroup) -> MapGroup:
     return entity
 
 
-def remove_external_info_user(entity: MapUser) -> MapUser:
+def remove_info_outside_system_user(entity: MapUser) -> MapUser:
     """Remove external information from a MapUser entity based on user permissions.
 
     Args:
@@ -189,8 +187,6 @@ def remove_external_info_user(entity: MapUser) -> MapUser:
     Returns:
         MapUser: The MapUser entity with external information removed as appropriate.
     """
-    from .utils.affiliations import detect_affiliations  # noqa: PLC0415
-
     if entity.groups:
         group_list = [g.value for g in entity.groups]
         _, groups = detect_affiliations(group_list)
