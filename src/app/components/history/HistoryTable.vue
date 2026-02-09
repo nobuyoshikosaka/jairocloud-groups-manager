@@ -1,18 +1,14 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { computed, ref } from 'vue'
+import type { TableColumn } from '@nuxt/ui'
 
-import { useI18n } from '#imports'
+const { t: $t } = useI18n()
 
-import type { DownloadHistoryData } from '~/types/history'
-
-const { t } = useI18n()
 interface Properties<T> {
   data: T[]
   currentPage: number
   itemsPerPage: number
   totalItems: number
   emptyMessage?: string
-  columns?: any[]
   tableConfig?: {
     enableExpand?: boolean
     showStatus?: boolean
@@ -21,8 +17,7 @@ interface Properties<T> {
 }
 
 const properties = computed(() => withDefaults(defineProps<Properties<T>>(), {
-  emptyMessage: t('history.empty-data'),
-  columns: () => [],
+  emptyMessage: $t('history.empty-data'),
   tableConfig: () => ({ enableExpand: true, showStatus: false }),
 }))
 
@@ -30,43 +25,29 @@ const emit = defineEmits<{
   'update:currentPage': [page: number]
   'update:itemsPerPage': [items: number]
   'action': [action: string, row: T]
-  'sortChange': [payload?: any]
+  'sortChange': [payload?: string]
   'loadMoreChildren': [parentId: string, currentShown: number]
 }>()
 
-const expandedRows = ref<Set<string>>(new Set())
-function toggleExpand(id: string) {
-  if (expandedRows.value.has(id)) {
-    expandedRows.value.delete(id)
-  }
-  else {
-    expandedRows.value.add(id)
-  }
-}
-
-const columns = computed(() => {
-  if (properties.value.columns && properties.value.columns.length > 0) {
-    return properties.value.columns
-  }
-
+const columns = computed<TableColumn<T>[]>(() => {
   const base = [
     {
       id: 'timestamp',
       key: 'timestamp',
-      label: t('history.operation-date'),
+      label: $t('history.operation-date'),
       sortable: true,
     },
     {
       id: 'operator',
       key: 'operator',
-      label: t('history.operator'),
+      label: $t('history.operator'),
     },
-    { id: 'users', key: 'users', label: t('history.user-count') },
-    { id: 'groups', key: 'groups', label: t('history.group-count') },
+    { id: 'users', key: 'users', label: $t('history.user-count') },
+    { id: 'groups', key: 'groups', label: $t('history.group-count') },
   ]
 
   if (properties.value.tableConfig.enableExpand) {
-    base.push({ id: 'redownload', key: 'redownload', label: t('history.re-download') })
+    base.push({ id: 'redownload', key: 'redownload', label: $t('history.re-download') })
   }
 
   base.push({ id: 'actions', key: 'actions', label: '' })
@@ -74,12 +55,12 @@ const columns = computed(() => {
 })
 
 const tableRows = computed(() => {
-  const first = (properties.value.data as any[])[0]
+  const first = (properties.value.data as T[])[0]
   const looksLikeGroup = first && typeof first === 'object'
     && 'parent' in first && 'children' in first
 
   if (looksLikeGroup) {
-    return (properties.value.data as any[]).map((item: any) => {
+    return (properties.value.data as T[]).map((item: T) => {
       const base = {
         ...item.parent,
         _children: item.children ?? [],
@@ -94,7 +75,7 @@ const tableRows = computed(() => {
       }
     })
   }
-  return (properties.value.data as any[]).map((r: any) => ({
+  return (properties.value.data as T[]).map((r: T) => ({
     ...r,
     isDisabled: typeof properties.value.fileAvailabilityCheck === 'function'
       ? !properties.value.fileAvailabilityCheck(r)
@@ -111,12 +92,10 @@ const pageEnd = computed(() => Math.min(
   properties.value.totalItems,
 ))
 
-const itemsPerPageOptions = [10, 25, 50, 100].map(v => ({ label: String(v), value: v }))
-
 const statusConfig = computed(() => ({
-  S: { label: t('history.succes'), color: 'success' as const },
-  F: { label: t('history.failed'), color: 'error' as const },
-  P: { label: t('history.progress'), color: 'warning' as const },
+  S: { label: $t('history.succes'), color: 'success' as const },
+  F: { label: $t('history.failed'), color: 'error' as const },
+  P: { label: $t('history.progress'), color: 'warning' as const },
 }))
 
 const formatDate = (dateString: string) => {
@@ -128,20 +107,20 @@ const formatDate = (dateString: string) => {
 </script>
 
 <template>
-  <UCard variant="outline" :ui="{ body: { padding: 'p-0' } }">
+  <UCard variant="outline" :ui="{ body: 'p-0' }">
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-semibold">
           {{ $t('history.table-title') }}
         </h2>
         <div class="flex items-center gap-2">
-          <span class="text-sm text-muted">{{ $t('history.view') }}:</span>
-          <USelectMenu
-            :model-value="properties.itemsPerPage"
-            :items="itemsPerPageOptions"
-            value-key="value"
+          <label class="text-sm text-gray-600">{{ $t('table.page-size-label') }}</label>
+          <USelect
+            v-model="pageSize" :items="pageOptions"
             class="w-24"
-            @update:model-value="(v) => $emit('update:itemsPerPage', v.value)"
+            @update:model-value="() => updateQuery(
+              { l: pageSize, p: Math.ceil(offset / pageSize!) },
+            )"
           />
         </div>
       </div>
@@ -151,7 +130,7 @@ const formatDate = (dateString: string) => {
       :key="`ut-${properties.tableConfig.enableExpand?'d':'u'}-${properties.currentPage}
       -${properties.itemsPerPage}`"
       :rows="[...tableRows]"
-      :columns="[...columns]"
+      :columns="columns"
       row-key="id"
       :loading="false"
       @sort="(s) => emit('sortChange', s)"

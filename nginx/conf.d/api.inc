@@ -16,7 +16,7 @@ location /secure {
     uwsgi_param X-Forwarded-Proto $scheme;
 
     uwsgi_param SCRIPT_NAME  "";
-    uwsgi_param PATH_INFO    "/api/auth/login";
+    uwsgi_param PATH_INFO    "https://api_server/api/auth/login";
     uwsgi_param QUERY_STRING $query_string;
 }
 

@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, toRef } from 'vue'
-
-import type { HistoryFilterProperties, SelectOption } from '~/types/history'
-
+interface HistoryFilterProperties {
+  target: 'download' | 'upload'
+}
 const properties = defineProps<HistoryFilterProperties>()
 
-const { t } = useI18n()
+const { t: $t } = useI18n()
 
 const {
-  filterState,
-  isFiltered,
-  dateRange,
-  formattedDateRange,
-  resetFilters,
+  criteria: {
+    specifiedRepos,
+    specifiedGroups,
+    specifiedUsers,
+    specifiedOperators,
+  },
+  dateFilter: {
+    dateRange,
+    formattedDateRange,
+  },
   targetLabel,
 } = useHistoryFilter({ target: properties.target })
 
@@ -31,45 +35,45 @@ onMounted(loadOptions)
 
 const operatorModel = computed<SelectOption[]>({
   get() {
-    if (!Array.isArray(filterState.value.o)) return []
-    const set = new Set(filterState.value.o)
+    if (!Array.isArray(specifiedOperators.value)) return []
+    const set = new Set(specifiedOperators.value)
     return operatorOptions.value.filter(opt => set.has(opt.value))
   },
   set(selected: SelectOption[]) {
-    filterState.value.o = selected.map(s => s.value)
+    specifiedOperators.value = selected.map(s => s.value)
   },
 })
 
 const repoModel = computed<SelectOption[]>({
   get() {
-    if (!Array.isArray(filterState.value.r)) return []
-    const set = new Set(filterState.value.r)
+    if (!Array.isArray(specifiedRepos.value)) return []
+    const set = new Set(specifiedRepos.value)
     return repoOptions.value.filter(opt => set.has(opt.value))
   },
   set(selected: SelectOption[]) {
-    filterState.value.r = selected.map(s => s.value)
+    specifiedRepos.value = selected.map(s => s.value)
   },
 })
 
 const groupModel = computed<SelectOption[]>({
   get() {
-    if (!Array.isArray(filterState.value.g)) return []
-    const set = new Set(filterState.value.g)
+    if (!Array.isArray(specifiedGroups.value)) return []
+    const set = new Set(specifiedGroups.value)
     return groupOptions.value.filter(opt => set.has(opt.value))
   },
   set(selected: SelectOption[]) {
-    filterState.value.g = selected.map(s => s.value)
+    specifiedGroups.value = selected.map(s => s.value)
   },
 })
 
 const userModel = computed<SelectOption[]>({
   get() {
-    if (!Array.isArray(filterState.value.u)) return []
-    const set = new Set(filterState.value.u)
+    if (!Array.isArray(specifiedUsers.value)) return []
+    const set = new Set(specifiedUsers.value)
     return userOptions.value.filter(opt => set.has(opt.value))
   },
   set(selected: SelectOption[]) {
-    filterState.value.u = selected.map(s => s.value)
+    specifiedUsers.value = selected.map(s => s.value)
   },
 })
 </script>
@@ -79,11 +83,11 @@ const userModel = computed<SelectOption[]>({
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold">
-          {{ t('history.filter') }}
+          {{ $t('history.filter') }}
         </h2>
         <UButton
           v-if="isFiltered"
-          :label="t('history.reset')"
+          :label="$t('history.reset')"
           icon="i-lucide-rotate-ccw"
           color="neutral"
           variant="ghost"
@@ -94,19 +98,19 @@ const userModel = computed<SelectOption[]>({
     </template>
 
     <div v-if="loadingOptions" class="text-sm text-muted mb-2">
-      {{ t('common.loading') }}
+      {{ $t('common.loading') }}
     </div>
 
     <div v-if="optionsError" class="text-sm text-error mb-4">
       {{ optionsError }}
     </div>
 
-    <UFormField :label="t('history.operation')" class="mb-4">
+    <UFormField :label="$t('history.operation')" class="mb-4">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <UPopover :popper="{ placement: 'bottom-start' }">
           <UInput
             icon="i-lucide-calendar"
-            :placeholder="t('history.operation-date')"
+            :placeholder="$t('history.operation-date')"
             :model-value="formattedDateRange"
             readonly
             class="w-full"
@@ -123,7 +127,7 @@ const userModel = computed<SelectOption[]>({
 
         <USelectMenu
           v-model="operatorModel"
-          :placeholder="t('history.operator')"
+          :placeholder="$t('history.operator')"
           icon="i-lucide-user"
           :items="operatorOptions"
           multiple
@@ -136,7 +140,7 @@ const userModel = computed<SelectOption[]>({
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <USelectMenu
           v-model="repoModel"
-          :placeholder="t('repositories.title')"
+          :placeholder="$t('repositories.title')"
           icon="i-lucide-folder"
           :items="repoOptions"
           multiple
@@ -144,7 +148,7 @@ const userModel = computed<SelectOption[]>({
         />
         <USelectMenu
           v-model="groupModel"
-          :placeholder="t('groups.title')"
+          :placeholder="$t('groups.title')"
           icon="i-lucide-users"
           :items="groupOptions"
           multiple
@@ -152,7 +156,7 @@ const userModel = computed<SelectOption[]>({
         />
         <USelectMenu
           v-model="userModel"
-          :placeholder="t('users.title')"
+          :placeholder="$t('users.title')"
           icon="i-lucide-user"
           :items="userOptions"
           multiple

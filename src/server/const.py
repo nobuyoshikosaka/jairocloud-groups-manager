@@ -26,6 +26,9 @@ DEFAULT_LOG_FORMAT_DEV: Final = (
 DEFAULT_LOG_DATEFMT: Final = "%Y-%m-%dT%H:%M:%S"
 """Default date format string for log timestamps."""
 
+DEFAULT_SEARCH_COUNT: Final = 20
+"""Default number of records to return in search from database."""
+
 
 class SHIB_HEADERS(StrEnum):
     """Constants for Shibboleth headers."""

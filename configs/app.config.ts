@@ -36,6 +36,7 @@ const table = {
     repositories: [20, 50, 100] as number[],
     groups: [20, 50, 100] as number[],
     users: [20, 50, 100] as number[],
+    history: [20, 50, 100] as number[],
   },
 }
 

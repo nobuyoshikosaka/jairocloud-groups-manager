@@ -6,17 +6,18 @@
 
 import typing as t
 
-from datetime import timedelta
+from datetime import date, timedelta
+from types import SimpleNamespace
 from uuid import UUID
 
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 
+from server.const import DEFAULT_SEARCH_COUNT
 from server.db.history import DownloadHistory, Files, UploadHistory
 from server.db.utils import db
 from server.entities.history_detail import (
     DownloadHistoryData,
-    HistoryQuery,
     HistorySummary,
     Results,
     UploadHistoryData,
@@ -28,65 +29,17 @@ from server.services import permissions, repositories
 from server.services.utils import search_queries
 
 
-def get_upload_history_data(query: HistoryQuery) -> list[UploadHistoryData]:
+def get_upload_history_data(criteria: HistoryCriteria) -> list[UploadHistoryData]:
     """Get history data for the specified user.
 
     Args:
-        query : The query parameters for filtering history entries.
+        criteria : The search criteria for filtering history entries.
 
     Returns:
         list[UploadHistoryData]:
 
     """
-    filters: list[t.Any] = []
-
-    if permissions.is_current_user_system_admin():
-        target_repositories = query.r or []
-    else:
-        permitted = permissions.get_permitted_repository_ids()
-        target_repositories = (
-            list(set(permitted) & set(query.r)) if query.r else permitted
-        )
-
-    if target_repositories:
-        filters.append(
-            or_(*[
-                Files.file_content["repositories"].contains([{"id": rid}])
-                for rid in target_repositories
-            ])
-        )
-
-    if query.g:
-        filters.append(
-            or_(*[
-                Files.file_content["groups"].contains([{"id": gid}]) for gid in query.g
-            ])
-        )
-
-    if query.u:
-        filters.append(
-            or_(*[
-                Files.file_content["users"].contains([{"id": uid}]) for uid in query.u
-            ])
-        )
-
-    if query.o:
-        filters.append(UploadHistory.operator_id.in_(query.o))
-
-    if query.s and query.e:
-        filters.append(UploadHistory.timestamp.between(query.s, query.e))
-    elif query.s and not query.e:
-        start = query.s
-        end = start + timedelta(days=1)
-        filters.extend((
-            UploadHistory.timestamp >= start,
-            UploadHistory.timestamp < end,
-        ))
-    elif query.e and not query.s:
-        filters.append(UploadHistory.timestamp <= query.e)
-
-    if not permissions.is_current_user_system_admin():
-        filters.append(UploadHistory.public.is_(True))
+    filters = _build_filters_for_history(criteria, history_type="upload")
 
     stmt = (
         select(
@@ -108,8 +61,8 @@ def get_upload_history_data(query: HistoryQuery) -> list[UploadHistoryData]:
     if filters:
         stmt = stmt.filter(*filters)
 
-    page = query.p or 1
-    per_page = query.l or 10
+    page = criteria.p or 1
+    per_page = criteria.l or DEFAULT_SEARCH_COUNT
     stmt = stmt.limit(per_page).offset((page - 1) * per_page)
 
     rows = db.session.execute(stmt).mappings().all()
@@ -117,55 +70,98 @@ def get_upload_history_data(query: HistoryQuery) -> list[UploadHistoryData]:
     data: list[UploadHistoryData] = []
     for r in rows:
         fc: dict[str, t.Any] = r["file_content"] or {}
-        repos_raw = fc.get("repositories") or []
-        groups_raw = fc.get("groups") or []
-        users_raw = fc.get("users") or []
 
-        repositories_list = [RepositorySummary.model_validate(x) for x in repos_raw]
-        groups_list = [GroupSummary.model_validate(x) for x in groups_raw]
-        users_list = [UserSummary.model_validate(x) for x in users_raw]
+        repositories_list = [
+            RepositorySummary.model_validate(x) for x in fc.get("repositories") or []
+        ]
+        groups_list = [GroupSummary.model_validate(x) for x in fc.get("groups") or []]
+        users_list = [UserSummary.model_validate(x) for x in fc.get("users") or []]
 
         operator = UserSummary(id=r["operator_id"], user_name=r["operator_name"])
 
         summary, results_list = _parse_upload_results(r["results"])
 
         payload = {
-            "id": r["id"],
-            "timestamp": r["timestamp"],
-            "end_timestamp": r["end_timestamp"],
-            "public": r["public"],
             "operator": operator,
-            "status": r["status"],
             "results": results_list,
             "summary": summary,
-            "file_path": r["file_path"],
             "repositories": repositories_list,
             "groups": groups_list,
             "users": users_list,
+            **r,
         }
         data.append(UploadHistoryData.model_validate(payload))
 
     return data
 
 
-def _parse_upload_results(results_json: t.Any) -> tuple[HistorySummary, list[Results]]:
-    def blank_summary() -> HistorySummary:
-        return HistorySummary(create=0, update=0, delete=0, skip=0, error=0)
-
-    if not isinstance(results_json, dict):
-        return blank_summary(), []
-
-    s = results_json.get("summary") or {}
-    try:
-        summary = HistorySummary(
-            create=int(s.get("create", 0)),
-            update=int(s.get("update", 0)),
-            delete=int(s.get("delete", 0)),
-            skip=int(s.get("skip", 0)),
-            error=int(s.get("error", 0)),
+def _build_filters_for_history(
+    criteria: HistoryCriteria, history_type: t.Literal["upload", "download"]
+) -> list[t.Any]:
+    filters_model = UploadHistory if history_type == "upload" else DownloadHistory
+    filters: list[t.Any] = []
+    if permissions.is_current_user_system_admin():
+        filters.append(
+            or_(*[
+                Files.file_content["repositories"].contains([{"id": rid}])
+                for rid in criteria.r or []
+            ])
         )
-    except Exception:
-        summary = blank_summary()
+    else:
+        filters.append(filters_model.public.is_(True))
+        permitted = permissions.get_permitted_repository_ids()
+        target_repositories = permitted & set(criteria.r) if criteria.r else permitted
+        filters.append(
+            or_(*[
+                Files.file_content["repositories"].contains([{"id": rid}])
+                for rid in target_repositories
+            ])
+        )
+
+    if criteria.g:
+        filters.append(
+            or_(*[
+                Files.file_content["groups"].contains([{"id": gid}])
+                for gid in criteria.g
+            ])
+        )
+
+    if criteria.u:
+        filters.append(
+            or_(*[
+                Files.file_content["users"].contains([{"id": uid}])
+                for uid in criteria.u
+            ])
+        )
+
+    if criteria.o:
+        filters.append(filters_model.operator_id.in_(criteria.o))
+
+    if criteria.s and criteria.e:
+        filters.append(filters_model.timestamp.between(criteria.s, criteria.e))
+    elif criteria.s and not criteria.e:
+        start = criteria.s
+        end = start + timedelta(days=1)
+        filters.extend((
+            filters_model.timestamp >= start,
+            filters_model.timestamp < end,
+        ))
+    elif criteria.e and not criteria.s:
+        filters.append(filters_model.timestamp <= criteria.e)
+
+    if history_type == "download":
+        if not criteria.i:
+            filters.append(DownloadHistory.parent_id.is_(None))
+        else:
+            parent_id = UUID(criteria.i)
+            filters.append(DownloadHistory.parent_id == parent_id)
+
+    return filters
+
+
+def _parse_upload_results(results_json: dict) -> tuple[HistorySummary, list[Results]]:
+    s = results_json.get("summary") or {}
+    summary = HistorySummary(**s)
 
     items = results_json.get("results") or []
     result_list: list[Results] = []
@@ -185,136 +181,65 @@ def _parse_upload_results(results_json: t.Any) -> tuple[HistorySummary, list[Res
     return summary, result_list
 
 
-def get_download_history_data(query: HistoryQuery) -> list[DownloadHistoryData]:
+def get_download_history_data(criteria: HistoryCriteria) -> list[DownloadHistoryData]:
     """Get history data for the specified user.
 
     Args:
-        query : The query parameters for filtering history entries.
+        criteria : The search criteria for filtering history entries.
 
     Returns:
         list[DownloadHistoryData]:
 
     """
-    filters: list[t.Any] = []
+    filters: list[t.Any] = _build_filters_for_history(criteria, history_type="download")
 
-    if permissions.is_current_user_system_admin():
-        target_repositories = query.r or []
-    else:
-        permitted = permissions.get_permitted_repository_ids()
-        target_repositories = (
-            list(set(permitted) & set(query.r)) if query.r else permitted
-        )
-
-    if target_repositories:
-        filters.append(
-            or_(*[
-                Files.file_content["repositories"].contains([{"id": rid}])
-                for rid in target_repositories
-            ])
-        )
-
-    if query.g:
-        filters.append(
-            or_(*[
-                Files.file_content["groups"].contains([{"id": gid}]) for gid in query.g
-            ])
-        )
-
-    if query.u:
-        filters.append(
-            or_(*[
-                Files.file_content["users"].contains([{"id": uid}]) for uid in query.u
-            ])
-        )
-
-    if query.o:
-        filters.append(DownloadHistory.operator_id.in_(query.o))
-
-    if query.s and query.e:
-        filters.append(DownloadHistory.timestamp.between(query.s, query.e))
-    elif query.s and not query.e:
-        start = query.s
-        end = start + timedelta(days=1)
-        filters.extend((
-            DownloadHistory.timestamp >= start,
-            DownloadHistory.timestamp < end,
-        ))
-    elif query.e and not query.s:
-        filters.append(DownloadHistory.timestamp <= query.e)
-
-    if not permissions.is_current_user_system_admin():
-        filters.append(DownloadHistory.public.is_(True))
-
-    if not query.i:
-        filters.append(DownloadHistory.parent_id.is_(None))
-        parent_ids: list[UUID] = []
-    else:
-        parent_ids = [UUID(str(s)) for s in query.i]
-        filters.append(DownloadHistory.parent_id.in_(parent_ids))
-
-    stmt = (
-        select(
-            DownloadHistory.id.label("id"),
-            DownloadHistory.timestamp.label("timestamp"),
-            DownloadHistory.operator_id.label("operator_id"),
-            DownloadHistory.operator_name.label("operator_name"),
-            DownloadHistory.public.label("public"),
-            DownloadHistory.parent_id.label("parent_id"),
-            Files.file_path.label("file_path"),
-            Files.file_content.label("file_content"),
-        )
-        .join(Files, DownloadHistory.file_id == Files.id)
-        .order_by(desc(DownloadHistory.timestamp))
+    query = db.session.query(DownloadHistory, Files).join(
+        Files, DownloadHistory.file_id == Files.id
     )
-    if filters:
-        stmt = stmt.filter(*filters)
+    if criteria.d == "asc":
+        query = query.order_by(DownloadHistory.timestamp.asc())
+    else:
+        query = query.order_by(DownloadHistory.timestamp.desc())
 
-    page = query.p or 1
-    per_page = query.l or 10
-    stmt = stmt.limit(per_page).offset((page - 1) * per_page)
+    query = query.filter(*filters)
 
-    rows = db.session.execute(stmt).mappings().all()
+    page = criteria.p or 1
+    per_page = criteria.l or DEFAULT_SEARCH_COUNT
+    query = query.limit(per_page).offset((page - 1) * per_page)
 
+    rows = query.all()
     children_counts_map: dict[UUID, int] = {}
-    if (not query.i) and rows:
-        pid_list = [r["id"] for r in rows]
-        cnt_stmt = (
-            select(
-                DownloadHistory.parent_id.label("pid"),
-                func.count().label("cnt"),
-            )
-            .select_from(DownloadHistory)
-            .where(DownloadHistory.parent_id.in_(pid_list))
+    if (not criteria.i) and rows:
+        pid_list: list[UUID] = [history.id for history, _ in rows]
+        cnt_rows = (
+            db.session
+            .query(DownloadHistory.parent_id, func.count(DownloadHistory.id))
+            .filter(DownloadHistory.parent_id.in_(pid_list))
             .group_by(DownloadHistory.parent_id)
+            .all()
         )
-        cnt_rows = db.session.execute(cnt_stmt).mappings().all()
-        children_counts_map = {r["pid"]: int(r["cnt"]) for r in cnt_rows}
+        children_counts_map = {row[0]: row[1] for row in cnt_rows}
 
     data: list[DownloadHistoryData] = []
-    for r in rows:
-        fc: dict[str, t.Any] = r["file_content"] or {}
-        repos_raw = fc.get("repositories") or []
-        groups_raw = fc.get("groups") or []
-        users_raw = fc.get("users") or []
+    for history, file in rows:
+        fc: dict[str, t.Any] = file.file_content or {}
 
-        repositories = [RepositorySummary.model_validate(x) for x in repos_raw]
-        groups = [GroupSummary.model_validate(x) for x in groups_raw]
-        users = [UserSummary.model_validate(x) for x in users_raw]
+        repositories = [
+            RepositorySummary.model_validate(x) for x in fc.get("repositories") or []
+        ]
+        groups = [GroupSummary.model_validate(x) for x in fc.get("groups") or []]
+        users = [UserSummary.model_validate(x) for x in fc.get("users") or []]
 
-        operator = UserSummary(id=r["operator_id"], user_name=r["operator_name"])
+        operator = UserSummary(id=history.operator_id, user_name=history.operator_name)
 
         payload = {
-            "id": r["id"],
-            "timestamp": r["timestamp"],
+            **history,
             "operator": operator,
-            "public": r["public"],
-            "parent_id": r["parent_id"],
-            "file_path": r["file_path"],
             "repositories": repositories,
             "groups": groups,
             "users": users,
             "children_count": (
-                children_counts_map.get(r["id"], 0) if not query.i else 0
+                children_counts_map.get(history.id, 0) if not criteria.i else 0
             ),
         }
         data.append(DownloadHistoryData.model_validate(payload))
@@ -334,10 +259,11 @@ def get_filters(tub: t.Literal["download", "upload"]) -> list[FilterOption]:
     Raises:
         RecordNotFound: If the record is not found.
     """
+    empty_criteria = empty_history_criteria()
     if tub == "download":
-        history_data = get_download_history_data(HistoryQuery())
+        history_data = get_download_history_data(empty_criteria)
     else:
-        history_data = get_upload_history_data(HistoryQuery())
+        history_data = get_upload_history_data(empty_criteria)
 
     if history_data is None:
         error = f"{tub} history data is not found"
@@ -457,3 +383,48 @@ def get_file_path(file_id: UUID) -> str:
         raise RecordNotFound(error)
 
     return file.file_path
+
+
+class HistoryCriteria(t.Protocol):
+    """Criteria for searching history records."""
+
+    i: t.Annotated[str | None, "history ID (parent ID)"]
+    """Filter by parent history ID."""
+
+    r: t.Annotated[list[str] | None, "repositories"]
+    """Filter by affiliated repository IDs."""
+
+    g: t.Annotated[list[str] | None, "groups"]
+    """Filter by affiliated group IDs."""
+
+    u: t.Annotated[list[str] | None, "users"]
+    """Filter by affiliated user IDs."""
+
+    o: t.Annotated[list[str] | None, "operators"]
+    """Filter by operator user IDs."""
+
+    s: t.Annotated[date | None, "last modified date (from)"]
+    """Filter by last modified date (from)."""
+
+    e: t.Annotated[date | None, "last modified date (to)"]
+    """Filter by last modified date (to)."""
+
+    d: t.Annotated[t.Literal["asc", "desc"] | None, "sort order"]
+    """Sort order: 'asc' (ascending) or 'desc' (descending)."""
+
+    p: t.Annotated[int | None, "page number"]
+    """Page number to retrieve."""
+
+    l: t.Annotated[int | None, "page size"]  # noqa: E741
+    """Page size (number of items per page)."""
+
+
+def empty_history_criteria() -> HistoryCriteria:
+    """Create an empty HistoryCriteria object.
+
+    Returns:
+        HistoryCriteria: An empty HistoryCriteria object.
+    """
+    hints = t.get_type_hints(HistoryCriteria)
+    attrs = dict.fromkeys(hints)
+    return t.cast("HistoryCriteria", SimpleNamespace(**attrs))

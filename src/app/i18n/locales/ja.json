@@ -143,6 +143,16 @@
     "succes": "成功",
     "success-count": "成功件数",
     "sum": "総ダウンロード回数 | 総アップロード回数",
+    "table": {
+      "column": {
+        "download-date": "ダウンロード日時",
+        "eppns": "eppn",
+        "groups": "グループ",
+        "operator": "実行ユーザー",
+        "re-download": "再ダウンロード",
+        "users": "ユーザー"
+      }
+    },
     "table-title": "履歴一覧",
     "target": "ダウンロード対象 | アップロード対象",
     "title": "履歴",

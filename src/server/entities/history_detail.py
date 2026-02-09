@@ -230,7 +230,7 @@ class HistoryQuery(BaseModel):
     o: t.Annotated[list[str] | None, "operator"] = None
     """Filter by operator IDs"""
 
-    i: t.Annotated[list[str] | None, "ids"] = None
+    i: t.Annotated[str | None, "id"] = None
     """Filter by Parent ID to retrieve child elements """
 
     d: t.Annotated[

@@ -146,6 +146,16 @@
     "succes": "success",
     "success-count": "Number of successes",
     "sum": "Total number of downloads | Total number of uploads",
+    "table": {
+      "column": {
+        "download-date": "Download date and time",
+        "eppns": "eppn",
+        "groups": "group",
+        "operator": "Execution user",
+        "re-download": "re-download",
+        "users": "user"
+      }
+    },
     "table-title": "History list",
     "target": "Download target | Upload target",
     "title": "History",

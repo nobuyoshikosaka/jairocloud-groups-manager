@@ -1,25 +1,12 @@
-// types/history.ts
-type UserSummary = {
-  id: string
-  user_name?: string | null
-}
-
-type RepositorySummary = {
-  id: string
-  display_name?: string | null
-}
-
-type GroupSummary = {
-  id: string
-  display_name?: string | null
-}
-
-export type DownloadHistoryData = {
+/**
+ * Types related to history
+ */
+interface DownloadHistoryData {
   id: string
   timestamp: string
   operator: UserSummary
   public: boolean
-  parent_id: string | null
+  parent_id: string | undefined
   file_path: string
   file_id: string
   repositories: RepositorySummary[]
@@ -28,10 +15,10 @@ export type DownloadHistoryData = {
   children_count: number
 }
 
-export type UploadHistoryData = {
+interface UploadHistoryData {
   id: string
   timestamp: string
-  end_timestamp?: string | null
+  end_timestamp?: string | undefined
   public: boolean
   operator: UserSummary
   status: 'S' | 'F' | 'P'
@@ -42,13 +29,13 @@ export type UploadHistoryData = {
   users: UserSummary[]
 }
 
-export interface PaginationInfo {
+interface PaginationInfo {
   page: number
   per_page: number
   total: number
 }
 
-export type DownloadApiModel = {
+interface DownloadApiModel {
   download_history_data: DownloadHistoryData[]
   pagination?: PaginationInfo
   summary?: {
@@ -61,7 +48,7 @@ export type DownloadApiModel = {
   re_download?: number
 }
 
-export type UploadApiModel = {
+interface UploadApiModel {
   upload_history_data: UploadHistoryData[]
   pagination?: PaginationInfo
   summary?: {
@@ -76,69 +63,50 @@ export type UploadApiModel = {
   progress_upload?: number
 }
 
-export interface HistoryQueryParameters {
+interface HistoryQuery {
   tab?: string
-  p?: string | number
-  l?: string | number
+  p?: string
+  l?: string
   d?: string
-  dir?: string
   s?: string
   e?: string
-  o?: string | string[]
-  r?: string | string[]
-  g?: string | string[]
-  u?: string | string[]
-  i?: string | string[]
+  o?: string[]
+  r?: string[]
+  g?: string[]
+  u?: string[]
+  i?: string[]
 }
 
-export type DownloadGroupItem = {
+interface DownloadGroupItem {
   parent: DownloadHistoryData
   children: DownloadHistoryData[]
   hasMoreChildren: boolean
   childrenLimit: number
 }
 
-export type ActionRow = DownloadGroupItem | UploadHistoryData
-
-export interface FilterQuery {
-  s: string
-  e: string
-  o: string[]
-  r: string[]
-  g: string[]
-  u: string[]
-}
-
-export interface TableColumn {
-  id: string
-  key: string
-  label: string
-  sortable?: boolean
-}
-
-export interface TableConfig {
+interface TableConfig {
   enableExpand?: boolean
   showStatus?: boolean
 }
 
-export interface FilterOptionsResponse {
+interface FilterOptionsResponse {
   operators?: Array<{ id: string, user_name?: string | null }>
   target_repositories?: Array<{ id: string, display_name?: string | null }>
   target_groups?: Array<{ id: string, display_name?: string | null }>
   target_users?: Array<{ id: string, user_name?: string | null }>
 }
 
-export type SelectOption = {
+interface SelectOption {
   label: string
   value: string
 }
 
-export interface StatusConfig {
+interface StatusConfig {
   label: string
-  color: 'success' | 'error' | 'warning'
+  color: 'success' | 'error' | 'warning' | 'info'
 }
 
-export interface HistoryStats {
+interface HistoryStats {
   sum?: number
   firstDownload?: number
   reDownload?: number
@@ -146,6 +114,12 @@ export interface HistoryStats {
   error?: number
 }
 
-export interface PublicStatusUpdateRequest {
+interface PublicStatusUpdateRequest {
   public: boolean
 }
+
+type ActionRow = DownloadGroupItem | UploadHistoryData
+
+export type { DownloadHistoryData, UploadHistoryData, DownloadApiModel, UploadApiModel,
+  HistoryQuery, TableConfig, FilterOptionsResponse, SelectOption, StatusConfig, HistoryStats,
+  PublicStatusUpdateRequest, ActionRow, DownloadGroupItem }

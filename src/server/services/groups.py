@@ -123,9 +123,6 @@ def create(group: GroupDetail) -> GroupDetail:
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
     system_admins = get_system_admin()
-    if not system_admins:
-        error = "Failed to get system admin user id from mAP Core API."
-        raise UnexpectedResponseError(error)
     map_group = group.to_map_group()
     map_group.members = [
         MemberUser(type="User", value=admin_id) for admin_id in system_admins
@@ -401,7 +398,9 @@ def delete_by_id(group_id: str) -> None:
         raise
 
     if isinstance(result, MapError):
-        raise ResourceInvalid
+        error = f"Failed to delete Group resource: {result.detail}"
+        current_app.logger.error(error)
+        raise ResourceInvalid(error)
 
 
 def update_member(group_id: str, add: set[str], remove: set[str]) -> GroupDetail:
@@ -423,38 +422,29 @@ def update_member(group_id: str, add: set[str], remove: set[str]) -> GroupDetail
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
     if add & remove:
-        raise RequestConflict
+        error = "cannot add and remove the same user."
+        raise RequestConflict(error)
     try:
         access_token = get_access_token()
         client_secret = get_client_secret()
-        target: MapGroup | MapError = groups.get_by_id(
+        target = groups.get_by_id(
             group_id, access_token=access_token, client_secret=client_secret
         )
         if isinstance(target, MapError):
             current_app.logger.info(target.detail)
             raise ResourceInvalid(target.detail)
-        user_list: set[str] = (
-            {u.value for u in target.members if isinstance(u, MemberUser)}
-            if target.members
-            else set()
-        )
+        user_list: set[str] = {
+            u.value for u in (target.members or []) if u.type == "User"
+        }
         system_admins = get_system_admin()
-        if not system_admins:
-            error = "Failed to get system admin user id from mAP Core API."
-            raise UnexpectedResponseError(error)
-        add.difference_update(user_list)
-        remove.difference_update(system_admins)
-        remove.intersection_update(user_list)
-        if remove.issuperset(user_list | add):
-            add.update(system_admins)
-        operations = build_update_member_operations(add, remove)
-        if operations is None:
-            return GroupDetail.from_map_group(target)
+        operations = build_update_member_operations(
+            add=add, remove=remove, user_list=user_list, system_admins=system_admins
+        )
 
         result: MapGroup | MapError = groups.patch_by_id(
             group_id,
             operations,
-            include=({"member"}),
+            include=({"members"}),
             access_token=access_token,
             client_secret=client_secret,
         )
@@ -510,9 +500,6 @@ def update_put(body: GroupDetail) -> GroupDetail:
         client_secret = get_client_secret()
         request_group = body.to_map_group()
         system_admins = get_system_admin()
-        if not system_admins:
-            error = "Failed to get system admin user id from mAP Core API."
-            raise UnexpectedResponseError(error)
         request_group.members = [
             MemberUser(type="User", value=admin_id) for admin_id in system_admins
         ]
@@ -561,7 +548,7 @@ def update_put(body: GroupDetail) -> GroupDetail:
     return GroupDetail.from_map_group(result)
 
 
-def get_system_admin() -> set[str] | None:
+def get_system_admin() -> set[str]:
     """Get group from mAP Core API by group_id.
 
     Returns:
@@ -571,6 +558,7 @@ def get_system_admin() -> set[str] | None:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
+        ResourceInvalid: If the Group resource data is invalid.
     """
     try:
         access_token = get_access_token()
@@ -606,10 +594,11 @@ def get_system_admin() -> set[str] | None:
 
     if isinstance(result, MapError):
         current_app.logger.info(result.detail)
-        return None
+        raise ResourceInvalid(result.detail)
 
-    return (
-        {members.value for members in result.members if members.type == "User"}
-        if result.members
-        else None
-    )
+    if not result.members:
+        error = "System admin group has no members."
+        current_app.logger.error(error)
+        raise ResourceInvalid(error)
+
+    return {members.value for members in result.members if members.type == "User"}

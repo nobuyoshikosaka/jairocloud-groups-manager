@@ -69,4 +69,25 @@ const normalizeUsersQuery = (query: LocationQuery): UsersSearchQuery => {
   }
 }
 
-export { normalizeRepositoriesQuery, normalizeGroupsQuery, normalizeUsersQuery }
+/**
+ * Normalize location query to history
+ */
+const normalizeHistoryQuery = (query: LocationQuery): HistoryQuery => {
+  const { table: { pageSize } } = useAppConfig()
+  return {
+    tab: query.tab ? pickSingle(query.tab) : 'download',
+    p: Number(query.p) || 1,
+    l: Number(query.l) || pageSize.history?.[0],
+    d: query.d ? pickSingle(query.d) : undefined,
+    s: query.s?.toString() || undefined,
+    e: query.e?.toString() || undefined,
+    o: query.o ? toArray(query.o) : undefined,
+    r: query.r ? toArray(query.r) : undefined,
+    g: query.g ? toArray(query.g) : undefined,
+    u: query.u ? toArray(query.u) : undefined,
+    i: query.i ? pickSingle(query.i) : undefined,
+  }
+}
+
+export { normalizeRepositoriesQuery, normalizeGroupsQuery, normalizeUsersQuery,
+  normalizeHistoryQuery }

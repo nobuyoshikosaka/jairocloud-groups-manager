@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-
 import { useI18n, useRoute, useRouter } from '#imports'
 
 import type { TabsItem } from '@nuxt/ui'
-import type { ActionRow } from '~/types/history'
 
-const { t } = useI18n()
+const { t: $t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -18,8 +15,8 @@ const currentHistory = computed(() =>
 )
 
 const tabItems = computed<TabsItem>(() => [
-  { label: t('history.tub', 1), icon: 'i-lucide-download', slot: 'download', value: 'download' },
-  { label: t('history.tub', 2), icon: 'i-lucide-upload', slot: 'upload', value: 'upload' },
+  { label: $t('history.tub', 1), icon: 'i-lucide-download', slot: 'download', value: 'download' },
+  { label: $t('history.tub', 2), icon: 'i-lucide-upload', slot: 'upload', value: 'upload' },
 ])
 
 const activeTab = computed<string>({

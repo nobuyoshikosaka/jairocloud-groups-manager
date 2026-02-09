@@ -1,141 +1,134 @@
-import { useDebounceFn } from '@vueuse/core'
-import { computed, ref, watch } from 'vue'
-import { CalendarDate, DateFormatter, getLocalTimeZone, parseDate } from '@internationalized/date'
+import { getLocalTimeZone, parseDate } from '@internationalized/date'
 
-import type { DateRange } from '@internationalized/date'
-import type {
-  DownloadApiModel,
-  DownloadGroupItem,
-  DownloadHistoryData,
-  FilterOptionsResponse,
-  HistoryQueryParameters,
-  HistoryStats,
-  SelectOption,
-  UploadApiModel,
-  UploadHistoryData,
-} from '~/types/history'
+import type { CalendarDate } from '@internationalized/date'
 
-export interface HistoryFilterOptions {
+interface HistoryFilterOptions {
   target: 'download' | 'upload'
 }
 
-export function useHistoryFilter(options: HistoryFilterOptions) {
+function useHistoryFilter(options: HistoryFilterOptions) {
   const route = useRoute()
-  const router = useRouter()
-  const { t } = useI18n()
+  const { t: $t } = useI18n()
 
-  function toArray(v: unknown): string[] {
-    if (v == undefined) return []
-    return Array.isArray(v) ? v.map(String).filter(Boolean) : [String(v)].filter(Boolean)
+  const query = computed<HistoryQuery>(() => normalizeHistoryQuery(route.query))
+  const updateQuery = async (newQuery: Partial<HistoryQuery>) => {
+    await navigateTo({
+      query: {
+        ...route.query,
+        ...newQuery,
+      },
+    })
   }
+  const specifiedIds = ref(query.value.i)
+  const specifiedRepos = ref(query.value.r)
+  const specifiedGroups = ref(query.value.g)
+  const specifiedUsers = ref(query.value.u)
+  const specifiedOperators = ref(query.value.o)
+  const startDate = ref(query.value.s)
+  const endDate = ref(query.value.e)
+  const sortOrder = computed(() => query.value.d)
+  const pageNumber = ref(query.value.p)
+  const pageSize = ref(query.value.l)
 
-  function toString_(v: unknown): string {
-    return (typeof v === 'string' ? v : String(v ?? '')).trim()
+  const makeAttributeFilters = (data: Ref<FilterOption[] | undefined>) => {
+    const options = computed(() => (
+      Object.fromEntries(data.value?.map(option => [option.key, option]) ?? [],
+      ) as Record<keyof HistoryQuery, FilterOption>
+    ))
+
+    const filters = computed(() => [
+      {
+        key: 'r',
+        placeholder: $t('repositories.title'),
+        icon: 'i-lucide-folder',
+        items: options.value.r.items ?? [],
+        multiple: options.value.r.multiple ?? false,
+        searchInput: true,
+        onUpdated: (values: unknown) => {
+          updateQuery({ r: (values as { value: string }[]).map(v => v.value), p: 1 })
+        },
+      },
+      {
+        key: 'g',
+        placeholder: $t('groups.title'),
+        icon: 'i-lucide-shield-check',
+        items: options.value.g.items ?? [],
+        multiple: options.value.g.multiple ?? false,
+        searchInput: true,
+        onUpdated: (values: unknown) => {
+          updateQuery({ g: (values as { value: string }[]).map(v => v.value), p: 1 })
+        },
+      },
+      {
+        key: 'u',
+        placeholder: $t('users.title'),
+        icon: 'i-lucide-users',
+        items: options.value.u.items ?? [],
+        multiple: options.value.u.multiple ?? false,
+        searchInput: true,
+        onUpdated: (values: unknown) => {
+          updateQuery({ u: (values as { value: string }[]).map(v => v.value), p: 1 })
+        },
+      },
+      {
+        key: 'o',
+        placeholder: $t('history.operator'),
+        icon: 'i-lucide-user-check',
+        items: options.value.o.items ?? [],
+        multiple: options.value.o.multiple ?? false,
+        searchInput: true,
+        onUpdated: (values: unknown) => {
+          updateQuery({ o: (values as { value: string }[]).map(v => v.value), p: 1 })
+        },
+      },
+    ])
+
+    return filters
   }
-
-  const filterState = ref({
-    s: toString_(route.query.s || ''),
-    e: toString_(route.query.e || ''),
-    o: toArray(route.query.o),
-    r: toArray(route.query.r),
-    g: toArray(route.query.g),
-    u: toArray(route.query.u),
-  })
-
-  const isFiltered = computed(
-    () => !!filterState.value.s
-      || !!filterState.value.e
-      || filterState.value.o.length > 0
-      || filterState.value.r.length > 0
-      || filterState.value.g.length > 0
-      || filterState.value.u.length > 0,
-  )
-
-  function initializeDateRange(): DateRange | undefined {
-    const start = filterState.value.s ? parseDate(filterState.value.s) : undefined
-    const end = filterState.value.e ? parseDate(filterState.value.e) : undefined
-
-    if (start) {
-      return { start, end: end || start }
-    }
-    return undefined
-  }
-
-  const dateRange = ref<DateRange | undefined>(initializeDateRange())
-
-  const df = new DateFormatter('ja-JP', {
-    dateStyle: 'medium',
+  const dateRange = shallowRef<{ start: CalendarDate | undefined, end: CalendarDate | undefined }>({
+    start: startDate.value ? parseDate(startDate.value) : undefined,
+    end: endDate.value ? parseDate(endDate.value) : undefined,
   })
 
   const formattedDateRange = computed(() => {
-    if (!dateRange.value?.start) return ''
-
-    const from = df.format(dateRange.value.start.toDate(getLocalTimeZone()))
+    if (!dateRange.value.start) return $t('users.table.column.last-modified')
+    const from = dateFormatter.format(dateRange.value.start.toDate(getLocalTimeZone()))
     const to = dateRange.value.end
-      ? df.format(dateRange.value.end.toDate(getLocalTimeZone()))
+      ? dateFormatter.format(dateRange.value.end.toDate(getLocalTimeZone()))
       : undefined
 
     return to ? `${from} - ${to}` : from
   })
 
-  watch(dateRange, (newRange) => {
-    if (!newRange || !newRange.start) {
-      filterState.value.s = ''
-      filterState.value.e = ''
-      return
-    }
-
-    filterState.value.s = newRange.start.toString()
-    filterState.value.e = newRange.end ? newRange.end.toString() : ''
-  }, { deep: true })
-
-  const updateQuery = useDebounceFn(() => {
-    const newQuery: Record<string, any> = {
-      ...route.query,
-      tab: route.query.tab || options.target,
-    }
-
-    const setArray = (key: string, array: string[]) => {
-      newQuery[key] = (array && array.length > 0) ? array : undefined
-    }
-    const setScalar = (key: string, value: string) => {
-      newQuery[key] = (value && value.trim() !== '') ? value : undefined
-    }
-
-    setScalar('s', filterState.value.s)
-    setScalar('e', filterState.value.e)
-    setArray('o', filterState.value.o)
-    setArray('r', filterState.value.r)
-    setArray('g', filterState.value.g)
-    setArray('u', filterState.value.u)
-
-    router.replace({ path: '/history', query: newQuery })
-  }, 200)
-
-  watch(filterState, updateQuery, { deep: true })
-
-  function resetFilters() {
-    filterState.value = { s: '', e: '', o: [], r: [], g: [], u: [] }
-    dateRange.value = undefined
-    updateQuery()
-  }
-
   const targetLabel = computed(() =>
-    options.target === 'download' ? t('history.target', 1) : t('history.target', 2),
+    options.target === 'download' ? $t('history.target', 1) : $t('history.target', 2),
   )
 
   return {
-    filterState,
-    isFiltered,
-    dateRange,
-    formattedDateRange,
-    resetFilters,
-    targetLabel,
+    query,
     updateQuery,
+    criteria: {
+      specifiedIds,
+      specifiedRepos,
+      specifiedGroups,
+      specifiedUsers,
+      specifiedOperators,
+      startDate,
+      endDate,
+      sortOrder,
+      pageNumber,
+      pageSize,
+    },
+    dateFilter: {
+      dateRange,
+      formattedDateRange,
+    },
+    targetLabel,
+    makeAttributeFilters,
   }
 }
 
-export function useHistoryFilterOptions(target: Ref<'download' | 'upload'>) {
+function useHistoryFilterOptions(target: Ref<'download' | 'upload'>) {
   const operatorOptions = ref<SelectOption[]>([])
   const repoOptions = ref<SelectOption[]>([])
   const groupOptions = ref<SelectOption[]>([])
@@ -178,7 +171,9 @@ export function useHistoryFilterOptions(target: Ref<'download' | 'upload'>) {
         value: u.id,
       }))
     }
-    catch {}
+    catch {
+      error.value = 'Failed to load filter options.'
+    }
     finally {
       loading.value = false
     }
@@ -194,10 +189,24 @@ export function useHistoryFilterOptions(target: Ref<'download' | 'upload'>) {
     loadOptions,
   }
 }
+function computeEffectiveTotal(itemsLength: number, currentPage: number,
+  itemsPerPage: number): number {
+  const base = (currentPage - 1) * itemsPerPage + itemsLength
+  return base + (itemsPerPage === itemsLength ? 1 : 0)
+}
 
-export function useHistory(target: 'download' | 'upload') {
+function useHistory(target: 'download' | 'upload') {
   const route = useRoute()
 
+  const query = computed<HistoryQuery>(() => normalizeHistoryQuery(route.query))
+  const updateQuery = async (newQuery: Partial<HistoryQuery>) => {
+    await navigateTo({
+      query: {
+        ...route.query,
+        ...newQuery,
+      },
+    })
+  }
   const loading = ref(false)
   const error = ref<string | undefined>(undefined)
   const downloadGroups = ref<DownloadGroupItem[]>([])
@@ -211,11 +220,6 @@ export function useHistory(target: 'download' | 'upload') {
     error: 0,
   })
   const fileExistsCache = ref<Map<string, boolean>>(new Map())
-
-  function computeEffectiveTotal(itemsLength: number, currentPage: number, itemsPerPage: number): number {
-    const base = (currentPage - 1) * itemsPerPage + itemsLength
-    return base + (itemsPerPage === itemsLength ? 1 : 0)
-  }
 
   async function checkFileExists(fileId: string): Promise<boolean> {
     if (fileExistsCache.value.has(fileId)) {
@@ -250,8 +254,8 @@ export function useHistory(target: 'download' | 'upload') {
     currentPage: number,
     itemsPerPage: number,
     sortDirection: 'asc' | 'desc',
-  ): HistoryQueryParameters {
-    const q: HistoryQueryParameters = { ...route.query }
+  ): HistoryQuery {
+    const q: HistoryQuery = { ...route.query }
     delete q.tab
     q.p = currentPage
     q.l = itemsPerPage
@@ -408,6 +412,8 @@ export function useHistory(target: 'download' | 'upload') {
     uploadRows,
     totalItems,
     stats,
+    query,
+    updateQuery,
     fetchHistory,
     loadChildren,
     togglePublicStatus,
@@ -415,4 +421,4 @@ export function useHistory(target: 'download' | 'upload') {
   }
 }
 
-export type UseHistoryReturn = ReturnType<typeof useHistory>
+export { useHistory, useHistoryFilter, useHistoryFilterOptions }

@@ -5,7 +5,7 @@
 """API endpoints for group-related operations."""
 
 from flask import Blueprint, url_for
-from flask_login import current_user, login_required
+from flask_login import login_required
 from flask_pydantic import validate
 
 from server.api.helpers import roles_required
@@ -95,7 +95,8 @@ def id_get(group_id: str) -> tuple[GroupDetail | ErrorResponse, int]:
         - If group not found, status code 404
     """
     if not (
-        current_user.is_system_admin or permissions.filter_permitted_group_ids(group_id)
+        permissions.is_current_user_system_admin()
+        or permissions.filter_permitted_group_ids(group_id)
     ):
         return ErrorResponse(code="", message=""), 403
     result = groups.get_by_id(group_id)
@@ -124,7 +125,8 @@ def id_put(body: GroupDetail) -> tuple[GroupDetail | ErrorResponse, int]:
         - If coflicted group information, status code 409
     """
     if not (
-        current_user.is_system_admin or permissions.filter_permitted_group_ids(body.id)
+        permissions.is_current_user_system_admin()
+        or permissions.filter_permitted_group_ids(body.id)
     ):
         return ErrorResponse(
             code="", message=f"Not have permission to edit {body.id}."
@@ -159,7 +161,8 @@ def id_patch(
         - If coflicted group member, status code 409
     """
     if not (
-        current_user.is_system_admin or permissions.filter_permitted_group_ids(group_id)
+        permissions.is_current_user_system_admin()
+        or permissions.filter_permitted_group_ids(group_id)
     ):
         return ErrorResponse(code="", message=""), 403
     try:
@@ -193,7 +196,8 @@ def id_delete(group_id: str) -> tuple[None, int] | tuple[ErrorResponse, int]:
         - If logged-in user does not have permission, status code 403
     """
     if not (
-        current_user.is_system_admin or permissions.filter_permitted_group_ids(group_id)
+        permissions.is_current_user_system_admin()
+        or permissions.filter_permitted_group_ids(group_id)
     ):
         return ErrorResponse(code="", message=""), 403
     groups.delete_by_id(group_id)
@@ -219,7 +223,7 @@ def delete_post(
     """
     group_id = body.group_ids
     if not (
-        current_user.is_system_admin
+        permissions.is_current_user_system_admin()
         or permissions.filter_permitted_group_ids(*group_id)
     ):
         return ErrorResponse(code="", message=""), 403
