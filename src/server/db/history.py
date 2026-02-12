@@ -7,13 +7,12 @@
 from __future__ import annotations
 
 import typing as t
-import uuid  # noqa: TC003
+import uuid
 
 from datetime import datetime  # noqa: TC003
 
 from sqlalchemy import (
     JSON,
-    UUID,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -25,9 +24,35 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.mutable import MutableDict
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import db
+
+
+class _FileContent(t.TypedDict):
+    """Definition for json data of `Files.file_content`."""
+
+    repositories: list[dict]
+    """Repositories contained in the file."""
+
+    groups: list[dict]
+    """Groups contained in the file."""
+
+    users: list[dict]
+    """Users contained in the file."""
+
+
+class _ResultData(t.TypedDict):
+    """Definition for json data of `UploadHistory.results`."""
+
+    summary: dict
+    """Summary of execution results or check results."""
+
+    items: list[dict]
+    """Items of execution results or check results."""
+
+    missing_users: list[dict]
+    """Users not contained in the file."""
 
 
 class Files(db.Model):
@@ -36,13 +61,13 @@ class Files(db.Model):
     Attributes:
         id (UUID): id (primary key).
         file_path (str): file path.
-        file_content (dict[str, t.Any]): file content mapped JSONB.
+        file_content (FileContent): file content mapped JSONB.
     """
 
     __tablename__ = "files"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
+        default=uuid.uuid7,
         primary_key=True,
     )
     """File identifier (UUID)."""
@@ -53,8 +78,9 @@ class Files(db.Model):
     )
     """File path."""
 
-    file_content: Mapped[dict[str, t.Any]] = mapped_column(
+    file_content: Mapped[_FileContent] = mapped_column(
         MutableDict.as_mutable(JSON().with_variant(postgresql.JSONB, "postgresql")),
+        nullable=False,
     )
     """Repositories, groups, and users contained in the file."""
 
@@ -69,7 +95,7 @@ class DownloadHistory(db.Model):
     __tablename__ = "download_history"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
+        default=uuid.uuid7,
         primary_key=True,
     )
     """History record ID (uuid.UUID)."""
@@ -83,11 +109,13 @@ class DownloadHistory(db.Model):
     """Download timestamp in UTC (TIMESTAMPTZ(6); server default UTC now)."""
 
     file_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        ForeignKey("files.id"),
+        ForeignKey(Files.id),
         nullable=False,
     )
-    """Foreign key to files.id (downloaded file ID)."""
+    """Foreign key to `Files.id` (downloaded file ID)."""
+
+    file: Mapped[Files] = relationship()
+    """Relationship to `Files` model."""
 
     operator_id: Mapped[str] = mapped_column(
         String(50),
@@ -109,12 +137,23 @@ class DownloadHistory(db.Model):
     )
     """Public/private flag (BOOLEAN NOT NULL DEFAULT true)."""
 
-    parent_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        ForeignKey("download_history.id"),
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey(f"{__tablename__}.id"),
         nullable=True,
     )
-    """Self-referencing FK to the first download record (nullable)."""
+    """Self-referencing FK to the first download record (`DownloadHistory.id`)."""
+
+    children: Mapped[list[DownloadHistory]] = relationship(
+        back_populates="parent",
+        cascade="all, delete-orphan",
+    )
+    """Relationship to child DownloadHistory records."""
+
+    parent: Mapped[DownloadHistory | None] = relationship(
+        back_populates="children",
+        remote_side=[id],  # noqa: A003
+    )
+    """Relationship to parent DownloadHistory record."""
 
 
 class UploadHistory(db.Model):
@@ -130,7 +169,7 @@ class UploadHistory(db.Model):
     """
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
+        default=uuid.uuid7,
         primary_key=True,
     )
     """History record ID (UUID)."""
@@ -150,11 +189,13 @@ class UploadHistory(db.Model):
     """Upload end timestamp in UTC (TIMESTAMPTZ(6); nullable)."""
 
     file_id: Mapped[uuid.UUID] = mapped_column(
-        UUID,
-        ForeignKey("files.id"),
+        ForeignKey(Files.id),
         nullable=False,
     )
-    """Foreign key to files.id (uploaded file ID)."""
+    """Foreign key to `Files.id` (uploaded file ID)."""
+
+    file: Mapped[Files] = relationship()
+    """Relationship to the `Files` model."""
 
     operator_id: Mapped[str] = mapped_column(
         String(50),
@@ -182,11 +223,11 @@ class UploadHistory(db.Model):
     )
     """Status: 'S' (success), 'F' (failure), 'P' (in progress)."""
 
-    results: Mapped[dict[str, t.Any]] = mapped_column(
+    results: Mapped[_ResultData] = mapped_column(
         MutableDict.as_mutable(JSON().with_variant(postgresql.JSONB, "postgresql")),
-        nullable=True,
+        nullable=False,
     )
-    """upload result data."""
+    """Upload result data."""
 
     __table_args__ = (
         CheckConstraint(
