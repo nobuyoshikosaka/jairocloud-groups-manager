@@ -30,6 +30,22 @@ ignore_extra_config = ConfigDict(
 """
 
 
+class LoginUserState(BaseModel):
+    """Schema for logged-in user state response."""
+
+    eppn: str
+    """The eduPersonPrincipalName of the user."""
+
+    user_name: str
+    """The username of the user. Alias to 'userName'."""
+
+    is_system_admin: bool
+    """Whether the user is a system administrator. Alias to 'isSystemAdmin'."""
+
+    model_config = camel_case_config
+    """Configure to use camelCase aliasing."""
+
+
 class OAuthTokenQuery(BaseModel):
     """Schema for OAuth token query parameters."""
 

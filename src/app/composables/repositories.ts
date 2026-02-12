@@ -172,7 +172,8 @@ const useRepositoriesTable = () => {
           copy(row.original.serviceUrl)
 
           toast.add({
-            title: $t('repository.actions.copy-url-success'),
+            title: $t('toast.success.title'),
+            description: $t('toast.success.copy-url.description'),
             color: 'success',
             icon: 'i-lucide-circle-check',
           })
@@ -185,7 +186,8 @@ const useRepositoriesTable = () => {
           copy(row.original.spConnectorId!)
 
           toast.add({
-            title: $t('repositories.actions.copy-sp-connector-id-success'),
+            title: $t('toast.success.title'),
+            description: $t('toast.success.copy-sp-connector-id.description'),
             color: 'success',
             icon: 'i-lucide-circle-check',
           })

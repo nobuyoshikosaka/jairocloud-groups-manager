@@ -16,11 +16,12 @@ export default defineNuxtPlugin(() => {
     baseURL,
     credentials: 'include',
 
-    onResponseError: ({ response }) => {
+    onResponseError: async ({ response }) => {
       const route = useRoute()
       const statusCode = response.status
       if (statusCode === 401 && !publicRoutes.has(route.path.replace(/\/$/, ''))) {
-        checkout()
+        const next = encodeURIComponent(route.fullPath.replace(/\/$/, ''))
+        await checkout({ next })
       }
     },
   })

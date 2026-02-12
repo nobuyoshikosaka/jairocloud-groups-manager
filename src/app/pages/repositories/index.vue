@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const toast = useToast()
 const { currentUser } = useAuth()
 const tableView = ref(currentUser.value?.isSystemAdmin)
 
@@ -12,8 +13,30 @@ const { searchTerm, pageNumber, pageSize } = criteria
 const table = useTemplateRef('table')
 const { table: { pageSize: { repositories: pageOptions } } } = useAppConfig()
 
-const { data: searchResult, status, refresh } = useFetch<RepositoriesSearchResult>(
-  '/api/repositories', { method: 'GET', query, lazy: true, server: false })
+const {
+  data: searchResult, status, refresh,
+} = useFetch<RepositoriesSearchResult>('/api/repositories', {
+  method: 'GET',
+  query,
+  onResponseError({ response }) {
+    if (response.status === 400) {
+      toast.add({
+        title: $t('toast.error.failed-search.title'),
+        description: $t('toast.error.invalid-search-query.description'),
+        color: 'error',
+      })
+      return
+    }
+    toast.add({
+      title: $t('toast.error.server.title'),
+      description: $t('toast.error.server.description'),
+      color: 'error',
+      icon: 'i-lucide-circle-x',
+    })
+  },
+  lazy: true,
+  server: false,
+})
 const offset = computed(() => (searchResult.value?.offset ?? 1))
 emptyActions.value[0]!.onClick = () => refresh()
 

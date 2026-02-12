@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const toast = useToast()
 const {
   query, updateQuery, criteria, creationButtons, emptyActions,
   toggleSelection, selectedCount, selectedUsersActions, columns, columnNames, columnVisibility,
@@ -13,6 +14,22 @@ const { table: { pageSize: { users: pageOptions } } } = useAppConfig()
 const { data: searchResult, status, refresh } = useFetch<UsersSearchResult>('/api/users', {
   method: 'GET',
   query,
+  onResponseError({ response }) {
+    if (response.status === 400) {
+      toast.add({
+        title: $t('toast.error.failed-search.title'),
+        description: $t('toast.error.invalid-search-query.description'),
+        color: 'error',
+      })
+      return
+    }
+    toast.add({
+      title: $t('toast.error.server.title'),
+      description: $t('toast.error.server.description'),
+      color: 'error',
+      icon: 'i-lucide-circle-x',
+    })
+  },
   lazy: true,
   server: false,
 })

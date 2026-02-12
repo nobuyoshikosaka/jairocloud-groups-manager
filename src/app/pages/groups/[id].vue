@@ -19,12 +19,12 @@ const { data: group, refresh } = useFetch<GroupDetail>(
       if (response.status === 404) {
         showError({
           statusCode: 404,
-          statusMessage: $t('group.error.not-found'),
+          statusMessage: $t('group.error-page.not-found'),
         })
       }
       toast.add({
-        title: $t('error.server.title'),
-        description: $t('error.server.description'),
+        title: $t('toast.error.server.title'),
+        description: $t('toast.error.server.description'),
         color: 'error',
         icon: 'i-lucide-circle-x',
       })
@@ -67,8 +67,8 @@ const onSubmit = async (data: GroupUpdatePayload) => {
     })
 
     toast.add({
-      title: $t('success.updated.title'),
-      description: $t('success.group.updated-description'),
+      title: $t('toast.success.updated.title'),
+      description: $t('toast.success.group-updated.description'),
       color: 'success',
       icon: 'i-lucide-circle-check',
     })
@@ -78,24 +78,24 @@ const onSubmit = async (data: GroupUpdatePayload) => {
     if (error instanceof FetchError) {
       if (error.status === 400) {
         toast.add({
-          title: $t('error.validation.title'),
-          description: error?.data?.message ?? $t('error.validation.description'),
+          title: $t('toast.error.validation.title'),
+          description: error?.data?.message ?? $t('toast.error.validation.description'),
           color: 'error',
           icon: 'i-lucide-circle-x',
         })
       }
       else if (error.status === 409) {
         toast.add({
-          title: $t('error.conflict.title'),
-          description: $t('error.conflict.description'),
+          title: $t('toast.error.conflict.title'),
+          description: $t('toast.error.conflict.description'),
           color: 'error',
           icon: 'i-lucide-circle-x',
         })
       }
       else {
         toast.add({
-          title: $t('error.server.title'),
-          description: $t('error.server.description'),
+          title: $t('toast.error.server.title'),
+          description: $t('toast.error.server.description'),
           color: 'error',
           icon: 'i-lucide-circle-x',
         })
@@ -103,8 +103,8 @@ const onSubmit = async (data: GroupUpdatePayload) => {
     }
     else {
       toast.add({
-        title: $t('error.unexpected.title'),
-        description: $t('error.unexpected.description'),
+        title: $t('toast.error.unexpected.title'),
+        description: $t('toast.error.unexpected.description'),
         color: 'error',
         icon: 'i-lucide-circle-x',
       })

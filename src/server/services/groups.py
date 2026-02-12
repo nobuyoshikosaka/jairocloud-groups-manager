@@ -100,6 +100,10 @@ def search(criteria: GroupsCriteria) -> SearchResult[GroupSummary]:
     except InvalidQueryError, OAuthTokenError, CredentialsError:
         raise
 
+    if isinstance(results, MapError):
+        current_app.logger.info(results.detail)
+        raise InvalidQueryError(results.detail)
+
     return SearchResult[GroupSummary](
         total=results.total_results,
         page_size=results.items_per_page,

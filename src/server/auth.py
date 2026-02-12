@@ -73,12 +73,12 @@ def load_user(user_id: str) -> LoginUser | None:
     if not user_id:
         return None
 
-    session_id: str = session.get("_id")  # pyright: ignore[reportAssignmentType]
+    session_id: str | None = session.get("_id")
     if not session_id:
         return None
 
     key = build_account_store_key(session_id)
-    raw = account_store.hgetall(key)  # pyright: ignore[reportAssignmentType]
+    raw = account_store.hgetall(key)
     if not raw:
         return None
 
@@ -87,7 +87,7 @@ def load_user(user_id: str) -> LoginUser | None:
         for k, v in t.cast("dict[bytes, bytes]", raw).items()
     }
 
-    if data["id"] != user_id:
+    if data["eppn"] != user_id:
         return None
 
     return LoginUser.model_validate(data | {"session_id": session_id})

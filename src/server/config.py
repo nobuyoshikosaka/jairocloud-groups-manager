@@ -159,7 +159,11 @@ class RuntimeConfig(BaseSettings):
                 "REMEMBER_COOKIE_DURATION",
                 "REMEMBER_COOKIE_REFRESH_EACH_REQUEST",
             }
-        ) | {"SQLALCHEMY_DATABASE_URI": self.SQLALCHEMY_DATABASE_URI}
+        ) | {
+            "SQLALCHEMY_DATABASE_URI": self.SQLALCHEMY_DATABASE_URI,
+            "SESSION_COOKIE_SECURE": True,
+            "SESSION_COOKIE_SAMESITE": "Lax",
+        }
 
     @t.override
     @classmethod

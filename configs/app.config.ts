@@ -26,6 +26,13 @@ const header = {
    * [Mandatory]
    */
   serviceAltName: 'JAIRO Cloud Groups Manager' as string,
+
+  /**
+   * URL or path to the user manual page \
+   * If set to an empty string, the link to the user manual will not be displayed. \
+   * [Optional, can be left empty]
+   */
+  userManualURL: '' as string,
 }
 
 const table = {

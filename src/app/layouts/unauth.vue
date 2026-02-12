@@ -8,10 +8,6 @@
     <UMain>
       <UContainer>
         <UPage>
-          <template #left>
-            <AppSideMenu />
-          </template>
-
           <UPageBody>
             <slot />
           </UPageBody>

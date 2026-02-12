@@ -26,20 +26,28 @@ from server.entities.login_user import LoginUser
 from server.services import users
 from server.services.utils import detect_affiliations, extract_group_ids
 
+from .schemas import LoginUserState
+
 
 bp = Blueprint("auth", __name__)
 
 
 @bp.get("/check")
 @login_required
-@validate(response_by_alias=True)
-def check() -> tuple[LoginUser, int]:
+@validate(response_by_alias=True, exclude_none=True)
+def check() -> tuple[LoginUserState, int]:
     """Check the authentication status.
 
     Returns:
         dict: Authentication status.
     """
-    return t.cast("LoginUser", current_user), 200
+    user = t.cast("LoginUser", current_user)
+
+    return LoginUserState(
+        eppn=user.eppn,
+        user_name=user.user_name,
+        is_system_admin=user.is_system_admin,
+    ), 200
 
 
 @bp.get("/login")
@@ -106,7 +114,7 @@ def login() -> Response:
 
 @bp.get("/logout")
 @login_required
-def logout() -> Response:
+def logout() -> tuple[t.Literal[""], int]:
     """Log out the current user and clear their session.
 
     Returns:
@@ -119,4 +127,4 @@ def logout() -> Response:
 
     logout_user()
 
-    return make_response(redirect("/"))
+    return "", 204

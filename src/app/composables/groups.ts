@@ -229,7 +229,8 @@ const useGroupsTable = () => {
           copy(row.original.id)
 
           toast.add({
-            title: $t('groups.actions.copy-id-success'),
+            title: $t('toast.success.title'),
+            description: $t('toast.success.copy-group-id.description'),
             color: 'success',
             icon: 'i-lucide-circle-check',
           })

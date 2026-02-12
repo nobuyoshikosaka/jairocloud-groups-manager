@@ -94,6 +94,10 @@ def search(criteria: RepositoriesCriteria) -> SearchResult[RepositorySummary]:
     except InvalidQueryError, OAuthTokenError, CredentialsError:
         raise
 
+    if isinstance(results, MapError):
+        current_app.logger.info(results.detail)
+        raise InvalidQueryError(results.detail)
+
     repository_summaries = [
         RepositorySummary(
             id=resolve_repository_id(service_id=result.id),

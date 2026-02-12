@@ -28,7 +28,7 @@ type GetMapUserResponse = MapUser | MapError
 adapter: TypeAdapter[GetMapUserResponse] = TypeAdapter(GetMapUserResponse)
 
 
-type UsersSearchResponse = SearchResponse[MapUser]
+type UsersSearchResponse = SearchResponse[MapUser] | MapError
 """Type alias for search response containing MapUser resources."""
 adapter_search: TypeAdapter[UsersSearchResponse] = TypeAdapter(UsersSearchResponse)
 

@@ -21,8 +21,8 @@ from .common import camel_case_config
 class LoginUser(BaseModel, UserMixin):
     """Model for login user information."""
 
-    eppn: t.Annotated[str, Field(validation_alias="id", serialization_alias="id")]
-    """The unique identifier for the user."""
+    eppn: str
+    """The eduPersonPrincipalName of the user. Used in session management."""
 
     login_date: datetime = Field(default_factory=lambda: datetime.now(UTC))
     """Login date and time. Cached in ISO 6018 format."""

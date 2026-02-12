@@ -1,6 +1,12 @@
+<!--
+ Copyright (C) 2026 National Institute of Informatics.
+-->
 <script setup lang="ts">
 import { description } from '@@/package.json'
 
+definePageMeta({
+  layout: 'unauth',
+})
 const route = useRoute()
 
 let { next } = route.query

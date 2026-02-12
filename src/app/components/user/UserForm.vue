@@ -31,8 +31,8 @@ const { copy } = useClipboard()
 const copyId = (id: string) => {
   copy(id)
   toast.add({
-    title: $t('toast.success-title'),
-    description: $t('user.actions.copy-id-success'),
+    title: $t('toast.success.title'),
+    description: $t('toast.success.copy-user-id.description'),
     color: 'success',
     icon: 'i-lucide-circle-check',
   })

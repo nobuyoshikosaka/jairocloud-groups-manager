@@ -101,6 +101,10 @@ def search(criteria: UsersCriteria) -> SearchResult[UserSummary]:
     except InvalidQueryError, OAuthTokenError, CredentialsError:
         raise
 
+    if isinstance(results, MapError):
+        current_app.logger.info(results.detail)
+        raise InvalidQueryError(results.detail)
+
     return SearchResult(
         total=results.total_results,
         page_size=results.items_per_page,

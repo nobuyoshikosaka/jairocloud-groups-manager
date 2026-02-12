@@ -28,7 +28,7 @@ type GetMapGroupResponse = MapGroup | MapError
 adapter: TypeAdapter[GetMapGroupResponse] = TypeAdapter(GetMapGroupResponse)
 
 
-type GroupsSearchResponse = SearchResponse[MapGroup]
+type GroupsSearchResponse = SearchResponse[MapGroup] | MapError
 """Type alias for search response containing MapGroup resources."""
 adapter_search: TypeAdapter[GroupsSearchResponse] = TypeAdapter(GroupsSearchResponse)
 

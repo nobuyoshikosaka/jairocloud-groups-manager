@@ -13,7 +13,7 @@ from pkgutil import iter_modules
 from flask import Blueprint
 from flask_pydantic import validate
 
-from server.auth import refresh_session
+from server.auth import login_manager, refresh_session
 from server.exc import JAIROCloudGroupsManagerError
 
 from .schemas import ErrorResponse
@@ -49,5 +49,15 @@ def create_api_blueprint() -> Blueprint:
         return ErrorResponse(code=error.code, message=error.message), 500
 
     bp_api.before_request(refresh_session)
+
+    @login_manager.unauthorized_handler
+    @validate()
+    def unauthorized() -> tuple[ErrorResponse, int]:
+        """Handle unauthorized access attempts.
+
+        Returns:
+            dict: Response body indicating unauthorized access.
+        """
+        return ErrorResponse(code="", message="Login required."), 401
 
     return bp_api

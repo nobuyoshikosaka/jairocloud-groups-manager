@@ -16,12 +16,12 @@ const { data: user } = useFetch<UserDetail>(
       if (response.status === 404) {
         showError({
           statusCode: 404,
-          statusMessage: $t('user.error.not-found'),
+          statusMessage: $t('user.error-page.not-found'),
         })
       }
       toast.add({
-        title: $t('error.server.title'),
-        description: $t('error.server.description'),
+        title: $t('toast.error.server.title'),
+        description: $t('toast.error.server.description'),
         color: 'error',
         icon: 'i-lucide-circle-x',
       })

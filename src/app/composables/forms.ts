@@ -421,8 +421,8 @@ const useFormError = () => {
 
   const handleFormError = (event: FormErrorEvent) => {
     toast.add({
-      title: $t('error.validation.title'),
-      description: $t('error.validation.description'),
+      title: $t('toast.error.validation.title'),
+      description: $t('toast.error.validation.description'),
       color: 'error',
       icon: 'i-lucide-circle-x',
     })

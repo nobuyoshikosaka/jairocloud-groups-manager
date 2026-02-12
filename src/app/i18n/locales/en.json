@@ -76,7 +76,7 @@
     "reload": "Reload",
     "save": "Save",
     "update": "Update",
-    "upload-users": "Upload"
+    "upload": "Upload"
   },
   "cache-groups": {
     "description": "You can manage the cache status of group information used by WEKO3.",
@@ -87,20 +87,12 @@
   },
   "error": {
     "conflict": {
-      "description": "There was a conflict in the input content.",
-      "title": "Conflict error"
     },
     "server": {
-      "description": "An unexpected error occurred on the server.",
-      "title": "Internal Server Error"
     },
     "unexpected": {
-      "description": "An unexpected error has occurred.",
-      "title": "Error"
     },
     "validation": {
-      "description": "The input content is invalid. Please check the message in the input field.",
-      "title": "Validation Error"
     }
   },
   "footer": {
@@ -115,6 +107,8 @@
     "display-name": "Display Name",
     "display-name-description": "Display name of the group. It is not linked to the group name in the actual repository.",
     "error": {
+    },
+    "error-page": {
       "not-found": "Group not found."
     },
     "id": "Group ID",
@@ -155,8 +149,7 @@
   },
   "groups": {
     "actions": {
-      "copy-id": "Copy ID to clipboard",
-      "copy-id-success": "The group ID has been copied to the clipboard."
+      "copy-id": "Copy ID to clipboard"
     },
     "button": {
       "selected-groups-actions": "Actions for selected users"
@@ -246,8 +239,7 @@
   },
   "repositories": {
     "actions": {
-      "copy-sp-connector-id": "Copy SP Connecter ID to clipboard\t",
-      "copy-sp-connector-id-success": "The selected repository's URL has been copied to the clipboard."
+      "copy-sp-connector-id": "Copy SP Connecter ID to clipboard\t"
     },
     "description": "You can check information about the repositories you manage.",
     "entity-id-label": "Entity ID: ",
@@ -267,8 +259,7 @@
   },
   "repository": {
     "actions": {
-      "copy-url": "Copy URL to clipboard",
-      "copy-url-success": "The selected repository's URL has been copied to the clipboard."
+      "copy-url": "Copy URL to clipboard"
     },
     "created": "Created at",
     "details-basic-section": "Basic Information",
@@ -276,9 +267,7 @@
     "details-title": "Repository Details",
     "entity-ids": "EntityID",
     "entity-ids-description": "EntityID of the SP linked to the repository",
-    "error": {
-      "conflict": {
-      },
+    "error-page": {
       "forbidden": "You do not have permission to create a repository.",
       "not-found": "Repository not found."
     },
@@ -319,23 +308,21 @@
       }
     }
   },
+  "submenu": {
+    "logout": "Logout",
+    "manual": "User Manual",
+    "profile": "Profile"
+  },
   "success": {
     "creation": {
-      "title": "Create successful"
     },
     "group": {
-      "created-description": "Successfully created group.",
-      "updated-description": "Successfully updated group information."
     },
     "repository": {
-      "created-description": "Successfully created SP connector for repository.",
-      "updated-description": "Successfully updated repository information."
     },
     "updated": {
-      "title": "Update successful"
     },
     "user": {
-      "created-description": "Successfully created user."
     }
   },
   "table": {
@@ -352,14 +339,74 @@
     "switch-to-table-view": "Switch to table view"
   },
   "toast": {
-    "success-title": "Success"
+    "error": {
+      "conflict": {
+        "description": "There was a conflict in the input content.",
+        "title": "Conflict error"
+      },
+      "failed-search": {
+        "title": "Search Error"
+      },
+      "invalid-search-query": {
+        "description": "Contains invalid search criteria."
+      },
+      "server": {
+        "description": "An unexpected error occurred on the server.",
+        "title": "Internal Server Error"
+      },
+      "unexpected": {
+        "description": "An unexpected error has occurred.",
+        "title": "Error"
+      },
+      "validation": {
+        "description": "The input content is invalid. Please check the message in the input field.",
+        "title": "Validation Error"
+      }
+    },
+    "success": {
+      "copy-group-id": {
+        "description": "The group ID has been copied to the clipboard."
+      },
+      "copy-sp-connector-id": {
+        "description": "The selected repository's URL has been copied to the clipboard."
+      },
+      "copy-url": {
+        "description": "The selected repository's URL has been copied to the clipboard."
+      },
+      "copy-user-eppn": {
+        "description": "The selected user's ePPN has been copied to the clipboard."
+      },
+      "copy-user-id": {
+        "description": "The user ID has been copied to the clipboard."
+      },
+      "creation": {
+        "title": "Create successful"
+      },
+      "group-created": {
+        "description": "Successfully created group."
+      },
+      "group-updated": {
+        "description": "Successfully updated group information."
+      },
+      "repository-created": {
+        "description": "Successfully created SP connector for repository."
+      },
+      "repository-updated": {
+        "description": "Successfully updated repository information."
+      },
+      "title": "Success",
+      "updated": {
+        "title": "Update successful"
+      },
+      "user-created": {
+        "description": "Successfully created user."
+      }
+    }
   },
   "user": {
     "actions": {
       "copy-eppn": "Copy ePPN to clipboard",
-      "copy-eppn-success": "The selected user's ePPN has been copied to the clipboard.",
-      "copy-id": "Copy ID to clipboard",
-      "copy-id-success": "The user ID has been copied to the clipboard."
+      "copy-id": "Copy ID to clipboard"
     },
     "affiliated-repositories": "Affiliated Repositories",
     "affiliated-repositories-description": "Specify the repository and role to assign to the user.",
@@ -372,8 +419,8 @@
     "eppns": "ePPN",
     "eppns-description": "A unique, persistent identifier assigned to a user by an IdP.",
     "error": {
-      "conflict-description": "There was a conflict in the input content.",
-      "conflict-title": "Conflict error",
+    },
+    "error-page": {
       "not-found": "User not found."
     },
     "groups": "Affiliated Groups",
