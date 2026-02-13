@@ -57,6 +57,11 @@ class RuntimeConfig(BaseSettings):
     )
     """API configuration."""
 
+    STORAGE: StorageConfig = Field(
+        default_factory=lambda: StorageConfig(),  # noqa: PLW0108
+    )
+    """Storage configuration."""
+
     MAP_CORE: MapCoreConfig
     """mAP Core service configuration."""
 
@@ -235,6 +240,28 @@ class ApiConfig(BaseModel):
 
     max_upload_size: t.Annotated[int, "bytes"] = 10 * 1024**2
     """Maximum allowed file upload size (in bytes)."""
+
+
+class StorageConfig(BaseModel):
+    """Schema for storage configuration."""
+
+    type: t.Literal["local"] = "local"
+    """Type of storage backend to use."""
+
+    local: LocalStorageConfig = Field(
+        default_factory=lambda: LocalStorageConfig(),  # noqa: PLW0108
+    )
+    """Configuration for local storage backend."""
+
+
+class LocalStorageConfig(BaseModel):
+    """Schema for local storage configuration."""
+
+    temporary: str = "/var/tmp/jcgroups"  # noqa: S108
+    """Path to the temporary directory."""
+
+    storage: str = "/data/jcgroups"
+    """Path to the storage directory."""
 
 
 class SpConfig(BaseModel):
