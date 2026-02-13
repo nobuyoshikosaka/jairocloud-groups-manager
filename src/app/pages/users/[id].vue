@@ -1,30 +1,40 @@
 <script setup lang="ts">
+import { camelCase } from 'scule'
+
 const route = useRoute()
-const toast = useToast()
 
 const userId = computed(() => route.params.id as string)
 const mode = computed<'view' | 'edit'>(() => 'view')
 
 const { defaultData, defaultForm, state } = useUserForm()
 
+const { handleFetchError } = useErrorHandling()
 const { data: user } = useFetch<UserDetail>(
   `/api/users/${userId.value}`, {
     method: 'GET',
     server: false,
     default: () => defaultData,
     onResponseError({ response }) {
-      if (response.status === 404) {
-        showError({
-          statusCode: 404,
-          statusMessage: $t('user.error-page.not-found'),
-        })
+      switch (response.status) {
+        case 403: {
+          showError({
+            statusCode: 403,
+            statusMessage: $t('error-page.forbidden.user-access'),
+          })
+          break
+        }
+        case 404: {
+          showError({
+            statusCode: 404,
+            statusMessage: $t('error-page.not-found.user'),
+          })
+          break
+        }
+        default:{
+          handleFetchError({ response })
+          break
+        }
       }
-      toast.add({
-        title: $t('toast.error.server.title'),
-        description: $t('toast.error.server.description'),
-        color: 'error',
-        icon: 'i-lucide-circle-x',
-      })
     },
   },
 )
@@ -43,9 +53,9 @@ watch(user, (newUser: UserDetail) => {
     isSystemAdmin: newUser.isSystemAdmin || defaultForm.isSystemAdmin,
     repositoryRoles: newUser.repositoryRoles?.length
       ? newUser.repositoryRoles?.map(role => ({
-          id: role.id,
+          value: role.id,
           label: role.serviceName,
-          userRole: role.userRole,
+          userRole: camelCase(role.userRole!),
         }))
       : defaultForm.repositoryRoles,
     groups: newUser.groups?.length

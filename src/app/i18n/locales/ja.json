@@ -85,6 +85,23 @@
   "common": {
     "loading": "読み込み中..."
   },
+  "error-page": {
+    "forbidden": {
+      "group-access": "このグループにアクセスする権限がありません。",
+      "group-create": "選択したリポジトリにグループを作成する権限がありません。",
+      "group-edit": "このグループの情報を変更する権限がありません。",
+      "repository-access": "このリポジトリにアクセスする権限がありません。",
+      "repository-create": "リポジトリを作成する権限がありません。",
+      "repository-edit": "このリポジトリの情報を変更する権限がありません。",
+      "user-access": "このユーザーにアクセスする権限がありません。",
+      "user-create": "選択したリポジトリやグループにユーザーを所属させる権限がありません。"
+    },
+    "not-found": {
+      "group": "該当するグループが見つかりません。",
+      "repository": "該当するリポジトリが見つかりません。",
+      "user": "該当するユーザーが見つかりません。"
+    }
+  },
   "footer": {
     "privacy-policy": "プライバシーポリシー",
     "terms-of-use": "利用ガイドライン"
@@ -96,9 +113,6 @@
     "details-title": "グループ詳細",
     "display-name": "表示名",
     "display-name-description": "グループの表示名です。実際のリポジトリ内でのグループ名とはリンクしません。",
-    "error-page": {
-      "not-found": "グループが見つかりません。"
-    },
     "id": "グループ ID",
     "member-list-visibility": {
       "hidden": "非公開",
@@ -252,10 +266,6 @@
     "details-title": "リポジトリ詳細",
     "entity-ids": "EntityID",
     "entity-ids-description": "リポジトリに紐づけられている SP の EntityID です。",
-    "error-page": {
-      "forbidden": "リポジトリを作成する権限がありません。",
-      "not-found": "リポジトリが見つかりません。"
-    },
     "new-description": "リポジトリの SP コネクタを作成できます。",
     "new-title": "リポジトリの作成",
     "number-of-groups": "グループ数",
@@ -313,6 +323,10 @@
   },
   "toast": {
     "error": {
+      "bad-request": {
+        "description": "サーバーがリクエストを不正とみなしました。",
+        "title": "不正なリクエスト"
+      },
       "conflict": {
         "description": "入力内容に競合がありました。",
         "title": "競合エラー"
@@ -320,12 +334,28 @@
       "failed-search": {
         "title": "検索エラー"
       },
+      "forbidden": {
+        "description": "アクセス権がありません。",
+        "title": "認可エラー"
+      },
       "invalid-search-query": {
         "description": "不正な検索条件が含まれます。"
+      },
+      "not-found": {
+        "description": "リクエスト先が見つかりません。",
+        "title": "未検出"
       },
       "server": {
         "description": "サーバーで予期せぬエラーが発生しました。",
         "title": "サーバーエラー"
+      },
+      "service-unavailable": {
+        "description": "サービスが一時的に利用できません。",
+        "title": "サービス利用不可"
+      },
+      "unauthorized": {
+        "description": "認証済みセッションの期限が切れました。再ログインしてください。",
+        "title": "認証エラー"
       },
       "unexpected": {
         "description": "予期しないエラーが発生しました。",
@@ -391,9 +421,6 @@
     "emails-description": "ユーザーのメールアドレスです。",
     "eppns": "ePPN",
     "eppns-description": "IdP によりユーザーに割り当てられた一意で永続的な識別子です。",
-    "error-page": {
-      "not-found": "ユーザーが見つかりません。"
-    },
     "groups": "所属グループ",
     "groups-description": "ユーザーを所属させるグループを選択します。",
     "id": "ユーザー ID",

@@ -7,22 +7,11 @@
  */
 export default defineNuxtPlugin(() => {
   const { baseURL } = useAppConfig()
-
-  const { checkout } = useAuth()
-
-  const publicRoutes = new Set(['/login'])
+  const { handleFetchError } = useErrorHandling()
 
   globalThis.$fetch = $fetch.create({
     baseURL,
     credentials: 'include',
-
-    onResponseError: async ({ response }) => {
-      const route = useRoute()
-      const statusCode = response.status
-      if (statusCode === 401 && !publicRoutes.has(route.path.replace(/\/$/, ''))) {
-        const next = encodeURIComponent(route.fullPath.replace(/\/$/, ''))
-        await checkout({ next })
-      }
-    },
+    onResponseError: ({ response }) => handleFetchError({ response }),
   })
 })

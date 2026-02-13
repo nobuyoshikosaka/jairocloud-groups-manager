@@ -95,6 +95,23 @@
     "validation": {
     }
   },
+  "error-page": {
+    "forbidden": {
+      "group-access": "You do not have permission to access this group.",
+      "group-create": "You do not have permission to create groups in the selected repository.",
+      "group-edit": "You do not have permission to change information for this group.",
+      "repository-access": "You do not have permission to access this repository.",
+      "repository-create": "You do not have permission to create a repository.",
+      "repository-edit": "You do not have permission to modify information in this repository.",
+      "user-access": "You do not have permission to access this user.",
+      "user-create": "You do not have permission to make users belong to the selected repository or group."
+    },
+    "not-found": {
+      "group": "No such group found.",
+      "repository": "No such repository found.",
+      "user": "No such user found."
+    }
+  },
   "footer": {
     "privacy-policy": "Privacy policy",
     "terms-of-use": "Terms of Use"
@@ -107,9 +124,6 @@
     "display-name": "Display Name",
     "display-name-description": "Display name of the group. It is not linked to the group name in the actual repository.",
     "error": {
-    },
-    "error-page": {
-      "not-found": "Group not found."
     },
     "id": "Group ID",
     "member-list-visibility": {
@@ -267,10 +281,6 @@
     "details-title": "Repository Details",
     "entity-ids": "EntityID",
     "entity-ids-description": "EntityID of the SP linked to the repository",
-    "error-page": {
-      "forbidden": "You do not have permission to create a repository.",
-      "not-found": "Repository not found."
-    },
     "new-description": "You can create an SP connector for your repository.",
     "new-title": "Create new repository",
     "number-of-groups": "Groups",
@@ -340,6 +350,10 @@
   },
   "toast": {
     "error": {
+      "bad-request": {
+        "description": "The server marked the request as invalid.",
+        "title": "Bad Request"
+      },
       "conflict": {
         "description": "There was a conflict in the input content.",
         "title": "Conflict error"
@@ -347,12 +361,28 @@
       "failed-search": {
         "title": "Search Error"
       },
+      "forbidden": {
+        "description": "No access rights.",
+        "title": "Forbidden"
+      },
       "invalid-search-query": {
         "description": "Contains invalid search criteria."
+      },
+      "not-found": {
+        "description": "Request destination not found.",
+        "title": "Not Found"
       },
       "server": {
         "description": "An unexpected error occurred on the server.",
         "title": "Internal Server Error"
+      },
+      "service-unavailable": {
+        "description": "Service is temporarily unavailable.",
+        "title": "Service Unavailable"
+      },
+      "unauthorized": {
+        "description": "Certified session has expired. Please login again.",
+        "title": "Unauthorized Error"
       },
       "unexpected": {
         "description": "An unexpected error has occurred.",
@@ -419,9 +449,6 @@
     "eppns": "ePPN",
     "eppns-description": "A unique, persistent identifier assigned to a user by an IdP.",
     "error": {
-    },
-    "error-page": {
-      "not-found": "User not found."
     },
     "groups": "Affiliated Groups",
     "groups-description": "Select the group to which the user belongs.",

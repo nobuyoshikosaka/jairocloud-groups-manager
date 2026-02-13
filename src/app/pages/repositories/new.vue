@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { FetchError } from 'ofetch'
+import type { FetchError } from 'ofetch'
 
+const toast = useToast()
 const { currentUser } = useAuth()
 const { stateAsCreate: state } = useRepositoryForm()
 
+const { handleFetchError } = useErrorHandling()
 const onSubmit = async (data: RepositoryCreatePayload) => {
-  const toast = useToast()
   try {
     await $fetch('/api/repositories', {
       method: 'POST',
@@ -21,39 +22,36 @@ const onSubmit = async (data: RepositoryCreatePayload) => {
     await navigateTo('/repositories')
   }
   catch (error) {
-    if (error instanceof FetchError) {
-      if (error.status === 400) {
+    switch ((error as FetchError).status) {
+      case 400: {
         toast.add({
           title: $t('toast.error.validation.title'),
-          description: error?.data?.message ?? $t('toast.error.validation.description'),
+          description: $t('toast.error.validation.description'),
           color: 'error',
           icon: 'i-lucide-circle-x',
         })
+        break
       }
-      else if (error.status === 409) {
+      case 403: {
+        showError({
+          status: 403,
+          message: $t('error-page.forbidden.repository-create'),
+        })
+        break
+      }
+      case 409: {
         toast.add({
           title: $t('toast.error.conflict.title'),
           description: $t('toast.error.conflict.description'),
           color: 'error',
           icon: 'i-lucide-circle-x',
         })
+        break
       }
-      else {
-        toast.add({
-          title: $t('toast.error.server.title'),
-          description: $t('toast.error.server.description'),
-          color: 'error',
-          icon: 'i-lucide-circle-x',
-        })
+      default: {
+        handleFetchError({ response: (error as FetchError).response! })
+        break
       }
-    }
-    else {
-      toast.add({
-        title: $t('toast.error.unexpected.title'),
-        description: $t('toast.error.unexpected.description'),
-        color: 'error',
-        icon: 'i-lucide-circle-x',
-      })
     }
   }
 }
@@ -62,7 +60,7 @@ onMounted(() => {
   if (!currentUser.value?.isSystemAdmin) {
     showError({
       status: 403,
-      statusText: $t('repository.error-page.forbidden'),
+      message: $t('error-page.forbidden.repository-create'),
     })
   }
 })

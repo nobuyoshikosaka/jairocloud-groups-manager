@@ -16,12 +16,8 @@ from flask_pydantic import validate
 from server.api.helpers import roles_required
 from server.api.schemas import ErrorResponse, HistoryPublic
 from server.const import USER_ROLES
-from server.entities.history_detail import (
-    DownloadHistory,
-    HistoryQuery,
-    UploadHistory,
-)
-from server.entities.search_request import FilterOption
+from server.entities.history_detail import HistoryQuery
+from server.entities.search_request import FilterOption, SearchResult
 from server.exc import DatabaseError, RecordNotFound
 from server.services import history
 
@@ -58,8 +54,8 @@ def filter_options(
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate()
 def get(
-    query: HistoryQuery, tub: t.Literal["download", "upload"]
-) -> tuple[DownloadHistory | UploadHistory | ErrorResponse, int]:
+    tub: t.Literal["download", "upload"], query: HistoryQuery
+) -> tuple[SearchResult | ErrorResponse, int]:
     """Get history data.
 
     Args:
@@ -67,16 +63,14 @@ def get(
         tub (t.Literal["download", "upload"]): Type of history (download or upload)
 
     Returns:
-        DownloadHistory | UploadHistory: if successful and status code 200
+        SearchResult: if successful and status code 200
         ErrorResponse: if a connection error occurs and status code 503
     """
     try:
         if tub == "download":
-            history_data = history.get_download_history_data(query)
-            result = DownloadHistory(download_history_data=history_data)
+            result = history.get_download_history_data(query)
         else:
-            history_data = history.get_upload_history_data(query)
-            result = UploadHistory(upload_history_data=history_data)
+            result = history.get_upload_history_data(query)
     except DatabaseError:
         error = f"{tub} table connection error"
         return ErrorResponse(code="", message=error), 503

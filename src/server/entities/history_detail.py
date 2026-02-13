@@ -9,7 +9,7 @@ import typing as t
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field
 
 from server.entities.summaries import GroupSummary, RepositorySummary, UserSummary
 
@@ -20,66 +20,6 @@ ignore_extra_config = ConfigDict(
     extra="ignore",
     validate_assignment=True,
 )
-
-
-class DownloadHistory(BaseModel):
-    """Download history model."""
-
-    @computed_field
-    @property
-    def sum_download(self) -> int:
-        """Total number of downloads."""
-        return len(self.download_history_data)
-
-    @computed_field
-    @property
-    def first_download(self) -> int:
-        """Number of first-time downloads."""
-        return sum(1 for item in self.download_history_data if item.parent_id is None)
-
-    @computed_field
-    @property
-    def re_download(self) -> int:
-        """Number of re-downloads."""
-        return self.sum_download - self.first_download
-
-    download_history_data: list[DownloadHistoryData]
-
-    model_config = camel_case_config
-    """Configure to use camelCase aliasing."""
-
-
-class UploadHistory(BaseModel):
-    """Upload history model."""
-
-    @computed_field
-    @property
-    def sum_upload(self) -> int:
-        """Total number of uploads."""
-        return len(self.upload_history_data)
-
-    @computed_field
-    @property
-    def success_upload(self) -> int:
-        """Number of successful uploads."""
-        return sum(1 for item in self.upload_history_data if item.status == "S")
-
-    @computed_field
-    @property
-    def failed_upload(self) -> int:
-        """Number of failed uploads."""
-        return sum(1 for item in self.upload_history_data if item.status == "F")
-
-    @computed_field
-    @property
-    def progress_upload(self) -> int:
-        """Number of uploads in progress."""
-        return sum(1 for item in self.upload_history_data if item.status == "P")
-
-    upload_history_data: list[UploadHistoryData]
-
-    model_config = camel_case_config
-    """Configure to use camelCase aliasing."""
 
 
 class DownloadHistoryData(BaseModel):

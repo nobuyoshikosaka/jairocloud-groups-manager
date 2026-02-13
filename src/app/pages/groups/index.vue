@@ -11,24 +11,25 @@ const { searchTerm, pageNumber, pageSize } = criteria
 const table = useTemplateRef('table')
 const { table: { pageSize: { groups: pageOptions } } } = useAppConfig()
 
+const { handleFetchError } = useErrorHandling()
 const { data: searchResult, status, refresh } = useFetch<GroupsSearchResult>('/api/groups', {
   method: 'GET',
   query,
   onResponseError({ response }) {
-    if (response.status === 400) {
-      toast.add({
-        title: $t('toast.error.failed-search.title'),
-        description: $t('toast.error.invalid-search-query.description'),
-        color: 'error',
-      })
-      return
+    switch (response.status) {
+      case 400: {
+        toast.add({
+          title: $t('toast.error.failed-search.title'),
+          description: $t('toast.error.invalid-search-query.description'),
+          color: 'error',
+        })
+        break
+      }
+      default: {
+        handleFetchError({ response })
+        break
+      }
     }
-    toast.add({
-      title: $t('toast.error.server.title'),
-      description: $t('toast.error.server.description'),
-      color: 'error',
-      icon: 'i-lucide-circle-x',
-    })
   },
   lazy: true,
   server: false,
@@ -40,6 +41,7 @@ const {
   data: filterOptions, status: filterOptionsStatus,
 } = useFetch<FilterOption[]>('/api/groups/filter-options', {
   method: 'GET',
+  onResponseError: async ({ response }) => { await handleFetchError({ response }) },
   lazy: true,
   server: false,
 })

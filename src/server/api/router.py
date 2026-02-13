@@ -14,7 +14,7 @@ from flask import Blueprint
 from flask_pydantic import validate
 
 from server.auth import login_manager, refresh_session
-from server.exc import JAIROCloudGroupsManagerError
+from server.exc import CredentialsError, JAIROCloudGroupsManagerError, OAuthTokenError
 
 from .schemas import ErrorResponse
 
@@ -47,6 +47,23 @@ def create_api_blueprint() -> Blueprint:
         """
         traceback.print_exc()
         return ErrorResponse(code=error.code, message=error.message), 500
+
+    @bp_api.errorhandler(OAuthTokenError)
+    @bp_api.errorhandler(CredentialsError)
+    @validate()
+    def handle_service_settings_error(
+        error: CredentialsError | OAuthTokenError,
+    ) -> tuple[ErrorResponse, int]:
+        """Handle service settings errors for the API.
+
+        Args:
+            error: The error object.
+
+        Returns:
+            dict: Response body.
+        """
+        traceback.print_exc()
+        return ErrorResponse(code=error.code, message=error.message), 503
 
     bp_api.before_request(refresh_session)
 

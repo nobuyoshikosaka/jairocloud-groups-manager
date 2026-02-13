@@ -13,32 +13,33 @@ const { searchTerm, pageNumber, pageSize } = criteria
 const table = useTemplateRef('table')
 const { table: { pageSize: { repositories: pageOptions } } } = useAppConfig()
 
+const { handleFetchError } = useErrorHandling()
 const {
   data: searchResult, status, refresh,
 } = useFetch<RepositoriesSearchResult>('/api/repositories', {
   method: 'GET',
   query,
   onResponseError({ response }) {
-    if (response.status === 400) {
-      toast.add({
-        title: $t('toast.error.failed-search.title'),
-        description: $t('toast.error.invalid-search-query.description'),
-        color: 'error',
-      })
-      return
+    switch (response.status) {
+      case 400: {
+        toast.add({
+          title: $t('toast.error.failed-search.title'),
+          description: $t('toast.error.invalid-search-query.description'),
+          color: 'error',
+        })
+        break
+      }
+      default: {
+        handleFetchError({ response })
+        break
+      }
     }
-    toast.add({
-      title: $t('toast.error.server.title'),
-      description: $t('toast.error.server.description'),
-      color: 'error',
-      icon: 'i-lucide-circle-x',
-    })
   },
   lazy: true,
   server: false,
 })
 const offset = computed(() => (searchResult.value?.offset ?? 1))
-emptyActions.value[0]!.onClick = () => refresh()
+emptyActions.value[0].onClick = () => refresh()
 
 const pageInfo = makePageInfo(searchResult)
 </script>
