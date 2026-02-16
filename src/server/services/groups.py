@@ -21,7 +21,7 @@ from server.entities.bulk_request import BulkOperation
 from server.entities.group_detail import GroupDetail
 from server.entities.map_error import MapError
 from server.entities.map_group import Administrator, MemberUser, Service
-from server.entities.search_request import SearchResult
+from server.entities.search_request import SearchResponse, SearchResult
 from server.entities.summaries import GroupSummary
 from server.exc import (
     CredentialsError,
@@ -44,14 +44,32 @@ if t.TYPE_CHECKING:
     from server.entities.patch_request import PatchOperation
 
 
-def search(criteria: GroupsCriteria) -> SearchResult[GroupSummary]:
+@t.overload
+def search(criteria: GroupsCriteria) -> SearchResult[GroupSummary]: ...
+@t.overload
+def search(
+    criteria: GroupsCriteria, *, raw: t.Literal[True]
+) -> SearchResponse[MapGroup]: ...
+
+
+def search(
+    criteria: GroupsCriteria, *, raw: bool = False
+) -> SearchResult[GroupSummary] | SearchResponse[MapGroup]:
     """Search for groups based on given criteria.
 
     Args:
         criteria (GroupsCriteria): Search criteria for filtering groups.
+        raw (bool):
+            If True, return raw search response from mAP Core API. Defaults to False.
 
     Returns:
-        SearchResult: Search result containing Group summaries.
+        object: Search results. The type depends on the `raw` argument.
+        - SearchResult;
+            Search result containing Group summaries. It has members `total`,
+            `page_size`, `offset`, and `resources`.
+        - SearchResponse;
+            Raw search response from mAP Core API. It has members `schemas`,
+            `total_results`, `start_index`, `items_per_page`, and `resources`.
 
     Raises:
         InvalidQueryError: If the query construction is invalid.
@@ -104,12 +122,79 @@ def search(criteria: GroupsCriteria) -> SearchResult[GroupSummary]:
         current_app.logger.info(results.detail)
         raise InvalidQueryError(results.detail)
 
+    if raw:
+        return results
+
     return SearchResult[GroupSummary](
         total=results.total_results,
         page_size=results.items_per_page,
         offset=results.start_index,
         resources=[GroupSummary.from_map_group(group) for group in results.resources],
     )
+
+
+@t.overload
+def get_by_id(group_id: str) -> GroupDetail | None: ...
+@t.overload
+def get_by_id(group_id: str, *, raw: t.Literal[True]) -> MapGroup | None: ...
+
+
+def get_by_id(group_id: str, *, raw: bool = False) -> GroupDetail | MapGroup | None:
+    """Get group from mAP Core API by group_id.
+
+    Args:
+        group_id (str): ID of the Group resource.
+        raw (bool): If True, return raw MapGroup object. Defaults to False.
+
+    Returns:
+        object: The Group resource if found, otherwise None. The type depends
+            on the `raw` argument.
+        - GroupDetail: The Group detail object.
+        - MapGroup: The raw Group object from mAP Core API.
+
+    Raises:
+        OAuthTokenError: If the access token is invalid or expired.
+        CredentialsError: If the client credentials are invalid.
+        UnexpectedResponseError: If response from mAP Core API is unexpected.
+    """
+    try:
+        access_token = get_access_token()
+        client_secret = get_client_secret()
+        result: MapGroup | MapError = groups.get_by_id(
+            group_id, access_token=access_token, client_secret=client_secret
+        )
+    except requests.HTTPError as exc:
+        code = exc.response.status_code
+        if code == HTTPStatus.UNAUTHORIZED:
+            error = "Access token is invalid or expired."
+            raise OAuthTokenError(error) from exc
+
+        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
+            error = "mAP Core API server error."
+            raise UnexpectedResponseError(error) from exc
+
+        error = "Failed to get Group resource from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except requests.RequestException as exc:
+        error = "Failed to communicate with mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except ValidationError as exc:
+        error = "Failed to parse Group resource from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except OAuthTokenError, CredentialsError:
+        raise
+
+    if isinstance(result, MapError):
+        current_app.logger.info(result.detail)
+        return None
+
+    if raw:
+        return result
+
+    return GroupDetail.from_map_group(result)
 
 
 def create(group: GroupDetail) -> GroupDetail:
@@ -179,57 +264,6 @@ def create(group: GroupDetail) -> GroupDetail:
     if isinstance(result, MapError):
         current_app.logger.info(result.detail)
         raise ResourceInvalid(result.detail)
-
-    return GroupDetail.from_map_group(result)
-
-
-def get_by_id(group_id: str) -> GroupDetail | None:
-    """Get group from mAP Core API by group_id.
-
-    Args:
-        group_id (str): ID of the Group resource.
-
-    Returns:
-        GroupDetail: get group detail.
-
-    Raises:
-        OAuthTokenError: If the access token is invalid or expired.
-        CredentialsError: If the client credentials are invalid.
-        UnexpectedResponseError: If response from mAP Core API is unexpected.
-    """
-    try:
-        access_token = get_access_token()
-        client_secret = get_client_secret()
-        result: MapGroup | MapError = groups.get_by_id(
-            group_id, access_token=access_token, client_secret=client_secret
-        )
-    except requests.HTTPError as exc:
-        code = exc.response.status_code
-        if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
-            raise OAuthTokenError(error) from exc
-
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to get Group resource from mAP Core API."
-        raise UnexpectedResponseError(error) from exc
-
-    except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
-        raise UnexpectedResponseError(error) from exc
-
-    except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
-        raise UnexpectedResponseError(error) from exc
-
-    except OAuthTokenError, CredentialsError:
-        raise
-
-    if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        return None
 
     return GroupDetail.from_map_group(result)
 
