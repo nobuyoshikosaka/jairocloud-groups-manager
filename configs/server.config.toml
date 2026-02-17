@@ -203,6 +203,8 @@ url = "amqp://guest:guest@rabbitmq:5672//"
 
 # Developer account for testing.
 # [[develop.accounts]]
+# map ID of the developer account.
+# id = ""
 # ePPN of the developer account.
 # eppn = ""
 
