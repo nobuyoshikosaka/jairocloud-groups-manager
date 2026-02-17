@@ -12,7 +12,6 @@ const toast = useToast()
 const taskId = inject<Ref<string | undefined>>('taskId', ref(undefined))
 const selectedRepository = inject<Ref<string | undefined>>('selectedRepository', ref(undefined))
 const {
-  query,
   validationResults,
   missingUsers,
   selectedMissingUsers,
@@ -20,6 +19,8 @@ const {
   summary,
   executeBulkUpdate,
   toggleSelection,
+  useBulkIndicators,
+  fetchValidationResults,
 } = useValidation({ taskId, selectedRepository })
 
 const { makePageInfo } = useBulk()
@@ -27,7 +28,7 @@ const { polling: { interval, maxAttempts } } = useAppConfig()
 const isProcessing = ref<boolean>(false)
 const { handleFetchError } = useErrorHandling()
 const { data: status, execute }
-  = await useFetch<BulkProcessingStatus>(`/api/bulk/validate/status/${taskId}`,
+  = await useFetch<BulkProcessingStatus>(`/api/bulk/validate/status/${taskId.value}`,
     {
       method: 'GET',
       lazy: true,
@@ -60,41 +61,15 @@ const pollValidationStatus = async () => {
     icon: 'i-lucide-circle-x',
   })
 }
-
+const data = ref()
+const pageInfo = ref()
 onMounted(async () => {
   await pollValidationStatus()
+  data.value = await fetchValidationResults(`/api/bulk/validate/result/${taskId.value}`)
+  pageInfo.value = makePageInfo(data)
 })
 
-const fetchValidationResults = (taskId: string) => {
-  return useFetch<ResultSummary>(`/api/bulk/validate/result/${taskId}`, {
-    method: 'GET',
-    query,
-    lazy: true,
-    server: false,
-    onResponseError({ response }) {
-      switch (response.status) {
-        case 400: { {
-          toast.add({
-            title: $t('bulk.status.error'),
-            description: $t('bulk.validation.fetch_failed'),
-            color: 'error',
-            icon: 'i-lucide-circle-x',
-          }) }
-        break
-        }
-        default:{
-          handleFetchError({ response })
-          break
-        }
-      }
-    },
-  })
-}
-
-const { data } = fetchValidationResults(taskId.value!)
-const pageInfo = makePageInfo(data)
 const offset = computed(() => (data.value?.offset ?? 1))
-
 const canProceed = computed(() => summary.value.error === 0)
 
 const handleNext = async () => {
@@ -103,7 +78,7 @@ const handleNext = async () => {
   isProcessing.value = true
 
   try {
-    const { taskId, historyId } = await executeBulkUpdate()
+    const { taskId, historyId } = await executeBulkUpdate(`/api/bulk/execute`)
     if (historyId) {
       emit('next', { taskId, historyId })
     }
@@ -135,7 +110,8 @@ const deselectAllMissingUsers = () => {
   selectedMissingUsers.value = {}
 }
 
-const totalCount = computed(() => summary.value.total)
+const totalCount = computed(() => data.value.total)
+const indicators = useBulkIndicators
 </script>
 
 <template>
@@ -146,33 +122,14 @@ const totalCount = computed(() => summary.value.total)
     />
 
     <div class="sticky top-0 z-10 bg-background flex items-center justify-between gap-4">
-      <!-- <div
-          class="flex items-center justify-between gap-4 p-4 rounded-lg border border-default
-        bg-background shadow-sm"
-        > -->
       <NumberIndicator
-        :title="$t('bulk.status.create')" icon="i-lucide-plus-circle"
-        :number="summary.create ?? 0" color="success"
+        v-for="indicator in indicators"
+        :key="indicator.key"
+        :title="indicator.title"
+        :icon="indicator.icon"
+        :number="indicator.number"
+        :color="indicator.color"
       />
-      <NumberIndicator
-        :title="$t('bulk.status.update')" icon="i-lucide-pencil" :number="summary.update
-          ?? 0"
-        color="info"
-      />
-      <NumberIndicator
-        :title="$t('bulk.status.delete')" icon="i-lucide-trash-2"
-        :number="summary.delete ?? 0" color="error"
-      />
-      <NumberIndicator
-        :title="$t('bulk.status.skip')" icon="i-lucide-minus-circle"
-        :number="summary.skip ?? 0" color="warning"
-      />
-      <NumberIndicator
-        :title="$t('bulk.status.error')" icon="i-lucide-circle-x" :number="summary.error
-          ?? 0"
-        color="error"
-      />
-      <!-- </div> -->
     </div>
 
     <BulkUserTable
@@ -181,29 +138,27 @@ const totalCount = computed(() => summary.value.total)
       :title="$t('bulk.validation.results')"
     />
 
-    <UCard v-if="missingUsers.length > 0" variant="outline">
-      <template #header>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <h3 class="font-semibold">
-              {{ $t('bulk.missing_user') }} ({{ missingUsers.length }}件)
-            </h3>
-          </div>
-          <div class="flex items-center gap-2">
-            <UButton
-              :label="$t('bulk.select_all')" size="xs" color="neutral" variant="outline"
-              @click="selectAllMissingUsers"
-            />
-            <UButton
-              :label="$t('bulk.deselect_all')" size="xs" color="neutral" variant="outline"
-              @click="deselectAllMissingUsers"
-            />
-          </div>
+    <div v-if="missingUsers.length > 0" variant="outline">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h3 class="font-semibold">
+            {{ $t('bulk.missing_user') }} ({{ missingUsers.length }})
+          </h3>
         </div>
-        <p class="text-sm text-muted">
-          {{ $t('bulk.missing-user.select') }}
-        </p>
-      </template>
+        <div class="flex items-center gap-2">
+          <UButton
+            :label="$t('bulk.select_all')" size="xs" color="neutral" variant="outline"
+            @click="selectAllMissingUsers"
+          />
+          <UButton
+            :label="$t('bulk.deselect_all')" size="xs" color="neutral" variant="outline"
+            @click="deselectAllMissingUsers"
+          />
+        </div>
+      </div>
+      <p class="text-sm text-muted">
+        {{ $t('bulk.missing-user.select') }}
+      </p>
 
       <UAlert
         v-if="selectedCount > 0" color="error" icon="i-lucide-alert-triangle"
@@ -241,7 +196,7 @@ const totalCount = computed(() => summary.value.total)
           </div>
         </div>
       </div>
-    </UCard>
+    </div>
 
     <div class="flex justify-between">
       <UButton

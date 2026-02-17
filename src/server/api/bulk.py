@@ -9,10 +9,10 @@ import typing as t
 from pathlib import Path
 from uuid import UUID, uuid7
 
-from flask import Blueprint, current_app
+from flask import Blueprint
 from flask_login import current_user
 from flask_pydantic import validate
-from redis import exceptions
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from server.api.helpers import validate_files
 from server.api.schemas import (
@@ -50,8 +50,6 @@ def upload_file(
     """
     temp_id = uuid7()
     temp_dir = Path(config.STORAGE.local.temporary)
-    current_app.logger.info("temp_dir %s", temp_dir.exists())
-    current_app.logger.info("files %s", files)
     original_filename = files.bulk_file.filename or "upload_file"
     operator_id = t.cast("LoginUser", current_user).map_id
     operator_name = t.cast("LoginUser", current_user).user_name
@@ -83,8 +81,8 @@ def validate_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
         ErrorResponse: The response containing task status or error message
     """
     try:
-        res = current_app.extensions["celery"].AsyncResult(task_id)
-    except exceptions.ConnectionError:
+        res = bulks.validate_upload_data.AsyncResult(task_id)  # pyright: ignore[reportCallIssue]
+    except RedisConnectionError:
         return ErrorResponse(code="", message=""), 500
     if not res:
         return ErrorResponse(code="", message=f"{task_id} not found."), 404
@@ -108,8 +106,8 @@ def validate_result(
         ErrorResponse: The response containing validation result or error message.
     """
     try:
-        res = current_app.extensions["celery"].AsyncResult(task_id)
-    except exceptions.ConnectionError:
+        res = bulks.validate_upload_data.AsyncResult(task_id)  # pyright: ignore[reportCallIssue]
+    except RedisConnectionError:
         return ErrorResponse(code="", message=""), 500
     if not res:
         return ErrorResponse(code="", message=f"{task_id} not found."), 404
@@ -145,11 +143,11 @@ def execute(body: ExcuteRequest) -> tuple[BulkBody | ErrorResponse, int]:
         BulkBody: The response containing task ID
         ErrorResponse: The response containing task ID or error message
     """
-    async_result = bulks.update_users.delay(  # pyright: ignore[reportFunctionMemberAccess]
+    async_result = bulks.update_users.apply_async(
         task_id=body.task_id,
         temp_file_id=body.temp_file_id,
         delete_users=body.delete_users,
-    )
+    )  # pyright: ignore[reportCallIssue]
     history_id = (
         history_table.get_history_by_file_id(body.temp_file_id).id
         if body.temp_file_id
@@ -170,7 +168,12 @@ def execute_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
         str: The response containing task status
         ErrorResponse: The response containing task status or error message
     """
-    res = current_app.extensions["celery"].AsyncResult(task_id)
+    try:
+        res = bulks.update_users.AsyncResult(task_id)  # pyright: ignore[reportCallIssue]
+    except RedisConnectionError:
+        return ErrorResponse(code="", message=""), 500
+    if not res:
+        return ErrorResponse(code="", message=f"{task_id} not found."), 404
     return BulkBody(status=res.state), 200
 
 

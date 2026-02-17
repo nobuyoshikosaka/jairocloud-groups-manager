@@ -72,7 +72,7 @@ class HistorySummary(BaseModel):
 class CheckResult(BaseModel):
     """Model for result of validation check for each user."""
 
-    id: str
+    id: str | None
     """The unique identifier for the user."""
 
     eppn: list[str]

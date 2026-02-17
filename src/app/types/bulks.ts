@@ -85,5 +85,13 @@ interface ExcuteResponse {
   historyId: string
 }
 
+interface BulkIndicator {
+  title: string
+  number: number
+  color: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info'
+  icon: string
+  key: StatusType
+}
 export type { StatusType, ValidationResult, MissingUser, UploadResult, Summary, ExcuteResponse,
-  BulkProcessingStatus, ValidationSummary, ResultSummary, ExcuteRequest, UploadQuery }
+  BulkProcessingStatus, ValidationSummary, ResultSummary, ExcuteRequest, UploadQuery, BulkIndicator,
+}

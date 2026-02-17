@@ -107,7 +107,11 @@ def create_upload(
     """
     history_record = UploadHistory()
     history_record.file_id = file_id
-    history_record.results = results
+    history_record.results = {
+        "summary": results.get("summary", {}),
+        "items": results.get("results", []),
+        "missing_users": results.get("missing_users", []),
+    }
     history_record.operator_id = operator_id
     history_record.operator_name = operator_name
     db.session.add(history_record)
@@ -134,7 +138,11 @@ def update_upload_status(
     if obj is None:
         return
     if new_results:
-        obj.results = new_results
+        obj.results = {
+            "summary": new_results.get("summary", {}),
+            "items": new_results.get("results", []),
+            "missing_users": new_results.get("missing_users", []),
+        }
 
     obj.status = status
     now = datetime.now(UTC)
@@ -200,7 +208,11 @@ def create_file(
     if file_id:
         file_record.id = file_id
     file_record.file_path = str(file_path)
-    file_record.file_content = file_content
+    file_record.file_content = {
+        "repositories": file_content.get("repositories", []),
+        "groups": file_content.get("groups", []),
+        "users": file_content.get("users", []),
+    }
     db.session.add(file_record)
     db.session.commit()
     return file_record.id

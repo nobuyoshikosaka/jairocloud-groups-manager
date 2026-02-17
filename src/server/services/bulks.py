@@ -8,6 +8,7 @@ import csv
 import re
 import typing as t
 
+from collections import defaultdict
 from datetime import UTC, datetime
 from http import HTTPStatus
 from itertools import zip_longest
@@ -34,12 +35,12 @@ from server.entities.bulk import (
 )
 from server.entities.bulk_request import BulkOperation
 from server.entities.map_error import MapError
+from server.entities.map_group import MapGroup
 from server.entities.map_user import EPPN, Email, Group, MapUser
 from server.entities.patch_request import RemoveOperation
 from server.entities.summaries import GroupSummary
 from server.entities.user_detail import UserDetail
 from server.exc import (
-    ImmutableError,
     OAuthTokenError,
     ResourceInvalid,
     ResourceNotFound,
@@ -71,13 +72,16 @@ def validate_upload_data(
     repository_id = record.file_content["repositories"][0]["id"]
     repository_member = get_repository_member(repository_id)
 
-    file_users: list[UserDetail] = build_user_from_file(file_path).root
-    file_users_id = {u.id for u in file_users if u.id is not None}
-    missing_users = _get_missing_users(repository_member, file_users_id)
-    repo_user_by_id = _get_repo_user_by_id(repository_member, file_users_id)
+    data, new_data = build_user_from_file(file_path)
+
+    updata_users: list[UserDetail] = build_user_detail_from_dict(data).root
+    create_users: list[UserDetail] = build_user_detail_from_dict_by_name(new_data).root
+    updata_users_id = {u.id for u in updata_users if u.id is not None}
+    missing_users = _get_missing_users(repository_member, updata_users_id)
+    repo_user_by_id = _get_repo_user_by_id(repository_member, updata_users_id)
 
     check_results, summary = _build_check_results(
-        file_users, repository_member, repo_user_by_id
+        updata_users, create_users, repository_member, repo_user_by_id
     )
 
     results = ValidateSummary(
@@ -113,7 +117,8 @@ def _get_repo_user_by_id(
 
 
 def _build_check_results(
-    file_users: list[UserDetail],
+    update_users: list[UserDetail],
+    create_users: list[UserDetail],
     repository_member: RepositoryMember,
     repo_user_by_id: dict[str, UserDetail],
 ) -> tuple[list[CheckResult], HistorySummary]:
@@ -123,12 +128,12 @@ def _build_check_results(
     count_skip = 0
     count_error = 0
     check_results: list[CheckResult] = []
-    for u in file_users:
+    for u in create_users:
         code = None
         user_group_ids = {g.id for g in u.groups} if u.groups else set()
 
         if not user_group_ids.issubset(repository_member.groups):
-            code = "E001"
+            code = "Group ID does not exist"
             check_results.append(
                 CheckResult(
                     id=u.id,
@@ -144,7 +149,7 @@ def _build_check_results(
             continue
 
         if not check_value(u):
-            code = "E002"
+            code = "Invalid user data"
             check_results.append(
                 CheckResult(
                     id=u.id,
@@ -159,7 +164,12 @@ def _build_check_results(
             count_error += 1
             continue
 
+    for u in update_users:
+        if u.id is None:
+            continue
+        user_group_ids = {g.id for g in u.groups} if u.groups else set()
         repo_user = repo_user_by_id.get(u.id)
+        code = None
         if repo_user is None:
             check_results.append(
                 CheckResult(
@@ -182,7 +192,7 @@ def _build_check_results(
         else:
             status = "skip"
             count_skip += 1
-        code = is_immutable_attribute(repo_user, u)
+        code = check_immutable_attributes(repo_user, u)
         check_results.append(
             CheckResult(
                 id=u.id,
@@ -259,14 +269,19 @@ def read_file(file_path: str) -> t.Generator:
     yield iterator
 
 
-def build_user_from_file(file_path: str) -> UserAggregated:
+def build_user_from_file(
+    file_path: str,
+) -> tuple[dict[str, dict[str, list[str]]], dict[str, dict[str, list[str]]]]:
     """Build UserAggregated from a user data file.
 
     Args:
         file_path (str): Path to the input file containing user data.
 
     Returns:
-        UserAggregated: The aggregated user details built from the file.
+        tuple[dict[str, dict[str, list[str]]], dict[str, dict[str, list[str]]]]:
+            A tuple containing two dictionaries:
+            - The first dictionary contains user data keyed by user ID.
+            - The second dictionary contains new user data keyed by user name.
 
     Raises:
         ResourceNotFound: If the file does not exist.
@@ -282,19 +297,30 @@ def build_user_from_file(file_path: str) -> UserAggregated:
     id_idx = header.index("id")
     idx_of = {name: i for i, name in enumerate(header)}
 
-    data = {}
+    data = defaultdict(lambda: defaultdict(list))
+    new_data = defaultdict(lambda: defaultdict(list))
     for row in it:
         if row is None:
             continue
         r = list(row)
 
         rid = r[id_idx]
+        if not rid:
+            user_name_idx = idx_of.get("user_name")
+            if user_name_idx is None:
+                continue
+            user_name_value = r[user_name_idx]
+            bucket = new_data[user_name_value]
+            for col, j in idx_of.items():
+                if col != "user_name":
+                    bucket[col].append(r[j])
+            continue
 
-        bucket = data.setdefault(rid, {})
+        bucket = data[rid]
         for col, j in idx_of.items():
             if col != "id":
-                bucket.setdefault(col, []).append(r[j])
-    return build_user_detail_from_dict(data)
+                bucket[col].append(r[j])
+    return dict(data), dict(new_data)
 
 
 def build_user_detail_from_dict(
@@ -318,14 +344,22 @@ def build_user_detail_from_dict(
         if not uid:
             continue
 
-        user_name: str = columns.get("user_name")[0]
-        preferred_language: str = columns.get("preferred_language")[0]
+        user_name_list = columns.get("user_name")
+        user_name: str = (
+            user_name_list[0] if user_name_list and len(user_name_list) > 0 else ""
+        )
+        preferred_language_list = columns.get("preferred_language")
+        preferred_language: str = (
+            preferred_language_list[0]
+            if preferred_language_list is not None and len(preferred_language_list) > 0
+            else ""
+        )
 
-        eppns: set[str] = set(columns.get("edu_person_principal_names[]"))
-        emails: set[str] = set(columns.get("emails[]"))
+        eppns: set[str] = set(columns.get("edu_person_principal_names[]") or [])
+        emails: set[str] = set(columns.get("emails[]") or [])
 
-        gid_list: list[str] = columns.get("groups[].id")
-        gname_list: list[str] = columns.get("groups[].name")
+        gid_list: list[str] = list(columns.get("groups[].id") or [])
+        gname_list: list[str] = list(columns.get("groups[].name") or [])
         groups: list[GroupSummary] = []
         seen = set()
         for gid, gname in zip_longest(gid_list, gname_list, fillvalue=None):
@@ -353,6 +387,66 @@ def build_user_detail_from_dict(
     return UserAggregated(root=users)
 
 
+def build_user_detail_from_dict_by_name(
+    data: dict[str, dict[str, list[str]]],
+) -> UserAggregated:
+    """Build UserAggregated from a dictionary of user data.
+
+    Args:
+        data (dict[str, dict[str, list[str]]]):
+            A dictionary where the key is the user name and the value is another
+            dictionary containing user attributes.
+
+    Returns:
+        UserAggregated:
+            The aggregated user details built from the input dictionary.
+    """
+    users: list[UserDetail] = []
+
+    for raw_user_name, columns in data.items():
+        user_name = str(raw_user_name).strip() if raw_user_name else ""
+        if not user_name:
+            continue
+
+        preferred_language_list = columns.get("preferred_language")
+        preferred_language: str = (
+            preferred_language_list[0]
+            if preferred_language_list is not None and len(preferred_language_list) > 0
+            else ""
+        )
+
+        eppns: set[str] = set(columns.get("edu_person_principal_names[]") or [])
+        emails: set[str] = set(columns.get("emails[]") or [])
+
+        gid_list: list[str] = list(columns.get("groups[].id") or [])
+        gname_list: list[str] = list(columns.get("groups[].name") or [])
+        groups: list[GroupSummary] = []
+        seen = set()
+        for gid, gname in zip_longest(gid_list, gname_list, fillvalue=None):
+            if not gid or gid in seen:
+                continue
+            seen.add(gid)
+            groups.append(
+                GroupSummary.model_construct(
+                    id=gid,
+                    display_name=gname,
+                )
+            )
+
+        users.append(
+            UserDetail.model_construct(
+                id=None,
+                eppns=eppns,
+                user_name=user_name,
+                emails=emails,
+                preferred_language=preferred_language,
+                groups=groups,
+            )
+        )
+
+    return UserAggregated(root=users)
+
+
 def check_value(user: UserDetail) -> bool:
     """Check if the user detail has valid values.
 
@@ -369,12 +463,9 @@ def check_value(user: UserDetail) -> bool:
     return len(user.user_name) <= ValidationEntity.USER_NAME_MAX_LENGTH
 
 
-def is_immutable_attribute(
+def check_immutable_attributes(
     original: UserDetail, update_user: UserDetail
-) -> (
-    t.Literal["emails", "eppns", "preferred_language", "last_modified", "created"]
-    | None
-):
+) -> str | None:
     """Verify whether the immutable attribute is indeed immutable.
 
     Args:
@@ -383,13 +474,7 @@ def is_immutable_attribute(
 
     Returns:
         str | None: The name of the immutable attribute if found, None otherwise.
-
-    Raises:
-        ImmutableError: If the user ID is attempted to be changed.
     """
-    if original.id != update_user.id:
-        error = "User ID is immutable."
-        raise ImmutableError(error)
     if original.emails != update_user.emails:
         return "emails"
     if original.eppns != update_user.eppns:
@@ -420,14 +505,10 @@ def get_validate_result(
     results = history_table.get_paginated_upload_results(
         history_id, offset, size, status_filter
     )
-    current_app.logger.info("results %s", results)
     check_results = [CheckResult.model_validate(it) for it in results]
 
     summary = history_table.get_upload_results(history_id, "summary")
     missing_user = history_table.get_upload_results(history_id, "missingUser")
-    current_app.logger.info("results: %s", check_results)
-    current_app.logger.info("summary: %s", summary)
-    current_app.logger.info("missingUser: %s", missing_user)
     return ValidateSummary.model_validate({
         "results": check_results,
         "summary": summary,
@@ -437,7 +518,7 @@ def get_validate_result(
     })
 
 
-@shared_task
+@shared_task()
 def update_users(
     task_id: str, temp_file_id: UUID, delete_users: list[UserDetail]
 ) -> UUID:
@@ -643,34 +724,42 @@ def _build_bulk_operations_from_check_results(
     repository_member = get_repository_member(repository_id)
 
     update_users_ids = set(
-        repository_member.users & {user.id for user in check_results}
+        repository_member.users
+        & {user.id for user in check_results if user.id is not None}
     )
     repo_user_by_id = _get_repo_user_by_id(repository_member, update_users_ids)
-    bulk_ops: list[BulkOperation] = []
     count_delete = 0
+    group_user_ops: dict[str, dict[str, set[str]]] = {}
+
     for user in check_results:
-        match user.status:
-            case "create":
-                bulk_ops.append(
-                    BulkOperation(
-                        method="POST",
-                        path="/Users",
-                        data=build_map_user_from_check_result(user),
-                    )
-                )
-            case "update":
-                original = repo_user_by_id.get(user.id)
-                if not original:
-                    raise ValueError
-                update_user = build_user_detail_from_check_result(user)
-                patch_ops = utils.build_patch_operations(original, update_user)
-                for patch_op in patch_ops:
-                    bulk_op = BulkOperation(
-                        method="PATCH",
-                        path=f"/Users/{user.id}",
-                        data=patch_op,
-                    )
-                    bulk_ops.append(bulk_op)
+        if user.status == "update" and user.id is not None:
+            original = repo_user_by_id.get(user.id)
+            if not original:
+                continue
+            original_group_ids = (
+                {g.id for g in original.groups} if original.groups else set()
+            )
+            new_group_ids = set(user.groups)
+            add_groups = new_group_ids - original_group_ids
+            remove_groups = original_group_ids - new_group_ids
+            for gid in add_groups:
+                if gid not in group_user_ops:
+                    group_user_ops[gid] = {"add": set(), "remove": set()}
+                group_user_ops[gid]["add"].add(user.id)
+            for gid in remove_groups:
+                if gid not in group_user_ops:
+                    group_user_ops[gid] = {"add": set(), "remove": set()}
+                group_user_ops[gid]["remove"].add(user.id)
+    bulk_ops: list[BulkOperation] = _build_groups_update_bulk_operations(group_user_ops)
+    bulk_ops.extend([
+        BulkOperation(
+            method="POST",
+            path="/Users",
+            data=build_map_user_from_check_result(user),
+        )
+        for user in check_results
+        if user.status == "create"
+    ])
 
     for user in delete_users:
         bulk_op = build_remove_user_path(user, repository_id)
@@ -688,6 +777,37 @@ def _build_bulk_operations_from_check_results(
         )
         count_delete += 1
     return bulk_ops, count_delete
+
+
+def _build_groups_update_bulk_operations(
+    group_user_ops: dict[str, dict[str, set[str]]],
+) -> list[BulkOperation]:
+    bulk_ops: list[BulkOperation] = []
+    system_user_id = groups.get_system_admin()
+    for gid, ops in group_user_ops.items():
+        target = groups.get_by_id(gid, raw=True)
+        user_list = set()
+        if isinstance(target, MapGroup) and target.members:
+            user_list = {u.value for u in target.members if u.type == "User"}
+
+        add_user = ops["add"]
+        remove_user = ops["remove"]
+        data_list = utils.build_update_member_operations(
+            add=add_user,
+            remove=remove_user,
+            system_admins=system_user_id,
+            user_list=user_list,
+        )
+        bulk_ops.extend([
+            BulkOperation(
+                method="PATCH",
+                path=f"Groups/{gid}",
+                data=data,
+            )
+            for data in data_list
+        ])
+
+    return bulk_ops
 
 
 def get_upload_result(

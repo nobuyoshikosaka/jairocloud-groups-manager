@@ -1,83 +1,75 @@
 <script setup lang="ts">
+import type { FormError, FormSubmitEvent } from '@nuxt/ui'
+
 const { t: $t } = useI18n()
 const emit = defineEmits<{
   next: [taskId: string]
 }>()
 
-const {
-  selectedFile,
-  isProcessing,
-} = useUserUpload()
+const { isProcessing } = useUserUpload()
 const { table: { pageSize } } = useAppConfig()
-const selectedRepository = inject<Ref<string | undefined>>('selectedRepository', ref(undefined))
-const hasFileFormatError = ref(false)
-const fileFormatError = computed(() => {
-  return hasFileFormatError.value ? $t('bulk.file-format-error') : undefined
+const state = reactive<{
+  repository: string | undefined
+  file: File | undefined
+}>({
+  repository: undefined,
+  file: undefined,
 })
 
-const validateFileFormat = (file: File | undefined) => {
-  hasFileFormatError.value = false
+type Schema = typeof state
 
-  if (!file) return
-  const fileName = file.name.toLowerCase()
-  const allowedExtensions = ['.csv', '.tsv', '.xlsx']
-  const allowedMimeTypes = [
-    'text/csv',
-    'text/tab-separated-values',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  ]
-
-  const hasValidExtension = allowedExtensions.some(extension => fileName.endsWith(extension))
-  const hasValidMimeType = allowedMimeTypes.includes(file.type)
-
-  if (!hasValidExtension && !hasValidMimeType) {
-    hasFileFormatError.value = true
+const validateFileFormat = (state: Partial<Schema>): FormError[] => {
+  const errors: FormError[] = []
+  if (!state.repository) {
+    errors.push({ name: 'repository', message: $t('bulk.repository-required') })
   }
+
+  if (state.file) {
+    const fileName = state.file.name.toLowerCase()
+    const allowedExtensions = ['.csv', '.tsv', '.xlsx']
+    const allowedMimeTypes = [
+      'text/csv',
+      'text/tab-separated-values',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ]
+
+    const hasValidExtension = allowedExtensions.some(extension => fileName.endsWith(extension))
+    const hasValidMimeType = allowedMimeTypes.includes(state.file.type)
+
+    if (!hasValidExtension && !hasValidMimeType) {
+      errors.push({
+        name: 'file',
+        message: $t('bulk.file-format-error'),
+      })
+    }
+  }
+  else {
+    errors.push({ name: 'file', message: $t('bulk.file-required') })
+  }
+  return errors
 }
 
-watch(selectedFile, (newFile) => {
-  validateFileFormat(newFile)
-})
-const toast = useToast()
 const { handleFetchError } = useErrorHandling()
-const handleNext = async () => {
-  if (hasFileFormatError.value || !selectedFile.value || !selectedRepository.value) return
 
+const handleNext = async (event: FormSubmitEvent<Schema>) => {
   isProcessing.value = true
 
   const formData = new FormData()
-  if (!selectedFile.value) {
-    return
-  }
+  formData.append('bulk_file', event.data.file!)
+  formData.append('repository_id', event.data.repository!)
 
-  formData.append('bulk_file', selectedFile.value)
-  formData.append('repository_id', selectedRepository.value)
-
-  const { data } = useFetch<BulkProcessingStatus>('/api/bulk/upload-file', {
+  const { data } = await useFetch<BulkProcessingStatus>('/api/bulk/upload-file', {
     method: 'POST',
     body: formData,
     onResponseError({ response }) {
       handleFetchError({ response })
     },
-    lazy: true,
     server: false,
   })
-  try {
-    const { taskId } = data.value!
 
-    emit('next', taskId)
-  }
-  catch {
-    toast.add({
-      title: $t('bulk.status.error'),
-      description: $t('bulk.file-validate-error'),
-      color: 'error',
-      icon: 'i-lucide-circle-x',
-    })
-  }
-  finally {
-    isProcessing.value = false
+  if (data.value?.taskId) {
+    emit('next', data.value.taskId)
   }
 }
 
@@ -97,14 +89,6 @@ const {
   }),
 })
 setupRepoScroll(repositorySelect)
-
-const canProceed = computed(() => {
-  if (selectedFile.value == undefined)
-    return false
-  if (selectedRepository.value == undefined)
-    return false
-  return !hasFileFormatError.value
-})
 </script>
 
 <template>
@@ -128,49 +112,51 @@ const canProceed = computed(() => {
         </ul>
       </template>
     </UAlert>
-
-    <UFormField
-      :label="$t('bulk.select-repository')"
-      name="repository"
+    <UForm
+      :validate="validateFileFormat" :state="state" :validate-on="['change']"
+      @submit="handleNext"
     >
-      <USelectMenu
-        ref="repositorySelect"
-        v-model="selectedRepository"
-        :search-term="repoSearchTerm" value-key="value" size="xl"
-        :placeholder="$t('group.placeholder.repository')"
-        :items="repositoryNames" :loading="repoSearchStatus === 'pending'" ignore-filter
-        :ui="{ base: 'w-full' }"
-        @update:open="onRepoOpen"
-      />
-    </UFormField>
+      <UFormField
+        :label="$t('bulk.select-repository')"
+        name="repository"
+      >
+        <USelectMenu
+          ref="repositorySelect"
+          v-model="state.repository"
+          :search-term="repoSearchTerm" value-key="value" size="xl"
+          :placeholder="$t('group.placeholder.repository')"
+          :items="repositoryNames" :loading="repoSearchStatus === 'pending'" ignore-filter
+          :ui="{ base: 'w-full' }"
+          @update:open="onRepoOpen"
+        />
+      </UFormField>
 
-    <UFormField
-      :label="$t('bulk.upload-file')"
-      name="file"
-      :error="fileFormatError"
-    >
-      <UFileUpload
-        v-model="selectedFile"
-        accept=".csv,.tsv,.xlsx,text/csv,text/tab-separated-values,application/vnd.ms-excel,
+      <UFormField
+        :label="$t('bulk.upload-file')"
+        name="file"
+      >
+        <UFileUpload
+          v-model="state.file"
+          accept=".csv,.tsv,.xlsx,text/csv,text/tab-separated-values,application/vnd.ms-excel,
           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        :label="$t('bulk.upload-field')"
-        description="TSV, CSV, Excel"
-        icon="i-lucide-file-up"
-        layout="list"
-        position="inside"
-        color="primary"
-      />
-    </UFormField>
+          :label="$t('bulk.upload-field')"
+          description="TSV, CSV, Excel"
+          icon="i-lucide-file-up"
+          layout="list"
+          position="inside"
+          color="primary"
+        />
+      </UFormField>
 
-    <div class="flex justify-end">
-      <UButton
-        :label="$t('button.next')"
-        icon="i-lucide-arrow-right"
-        trailing
-        :loading="isProcessing"
-        :disabled="!canProceed"
-        @click="handleNext"
-      />
-    </div>
+      <div class="flex justify-end">
+        <UButton
+          type="submit"
+          :label="$t('button.next')"
+          icon="i-lucide-arrow-right"
+          trailing
+          :loading="isProcessing"
+        />
+      </div>
+    </UForm>
   </div>
 </template>
