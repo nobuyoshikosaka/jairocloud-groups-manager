@@ -83,6 +83,9 @@ MAP_OAUTH_AUTHORIZE_ENDPOINT: Final = "/oauth/shib/authrequest.php"
 MAP_OAUTH_TOKEN_ENDPOINT: Final = "/oauth/token.php"  # noqa: S105
 """Endpoint for issuing access tokens from mAP Core Authorization Server."""
 
+MAP_OAUTH_CHECK_ENDPOINT: Final = "/oauth/resource.php"
+"""Endpoint for checking token validity in mAP Core Authorization Server."""
+
 
 MAP_USERS_ENDPOINT: Final = "/api/v2/Users"
 """Endpoint for User resources in mAP Core API."""
