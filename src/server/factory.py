@@ -90,7 +90,7 @@ def celery_init_app(app: Flask) -> Celery:
                 kwargs.setdefault("session_id", current_user.session_id)
             return super().apply_async(args, kwargs, task_id=task_id, **options)
 
-    celery_app = Celery(app.name, task_cls=FlaskTask)
+    celery_app: Celery = Celery(app.name, task_cls=FlaskTask)
     celery_app.config_from_object(app.config["CELERY"])
     celery_app.set_default()
     app.extensions["celery"] = celery_app
