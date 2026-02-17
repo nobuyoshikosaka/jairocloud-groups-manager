@@ -85,7 +85,7 @@ def search(
         CredentialsError: If the client credentials are invalid.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
-    default_include = {"id", "service_name", "service_url"}
+    default_include = {"id", "service_name", "service_url", "entity_ids"}
 
     try:
         query = build_search_query(criteria)

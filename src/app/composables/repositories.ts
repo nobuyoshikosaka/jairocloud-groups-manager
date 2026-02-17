@@ -94,9 +94,9 @@ const useRepositoriesTable = () => {
           ? h(ULink, {
               to: url,
               target: '_blank',
-              class: 'hover:underline inline-flex items-center gap-1',
+              class: 'hover:underline inline-flex items-center gap-1 max-w-xs',
             }, () => [
-              h('span', url),
+              h('span', { class: 'truncate' }, url),
               h(UIcon, { name: 'i-lucide-external-link', class: 'size-3 shrink-0' }),
             ])
           : undefined
@@ -106,6 +106,11 @@ const useRepositoriesTable = () => {
       accessorKey: 'entityIds',
       header: () => sortableHeader('entityIds'),
       cell: ({ row }) => row.original.entityIds?.[0],
+      meta: {
+        class: {
+          td: 'max-w-xs truncate',
+        },
+      },
     },
     {
       id: 'actions',
