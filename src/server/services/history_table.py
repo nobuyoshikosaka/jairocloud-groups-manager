@@ -9,12 +9,13 @@ import typing as t
 from datetime import UTC, datetime
 from uuid import UUID  # noqa: TC003
 
+from flask import current_app
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 
 from server.db import db
 from server.db.history import Files, UploadHistory
-from server.exc import InvalidQueryError
+from server.exc import InvalidQueryError, RecordNotFound
 
 
 def get_upload_by_id(history_id: UUID) -> UploadHistory | None:
@@ -165,8 +166,16 @@ def get_history_by_file_id(file_id: UUID) -> UploadHistory:
 
     Returns:
         UploadHistory: The history record.
+
+    Raises:
+        RecordNotFound: If no history record is found for the given file ID.
     """
-    return db.session.query(UploadHistory).filter_by(file_id=file_id).one()
+    result = db.session.query(UploadHistory).filter_by(file_id=file_id).one_or_none()
+    if result is None:
+        error = f"History not found for file_id: {file_id}"
+        current_app.logger.error(error)
+        raise RecordNotFound(error)
+    return result
 
 
 def get_file_by_id(file_id: UUID) -> Files:

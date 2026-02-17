@@ -26,6 +26,7 @@ from server.api.schemas import (
 from server.config import config
 from server.entities.bulk import ResultSummary, ValidateSummary
 from server.entities.login_user import LoginUser
+from server.exc import RecordNotFound
 from server.services import bulks, history_table
 
 
@@ -61,11 +62,12 @@ def upload_file(
         file_id=temp_id, file_path=str(file_path), file_content=file_content
     )
 
-    bulks.delete_temporary_file.apply_async((str(temp_id),), countdown=3600)  # pyright: ignore[reportCallIssue]
-    async_result = bulks.validate_upload_data.apply_async(
-        (operator_id, operator_name, temp_id), session_required=True
-    )  # pyright: ignore[reportCallIssue]
-    return BulkBody(task_id=async_result.id, temp_file_id=temp_id), 200
+    bulks.delete_temporary_file.apply_async((str(temp_id),), countdown=3600)
+    task = bulks.validate_upload_data.apply_async(
+        (operator_id, operator_name, temp_id),
+        session_required=True,  # pyright: ignore[reportCallIssue]
+    )
+    return BulkBody(task_id=task.id, temp_file_id=temp_id), 200
 
 
 @bp.get("/validate/status/<string:task_id>")
@@ -83,9 +85,11 @@ def validate_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
     try:
         res = bulks.validate_upload_data.AsyncResult(task_id)  # pyright: ignore[reportCallIssue]
     except RedisConnectionError:
-        return ErrorResponse(code="", message=""), 500
+        error = f"Failed to connect to Redis: {task_id}"
+        return ErrorResponse(code="", message=error), 500
     if not res:
-        return ErrorResponse(code="", message=f"{task_id} not found."), 404
+        error = f"Task not found: {task_id}"
+        return ErrorResponse(code="", message=error), 404
     return BulkBody(status=res.state), 200
 
 
@@ -108,12 +112,18 @@ def validate_result(
     try:
         res = bulks.validate_upload_data.AsyncResult(task_id)  # pyright: ignore[reportCallIssue]
     except RedisConnectionError:
-        return ErrorResponse(code="", message=""), 500
+        error = f"Failed to connect to Redis: {task_id}"
+        return ErrorResponse(code="", message=error), 500
     if not res:
-        return ErrorResponse(code="", message=f"{task_id} not found."), 404
+        error = f"Task not found: {task_id}"
+        return ErrorResponse(code="", message=error), 404
     if not res.successful():
-        return ErrorResponse(code="", message="Task not successful."), 400
+        error = f"Task not successful: {task_id}"
+        return ErrorResponse(code="", message=error), 400
     history_id = res.result
+    if isinstance(history_id, BaseException):
+        error = f"Task resulted in an exception: {history_id}"
+        return ErrorResponse(code="", message=error), 400
     status_filter = (
         [
             {0: "create", 1: "update", 2: "delete", 3: "skip", 4: "error"}[status]
@@ -143,17 +153,22 @@ def execute(body: ExcuteRequest) -> tuple[BulkBody | ErrorResponse, int]:
         BulkBody: The response containing task ID
         ErrorResponse: The response containing task ID or error message
     """
-    async_result = bulks.update_users.apply_async(
-        task_id=body.task_id,
-        temp_file_id=body.temp_file_id,
-        delete_users=body.delete_users,
-    )  # pyright: ignore[reportCallIssue]
-    history_id = (
-        history_table.get_history_by_file_id(body.temp_file_id).id
-        if body.temp_file_id
-        else None
+    task = bulks.update_users.apply_async(
+        kwargs={
+            "task_id": body.task_id,
+            "temp_file_id": body.temp_file_id,
+            "delete_users": body.delete_users,
+        },
     )
-    return BulkBody(task_id=async_result.id, history_id=history_id), 200
+    try:
+        history_id = (
+            history_table.get_history_by_file_id(body.temp_file_id).id
+            if body.temp_file_id
+            else None
+        )
+    except RecordNotFound as exc:
+        return ErrorResponse(code="", message=str(exc)), 404
+    return BulkBody(task_id=task.id, history_id=history_id), 200
 
 
 @bp.get("/execute/status/<string:task_id>")
@@ -169,11 +184,13 @@ def execute_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
         ErrorResponse: The response containing task status or error message
     """
     try:
-        res = bulks.update_users.AsyncResult(task_id)  # pyright: ignore[reportCallIssue]
+        res = bulks.update_users.AsyncResult(task_id)
     except RedisConnectionError:
-        return ErrorResponse(code="", message=""), 500
+        error = f"Failed to connect to Redis: {task_id}"
+        return ErrorResponse(code="", message=error), 500
     if not res:
-        return ErrorResponse(code="", message=f"{task_id} not found."), 404
+        error = f"Task not found: {task_id}"
+        return ErrorResponse(code="", message=error), 404
     return BulkBody(status=res.state), 200
 
 
@@ -202,6 +219,11 @@ def result(
     )
     offset = query.p or 1
     size = query.l or 10
-    return bulks.get_upload_result(
-        history_id=history_id, status_filter=status_filter, offset=offset, size=size
-    ), 200
+    try:
+        result = bulks.get_upload_result(
+            history_id=history_id, status_filter=status_filter, offset=offset, size=size
+        )
+    except RecordNotFound as exc:
+        return ErrorResponse(code="", message=str(exc)), 404
+
+    return result, 200

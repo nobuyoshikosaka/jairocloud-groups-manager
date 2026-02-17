@@ -42,6 +42,7 @@ from server.entities.summaries import GroupSummary
 from server.entities.user_detail import UserDetail
 from server.exc import (
     OAuthTokenError,
+    RecordNotFound,
     ResourceInvalid,
     ResourceNotFound,
     UnexpectedResponseError,
@@ -825,12 +826,12 @@ def get_upload_result(
         ResultSummary: The summary of the bulk operation result.
 
     Raises:
-        ResourceNotFound: If the upload history with the given ID does not exist.
+        RecordNotFound: If the upload history with the given ID does not exist.
     """
     upload = history_table.get_upload_by_id(history_id)
     if not upload:
         error = f"upload history not found: {history_id}"
-        raise ResourceNotFound(error)
+        raise RecordNotFound(error)
 
     raw_results: list[dict] = history_table.get_paginated_upload_results(
         history_id, offset, size, status_filter or []
