@@ -6,6 +6,8 @@ import { UButton, UDropdownMenu, UIcon, ULink } from '#components'
 
 import type { ButtonProps, DropdownMenuItem, TableColumn, TableRow } from '@nuxt/ui'
 
+const { features: { repositories: { 'sort-columns': sortColumns } } } = useAppConfig()
+
 /** Composable for managing repositories table */
 const useRepositoriesTable = () => {
   const route = useRoute()
@@ -68,12 +70,16 @@ const useRepositoriesTable = () => {
   const columns = computed<RepositoryTableColumn[]>(() => [
     {
       accessorKey: 'id',
-      header: () => sortableHeader('id'),
+      header: () => sortColumns
+        ? sortableHeader('id')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.id),
       cell: ({ row }) => row.original.spConnectorId,
     },
     {
       accessorKey: 'serviceName',
-      header: () => sortableHeader('serviceName'),
+      header: () => sortColumns
+        ? sortableHeader('serviceName')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.serviceName),
       cell: ({ row }) => {
         const name: string = row.original.serviceName
         return h(ULink, {
@@ -87,7 +93,9 @@ const useRepositoriesTable = () => {
     },
     {
       accessorKey: 'serviceUrl',
-      header: () => sortableHeader('serviceUrl'),
+      header: () => sortColumns
+        ? sortableHeader('serviceUrl')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.serviceUrl),
       cell: ({ row }) => {
         const url: string = row.original.serviceUrl
         return url
@@ -104,7 +112,9 @@ const useRepositoriesTable = () => {
     },
     {
       accessorKey: 'entityIds',
-      header: () => sortableHeader('entityIds'),
+      header: () => sortColumns
+        ? sortableHeader('entityIds')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.entityIds),
       cell: ({ row }) => row.original.entityIds?.[0],
     },
     {

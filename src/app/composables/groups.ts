@@ -15,7 +15,8 @@ const useGroupsTable = () => {
   const { t: $t } = useI18n()
   const { copy } = useClipboard()
 
-  const { table: { pageSize: pageSizeConfig } } = useAppConfig()
+  const { table: { pageSize: pageSizeConfig },
+    features: { groups: { 'sort-columns': sortColumns } } } = useAppConfig()
 
   const query = computed<GroupsSearchQuery>(() => normalizeGroupsQuery(route.query))
   const updateQuery = async (newQuery: Partial<GroupsSearchQuery>) => {
@@ -127,11 +128,15 @@ const useGroupsTable = () => {
     },
     {
       accessorKey: 'id',
-      header: () => sortableHeader('id'),
+      header: () => sortColumns
+        ? sortableHeader('id')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.id),
     },
     {
       accessorKey: 'displayName',
-      header: () => sortableHeader('displayName'),
+      header: () => sortColumns
+        ? sortableHeader('displayName')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.displayName),
       cell: ({ row }) => {
         const name: string = row.original.displayName
         return h(ULink, {
@@ -145,14 +150,19 @@ const useGroupsTable = () => {
     },
     {
       accessorKey: 'public',
-      header: () => sortableHeader('public'),
+      header: () => sortColumns
+        ? sortableHeader('public')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.public),
       cell: ({ row }) => (
         publicStatus.value[`${row.original.public}`]
       ),
     },
     {
       accessorKey: 'memberListVisibility',
-      header: () => sortableHeader('memberListVisibility'),
+      header: () => sortColumns
+        ? sortableHeader('memberListVisibility')
+        : h('span', { class: 'text-xs text-default font-medium' },
+            columnNames.value.memberListVisibility),
       cell: ({ row }) => (
         visibilityStatus.value[row.original.memberListVisibility]
       ),

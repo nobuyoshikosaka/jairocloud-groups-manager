@@ -11,7 +11,10 @@ const {
 const { searchTerm, pageNumber, pageSize } = criteria
 
 const table = useTemplateRef('table')
-const { table: { pageSize: { repositories: pageOptions } } } = useAppConfig()
+const {
+  table: { pageSize: { repositories: pageOptions } },
+  features: { repositories: { 'term-search': termSearchConfig } },
+} = useAppConfig()
 
 const { handleFetchError } = useErrorHandling()
 const {
@@ -74,7 +77,8 @@ const pageInfo = makePageInfo(searchResult)
 
   <div class="grid grid-cols-3 gap-4 my-4 h-8">
     <UInput
-      v-model="searchTerm" :placeholder="$t('users.table.search-placeholder')"
+      v-if="termSearchConfig"
+      v-model="searchTerm" :placeholder="$t('repositories.table.search-placeholder')"
       icon="i-lucide-search" :ui="{ trailing: 'pe-1.5' }"
       @keydown.enter="() => updateQuery({ q: searchTerm, p: 1 })"
     >
@@ -88,6 +92,7 @@ const pageInfo = makePageInfo(searchResult)
         </UButton>
       </template>
     </UInput>
+    <div v-else />
 
     <div class="col-span-2 flex gap-4">
       <div class="flex flex-1 justify-end items-center space-x-4">

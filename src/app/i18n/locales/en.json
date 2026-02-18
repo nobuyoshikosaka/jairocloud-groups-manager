@@ -196,7 +196,7 @@
         "public": "Public Status",
         "users-count": "Users"
       },
-      "search-placeholder": "Seach..."
+      "search-placeholder": "Search by group name..."
     },
     "title": "Groups"
   },
@@ -287,6 +287,7 @@
       },
       "no-repositories-description": "you have no repositories to manage",
       "no-repositories-title": "No repositories found",
+      "search-placeholder": "Search by repository name, URL, EntityID...",
       "title": "Repositories List"
     },
     "title": "Repositories",
@@ -530,6 +531,10 @@
     }
   },
   "users": {
+    "alert": {
+      "filter-by-last-modified-disabled": "Due to limited functionality, filtering by last updated time is currently not available.",
+      "filter-by-both-role-group-disabled": "Currently, due to limited functionality, it is not possible to select role and group filters at the same time."
+    },
     "button": {
       "selected-users-actions": "Actions for selected users",
       "selected-users-add-to-group": "Add to group",
@@ -556,7 +561,8 @@
       },
       "no-users-description": "Your repository does not have any users. Please create a user or upload a file first.",
       "no-users-title": "No users found",
-      "search-placeholder": "Search...",
+      "search-placeholder": "Search by username, email, ePPN...",
+      "search-placeholder-username-only": "Search by username...",
       "title": "Users List"
     },
     "title": "Users"

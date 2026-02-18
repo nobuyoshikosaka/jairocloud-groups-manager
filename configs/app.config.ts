@@ -162,6 +162,43 @@ const wayf = {
   ] as { name: string, entityID: string }[],
 }
 
+/**
+ * These are due to temporary constraints
+ * in the future, all features will be enabled and the settings will be deleted.
+ */
+const features = {
+  /** repositories feature flags */
+  repositories: {
+    /** Whether to display the search box  */
+    'term-search': false,
+    /** Whether to allow sorting columns */
+    'sort-columns': false,
+  },
+  /** groups feature flags */
+  groups: {
+    /** Whether to allow sorting columns */
+    'sort-columns': false,
+  },
+  /** users feature flags */
+  users: {
+    /** Whether to allow filters to be applied at the same time for both roles and groups */
+    'filter-by-both-role-group': false,
+    /** Whether to allow the last modified filter */
+    'filter-by-last-modified': false,
+    /** Whether to allow the search by username only */
+    'search-only-username': true,
+    /** Whether to allow sorting columns */
+    'sort-columns': false,
+    /** Whether to display file upload button */
+    'file-upload': false,
+  },
+  /** history feature flags */
+  history: {
+    /** Whether to display history upload tab */
+    upload: false,
+  },
+}
+
 export default {
   /** Server hostname of this application */
   serverName,
@@ -179,4 +216,10 @@ export default {
   polling,
   /** WAYF (Embedded DS) configuration */
   wayf,
+  /**
+   * Feature flags configuration. \
+   * These are due to temporary constraints
+   * in the future, all features will be enabled and the settings will be deleted.
+   */
+  features,
 }

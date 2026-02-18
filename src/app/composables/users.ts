@@ -11,6 +11,9 @@ import type { CalendarDate } from '@internationalized/date'
 import type { Row } from '@tanstack/table-core'
 import type { ButtonProps, DropdownMenuItem, TableColumn, TableRow } from '@nuxt/ui'
 
+const { features: { users: { 'sort-columns': sortColumns,
+  'file-upload': fileUpload } } } = useAppConfig()
+
 const useUsersTable = () => {
   const route = useRoute()
 
@@ -35,8 +38,8 @@ const useUsersTable = () => {
   const searchTerm = ref(query.value.q)
   const specifiedIds = ref(query.value.i)
   const specifiedRepos = ref(query.value.r)
-  const specifiedGroups = ref(query.value.g)
-  const specifiedRoles = ref(query.value.a)
+  const specifiedGroups = computed(() => query.value.g)
+  const specifiedRoles = computed(() => query.value.a)
   const startDate = ref(query.value.s)
   const endDate = ref(query.value.e)
   const sortKey = computed(() => query.value.k)
@@ -73,22 +76,32 @@ const useUsersTable = () => {
   }))
 
   /** Returns action buttons for a user entry */
-  const creationButtons = computed<[ButtonProps, ...ButtonProps[]]>(() => [
-    {
-      icon: 'i-lucide-user-plus',
-      label: $t('button.create-new'),
-      to: '/users/new',
-      color: 'primary',
-      variant: 'solid',
-    },
-    {
-      icon: 'i-lucide-file-up',
-      label: $t('button.upload'),
-      to: '/bulk',
-      color: 'primary',
-      variant: 'solid',
-    },
-  ])
+  const creationButtons = computed<[ButtonProps, ...ButtonProps[]]>(() => fileUpload
+    ? [
+        {
+          icon: 'i-lucide-user-plus',
+          label: $t('button.create-new'),
+          to: '/users/new',
+          color: 'primary',
+          variant: 'solid',
+        },
+        {
+          icon: 'i-lucide-file-up',
+          label: $t('button.upload'),
+          to: '/bulk',
+          color: 'primary',
+          variant: 'solid',
+        },
+      ]
+    : [
+        {
+          icon: 'i-lucide-user-plus',
+          label: $t('button.create-new'),
+          to: '/users/new',
+          color: 'primary',
+          variant: 'solid',
+        },
+      ])
 
   /** Actions to display when the list is empty */
   const emptyActions = computed<[ButtonProps, ...ButtonProps[]]>(() => [
@@ -160,11 +173,15 @@ const useUsersTable = () => {
     },
     {
       accessorKey: 'id',
-      header: () => sortableHeader('id'),
+      header: () => sortColumns
+        ? sortableHeader('id')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.id),
     },
     {
       accessorKey: 'userName',
-      header: () => sortableHeader('userName'),
+      header: () => sortColumns
+        ? sortableHeader('userName')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.userName),
       cell: ({ row }) => {
         const name = row.original.userName
         const role = camelCase(row.original.role!)
@@ -216,17 +233,23 @@ const useUsersTable = () => {
     },
     {
       accessorKey: 'emails',
-      header: () => sortableHeader('emails'),
+      header: () => sortColumns
+        ? sortableHeader('emails')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.emails),
       cell: ({ row }) => row.original.emails?.[0] ?? '',
     },
     {
       accessorKey: 'eppns',
-      header: () => sortableHeader('eppns'),
+      header: () => sortColumns
+        ? sortableHeader('eppns')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.eppns),
       cell: ({ row }) => row.original.eppns?.[0] ?? '',
     },
     {
       accessorKey: 'lastModified',
-      header: () => sortableHeader('lastModified'),
+      header: () => sortColumns
+        ? sortableHeader('lastModified')
+        : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.lastModified),
       cell: ({ row }) =>
         row.original.lastModified
           ? dateFormatter.format(new Date(row.original.lastModified))
@@ -458,6 +481,14 @@ const useUsersTable = () => {
     })
   }
 
+  const isRoleFilterActive = computed(() => {
+    return specifiedRoles.value && specifiedRoles.value.length > 0
+  })
+
+  const isGroupFilterActive = computed(() => {
+    return specifiedGroups.value && specifiedGroups.value.length > 0
+  })
+
   return {
     /** Computed reference for the current query */
     query,
@@ -517,6 +548,10 @@ const useUsersTable = () => {
     },
     /** Make indicator for the page information */
     makePageInfo,
+    /** Indicator for whether the group filter is active */
+    isGroupFilterActive,
+    /** Indicator for whether the role filter is active */
+    isRoleFilterActive,
   }
 }
 
