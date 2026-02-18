@@ -46,6 +46,8 @@ def refresh_session() -> None:
 
     key = build_account_store_key(session_id)
     login_date_raw = account_store.hget(key, "loginDate")
+    if isinstance(login_date_raw, bytes):
+        login_date_raw = login_date_raw.decode("utf-8")
     if not isinstance(login_date_raw, str):
         return
 
