@@ -20,11 +20,11 @@ from server.const import MAP_NOT_FOUND_PATTERN
 from server.entities.bulk_request import BulkOperation
 from server.entities.group_detail import GroupDetail
 from server.entities.map_error import MapError
-from server.entities.map_group import Administrator, MemberUser, Service
 from server.entities.search_request import SearchResponse, SearchResult
 from server.entities.summaries import GroupSummary
 from server.exc import (
     CredentialsError,
+    InvalidFormError,
     InvalidQueryError,
     OAuthTokenError,
     RequestConflict,
@@ -32,10 +32,17 @@ from server.exc import (
     ResourceNotFound,
     UnexpectedResponseError,
 )
-from server.services.utils.search_queries import GroupsCriteria, build_search_query
+from server.services.utils import validate_group_to_map_group
 
 from .token import get_access_token, get_client_secret
-from .utils import build_patch_operations, build_update_member_operations
+from .users import get_system_admins
+from .utils import (
+    GroupsCriteria,
+    build_patch_operations,
+    build_search_query,
+    build_update_member_operations,
+    prepare_group,
+)
 
 
 if t.TYPE_CHECKING:
@@ -125,11 +132,22 @@ def search(
     if raw:
         return results
 
+    group_summaries = [
+        GroupSummary(
+            id=t.cast("str", group.id),
+            display_name=group.display_name,
+            public=group.public,
+            member_list_visibility=group.member_list_visibility,
+            users_count=len(group.members) if group.members else 0,
+        )
+        for group in results.resources
+    ]
+
     return SearchResult[GroupSummary](
         total=results.total_results,
         page_size=results.items_per_page,
         offset=results.start_index,
-        resources=[GroupSummary.from_map_group(group) for group in results.resources],
+        resources=group_summaries,
     )
 
 
@@ -205,30 +223,20 @@ def create(group: GroupDetail) -> GroupDetail:
             Detail information about the group created from the input data.
 
     Returns:
-        GroupDetail: created group detail information.
+        GroupDetail: The created Group detail object.
 
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
         ResourceInvalid: If the Group resource data is invalid.
+        InvalidFormError: If failed to prepare MapGroup from GroupDetail.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
-    system_admins = get_system_admin()
-    map_group = group.to_map_group()
-    map_group.members = [
-        MemberUser(type="User", value=admin_id) for admin_id in system_admins
-    ]
-    map_group.administrators = [
-        Administrator(value=admin_id) for admin_id in system_admins
-    ]
-
-    map_group.services = [
-        Service(
-            value="jairocloud-groups-manager_dev",
-        )
-    ]
+    admins = get_system_admins()
 
     try:
+        map_group = prepare_group(group, administrators=admins)
+
         access_token = get_access_token()
         client_secret = get_client_secret()
         result: MapGroup | MapError = groups.post(
@@ -258,7 +266,7 @@ def create(group: GroupDetail) -> GroupDetail:
         error = "Failed to parse Group resource from mAP Core API."
         raise UnexpectedResponseError(error) from exc
 
-    except OAuthTokenError, CredentialsError:
+    except OAuthTokenError, CredentialsError, InvalidFormError:
         raise
 
     if isinstance(result, MapError):
@@ -276,7 +284,7 @@ def update(group: GroupDetail) -> GroupDetail:
             Detail information about the group update from the input data.
 
     Returns:
-        GroupDetail: updated group detail
+        GroupDetail: The updated Group detail object.
 
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
@@ -285,23 +293,29 @@ def update(group: GroupDetail) -> GroupDetail:
         ResourceNotFound: If the Group resource is not found.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
-    current: GroupDetail | None = get_by_id(group.id)
+    if config.MAP_CORE.update_strategy == "put":
+        return update_put(group)
+
+    validated = validate_group_to_map_group(group, mode="update")
+
+    group_id = t.cast("str", group.id)
+    current: GroupDetail | None = get_by_id(group_id)
     if current is None:
-        error = f"'{group.id}' Not Found"
+        error = f"'Group {group_id}' Not Found"
         raise ResourceNotFound(error)
 
-    operations: list[PatchOperation] = build_patch_operations(
+    operations: list[PatchOperation[MapGroup]] = build_patch_operations(
         current.to_map_group(),
-        group.to_map_group(),
-        exclude={"schemas", "meta", "administrator", "memeber"},
+        validated,
+        include={"display_name", "public", "description", "member_list_visibility"},
     )
-
     try:
         access_token = get_access_token()
         client_secret = get_client_secret()
         result: MapGroup | MapError = groups.patch_by_id(
-            group.id,
+            group_id,
             operations,
+            exclude=({"external_id", "meta"}),
             access_token=access_token,
             client_secret=client_secret,
         )
@@ -331,6 +345,71 @@ def update(group: GroupDetail) -> GroupDetail:
 
     if isinstance(result, MapError):
         current_app.logger.info(result.detail)
+        raise ResourceInvalid(result.detail)
+
+    return GroupDetail.from_map_group(result)
+
+
+def update_put(group: GroupDetail) -> GroupDetail:
+    """Update group from mAP Core API by group_id (replace with PUT).
+
+    Args:
+        group (GroupDetail):
+            Detail information about the group update from the input data.
+
+    Returns:
+        GroupDetail: The updated Group detail object.
+
+    Raises:
+        OAuthTokenError: If the access token is invalid or expired.
+        CredentialsError: If the client credentials are invalid.
+        ResourceInvalid: If the Group resource data is invalid.
+        ResourceNotFound: If the Group resource is not found.
+        UnexpectedResponseError: If response from mAP Core API is unexpected.
+    """
+    if config.MAP_CORE.update_strategy == "patch":
+        return update(group)
+
+    validated = validate_group_to_map_group(group, mode="update")
+
+    try:
+        access_token = get_access_token()
+        client_secret = get_client_secret()
+        result: MapGroup | MapError = groups.put_by_id(
+            validated,
+            exclude=({"external_id", "meta"}),
+            access_token=access_token,
+            client_secret=client_secret,
+        )
+    except requests.HTTPError as exc:
+        code = exc.response.status_code
+        if code == HTTPStatus.UNAUTHORIZED:
+            error = "Access token is invalid or expired."
+            raise OAuthTokenError(error) from exc
+
+        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
+            error = "mAP Core API server error."
+            raise UnexpectedResponseError(error) from exc
+
+        error = "Failed to update Group resource from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except requests.RequestException as exc:
+        error = "Failed to communicate with mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except ValidationError as exc:
+        error = "Failed to parse Group resource from mAP Core API."
+        raise UnexpectedResponseError(error) from exc
+
+    except OAuthTokenError, CredentialsError:
+        raise
+
+    if isinstance(result, MapError):
+        current_app.logger.info(result.detail)
+        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            raise ResourceNotFound(result.detail)
+
         raise ResourceInvalid(result.detail)
 
     return GroupDetail.from_map_group(result)
@@ -480,7 +559,7 @@ def update_member(group_id: str, add: set[str], remove: set[str]) -> GroupDetail
         user_list: set[str] = {
             u.value for u in (target.members or []) if u.type == "User"
         }
-        system_admins = get_system_admin()
+        system_admins = get_system_admins()
         operations = build_update_member_operations(
             add=add, remove=remove, user_list=user_list, system_admins=system_admins
         )
@@ -521,128 +600,3 @@ def update_member(group_id: str, add: set[str], remove: set[str]) -> GroupDetail
         raise ResourceInvalid(result.detail)
 
     return GroupDetail.from_map_group(result)
-
-
-def update_put(body: GroupDetail) -> GroupDetail:
-    """Update group from mAP Core API by group_id.
-
-    Args:
-        body (GroupDetail):
-            Detail information about the group update from the input data.
-
-    Returns:
-        GroupDetail: updated group detail
-
-    Raises:
-        OAuthTokenError: If the access token is invalid or expired.
-        CredentialsError: If the client credentials are invalid.
-        ResourceInvalid: If the Group resource data is invalid.
-        UnexpectedResponseError: If response from mAP Core API is unexpected.
-    """
-    try:
-        access_token = get_access_token()
-        client_secret = get_client_secret()
-        request_group = body.to_map_group()
-        system_admins = get_system_admin()
-        request_group.members = [
-            MemberUser(type="User", value=admin_id) for admin_id in system_admins
-        ]
-        request_group.administrators = [
-            Administrator(value=admin_id) for admin_id in system_admins
-        ]
-        request_group.services = [
-            Service(
-                value="jairocloud-groups-manager_dev",
-            ),
-        ]
-        result: MapGroup | MapError = groups.put_by_id(
-            request_group,
-            include=({"administrators"}),
-            access_token=access_token,
-            client_secret=client_secret,
-        )
-    except requests.HTTPError as exc:
-        code = exc.response.status_code
-        if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
-            raise OAuthTokenError(error) from exc
-
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to update Group resource from mAP Core API."
-        raise UnexpectedResponseError(error) from exc
-
-    except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
-        raise UnexpectedResponseError(error) from exc
-
-    except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
-        raise UnexpectedResponseError(error) from exc
-
-    except OAuthTokenError, CredentialsError:
-        raise
-
-    if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        raise ResourceInvalid(result.detail)
-
-    return GroupDetail.from_map_group(result)
-
-
-def get_system_admin() -> set[str]:
-    """Get group from mAP Core API by group_id.
-
-    Returns:
-        GroupDetail: get group detail.
-
-    Raises:
-        OAuthTokenError: If the access token is invalid or expired.
-        CredentialsError: If the client credentials are invalid.
-        UnexpectedResponseError: If response from mAP Core API is unexpected.
-        ResourceInvalid: If the Group resource data is invalid.
-    """
-    try:
-        access_token = get_access_token()
-        client_secret = get_client_secret()
-        result: MapGroup | MapError = groups.get_by_id(
-            config.GROUPS.id_patterns.system_admin,
-            access_token=access_token,
-            client_secret=client_secret,
-        )
-    except requests.HTTPError as exc:
-        code = exc.response.status_code
-        if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
-            raise OAuthTokenError(error) from exc
-
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to get Group resource from mAP Core API."
-        raise UnexpectedResponseError(error) from exc
-
-    except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
-        raise UnexpectedResponseError(error) from exc
-
-    except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
-        raise UnexpectedResponseError(error) from exc
-
-    except OAuthTokenError, CredentialsError:
-        raise
-
-    if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        raise ResourceInvalid(result.detail)
-
-    if not result.members:
-        error = "System admin group has no members."
-        current_app.logger.error(error)
-        raise ResourceInvalid(error)
-
-    return {members.value for members in result.members if members.type == "User"}

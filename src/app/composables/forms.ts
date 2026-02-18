@@ -208,13 +208,13 @@ const useGroupForm = () => {
   const { usersCount, ..._defaultForm } = defaultData
   const defaultForm = {
     ..._defaultForm,
-    repository: { id: '', label: '' },
+    repository: { value: undefined, label: undefined },
   }
   const state = reactive<Omit<GroupForm, 'usersCount'>>({ ...defaultForm })
 
   const defaultCreateForm: GroupCreateForm = {
     ..._defaultForm,
-    repository: { id: '', label: '' },
+    repository: { value: undefined, label: undefined },
   }
   const stateAsCreate = reactive<GroupCreateForm>({ ...defaultCreateForm })
 
@@ -273,20 +273,35 @@ const useGroupFormOptions = () => {
 const useGroupSchema = (mode?: MaybeRefOrGetter<FormMode>) => {
   const { t: $t } = useI18n()
 
-  const { groups: { maxUrlLength } } = useAppConfig()
-  const getMaxIdLength = (repositoryId: string) => maxUrlLength - repositoryId.length
+  const { groups: { maxIdLength } } = useAppConfig()
+  const getMaxIdLength = (repositoryId: string) => maxIdLength - repositoryId.length
 
   const createSchema = computed(() => z.object({
-    userDefinedId: z.string().optional(),
+    userDefinedId: z.string().min(1, $t('group.validation.groupId.required')),
     displayName: z.string().min(1, $t('group.validation.displayName.required')),
     description: z.string().optional(),
     repository: z.object({
-      id: z.string().min(1, $t('group.validation.repository.id.required')),
+      value: z.string({
+        // eslint-disable-next-line camelcase
+        required_error: $t('group.validation.repository.id.required'),
+      }).min(1, $t('group.validation.repository.id.required')),
     }),
     public: z.boolean().default(false),
     memberListVisibility: z.enum(VISIBILITY_OPTIONS, {
       errorMap: () => ({ message: $t('group.validation.memberListVisibility.invalid') }),
-    }).default('Hidden'),
+    }).default('Private'),
+  }).superRefine((data, context) => {
+    const maxIdLength = getMaxIdLength(data.repository?.value || '')
+    if (data.userDefinedId && data.userDefinedId.length > maxIdLength) {
+      context.addIssue({
+        code: z.ZodIssueCode.too_big,
+        maximum: maxIdLength,
+        type: 'string',
+        path: ['userDefinedId'],
+        inclusive: true,
+        message: $t('group.validation.groupId.max-length', { max: maxIdLength }),
+      })
+    }
   }))
 
   const updateSchema = computed(() => z.object({
@@ -295,7 +310,7 @@ const useGroupSchema = (mode?: MaybeRefOrGetter<FormMode>) => {
     public: z.boolean().default(false),
     memberListVisibility: z.enum(VISIBILITY_OPTIONS, {
       errorMap: () => ({ message: $t('group.validation.memberListVisibility.invalid') }),
-    }).default('Hidden'),
+    }).default('Private'),
   }))
 
   const getSchemaByMode = (m: FormMode) => {

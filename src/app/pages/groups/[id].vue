@@ -60,7 +60,7 @@ watch(group, (newGroup: GroupDetail) => {
     displayName: newGroup.displayName || defaultForm.displayName,
     description: newGroup.description || defaultForm.description,
     repository: newGroup.repository
-      ? { id: newGroup.repository.id, label: newGroup.repository.serviceName }
+      ? { value: newGroup.repository.id, label: newGroup.repository.serviceName }
       : defaultForm.repository,
     public: newGroup.public ?? defaultForm.public,
     memberListVisibility: newGroup.memberListVisibility || defaultForm.memberListVisibility,

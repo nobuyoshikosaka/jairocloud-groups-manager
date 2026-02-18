@@ -64,7 +64,7 @@ const groups = {
    * (excluding the “jc_” prefix assigned to the ID and additional padding) \
    * [Mandatory]
    */
-  maxUrlLength: 50 - 'jc_'.length - '_groups_'.length - 4,
+  maxIdLength: 50 - 'jc_'.length - '_groups_'.length - 4,
 }
 
 const wayf = {

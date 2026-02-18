@@ -46,6 +46,7 @@
     "display-name": "表示名",
     "display-name-description": "グループの表示名です。実際のリポジトリ内でのグループ名とはリンクしません。",
     "id": "グループ ID",
+    "id-description": "グループの識別子です。文字列の上限は選択したリポジトリによって変わります。",
     "member-list-visibility": {
       "hidden": "非公開",
       "private": "メンバーにのみ公開",
@@ -53,6 +54,7 @@
     },
     "new-description": "ユーザーをまとめて管理するグループを作成できます。",
     "new-title": "グループの作成",
+    "number-of-users": "ユーザー数",
     "placeholder": {
       "display-name": "ジャイロ研究科",
       "id": "グループの ID です。実際のリポジトリで使用されます。",
@@ -67,6 +69,10 @@
     "validation": {
       "displayName": {
         "required": "表示名は必須項目です。"
+      },
+      "groupId": {
+        "max-length": "グループ ID は {max} 文字以下で入力する必要があります。",
+        "required": "グループ ID は必須項目です。"
       },
       "memberListVisibility": {
         "invalid": "メンバーの公開状態はドロップダウンリストから選択してください。"
@@ -230,7 +236,7 @@
       },
       "serviceUrl": {
         "invalid": "URL が不正です。",
-        "max-length": "URLは {max} 文字で入寮する必要があります。",
+        "max-length": "URLは {max} 文字以下で入力する必要があります。",
         "required": "URL は必須項目です。"
       }
     }

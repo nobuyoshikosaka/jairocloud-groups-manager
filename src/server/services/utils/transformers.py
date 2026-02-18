@@ -9,10 +9,21 @@
 import typing as t
 
 from server.config import config
-from server.const import USER_ROLES
+from server.const import (
+    GROUP_DEFAULT_MEMBER_LIST_VISIBILITY,
+    GROUP_DEFAULT_PUBLIC,
+    USER_ROLES,
+)
+from server.entities.group_detail import (
+    GroupDetail,
+    Repository as GroupRepository,
+    Service as GroupService_,
+)
 from server.entities.map_group import (
     Administrator as GroupAdministrator,
     MapGroup,
+    MemberUser,
+    Service as GroupService,
 )
 from server.entities.map_service import (
     Administrator,
@@ -21,6 +32,7 @@ from server.entities.map_service import (
     ServiceEntityID,
 )
 from server.entities.repository_detail import RepositoryDetail
+from server.entities.summaries import UserSummary
 from server.exc import InvalidFormError, SystemAdminNotFound
 
 from .affiliations import detect_affiliation
@@ -222,3 +234,214 @@ def make_map_service(repository: RepositoryDetail) -> MapService:
             ServiceEntityID(value=eid) for eid in repository.entity_ids
         ]
     return service
+
+
+def prepare_group(
+    detail: GroupDetail,
+    administrators: set[str],
+) -> MapGroup:
+    """Prepare a MapServiceGroup instance from a GroupDetail instance.
+
+    Args:
+        detail (GroupDetail): The GroupDetail instance to convert.
+        administrators (set[str]): The set of administrator user IDs.
+
+    Returns:
+        MapGroup: The created MapServiceGroup instance.
+
+    Raises:
+        SystemAdminNotFound: If no administrators are found.
+    """
+    map_group, repository_id = validate_group_to_map_group(detail, mode="create")
+    service_id = resolve_service_id(repository_id=repository_id)
+
+    if not administrators:
+        error = "At least one administrator is required to create a repository."
+        raise SystemAdminNotFound(error)
+
+    map_group.administrators = [
+        GroupAdministrator(value=user_id) for user_id in administrators
+    ]
+    map_group.services = [
+        GroupService(value=config.SP.connecter_id),
+        GroupService(value=service_id),
+    ]
+
+    return map_group
+
+
+def make_group_detail(group: MapGroup, *, more_detail: bool = False) -> GroupDetail:
+    """Convert a MapGroup instance to a GroupDetail instance.
+
+    Args:
+        group (MapGroup): The MapGroup instance to convert.
+        more_detail (bool): Whether to include more detailed information.
+
+    Returns:
+        GroupDetail: The created GroupDetail instance.
+    """
+    users, user_count = None, None
+    if group.members:
+        users = [member for member in group.members if member.type == "User"]
+        user_count = len(users)
+
+    detail = GroupDetail(
+        id=group.id,
+        display_name=group.display_name,
+        description=group.description,
+        public=group.public,
+        member_list_visibility=group.member_list_visibility,
+    )
+
+    if group.members:
+        users = [member for member in group.members if member.type == "User"]
+        user_count = len(users)
+        detail.users_count = user_count
+        detail._users = [
+            UserSummary(id=member.value, user_name=member.display) for member in users
+        ]
+
+    if group.administrators:
+        detail._admins = [
+            UserSummary(id=admin.value, user_name=admin.display)
+            for admin in group.administrators
+        ]
+
+    if group.services:
+        detail._services = [
+            GroupService_(id=service.value, service_name=service.display)
+            for service in group.services
+        ]
+
+    if group.meta:
+        detail.created = group.meta.created
+        detail.last_modified = group.meta.last_modified
+
+    if not more_detail:
+        return detail
+
+    detected = detect_affiliation(t.cast("str", group.id))
+    repository_id = detected.repository_id if detected else None
+    detail.user_defined_id = (
+        detected.user_defined_id if detected and detected.type == "group" else None
+    )
+    repository_id = detected.repository_id if detected else None
+    if repository_id:
+        from server.services import repositories  # noqa: PLC0415
+
+        if repo := repositories.get_by_id(repository_id):
+            detail.repository = GroupRepository(
+                id=repository_id, service_name=repo.service_name
+            )
+
+    return detail
+
+
+@t.overload
+def validate_group_to_map_group(
+    group: GroupDetail, *, mode: t.Literal["create"]
+) -> tuple[MapGroup, str]: ...
+@t.overload
+def validate_group_to_map_group(
+    group: GroupDetail, *, mode: t.Literal["update"]
+) -> MapGroup: ...
+
+
+def validate_group_to_map_group(  # noqa: C901
+    group: GroupDetail, *, mode: t.Literal["create", "update"]
+) -> tuple[MapGroup, str] | MapGroup:
+    """Validate the GroupDetail instance and convert it to a MapGroup instance.
+
+    Args:
+        group (GroupDetail): The GroupDetail instance to convert.
+        mode (Literal["create", "update"]):
+            The mode of operation, either "create" or "update".
+
+    Returns:
+        tuple: The converted MapGroup instance and the repository ID associated with it.
+
+    Raises:
+        InvalidFormError: If the GroupDetail instance cannot be converted to a MapGroup.
+    """
+    if not group.display_name:
+        error = "Display name is required to create a group."
+        raise InvalidFormError(error)
+
+    if mode == "update":
+        if not group.id:
+            error = "Group ID is required to update a group."
+            raise InvalidFormError(error)
+
+        return make_map_group(group)
+
+    repository_id = group.repository.id if group.repository else None
+    if not repository_id:
+        error = "Repository ID is required to create a group."
+        raise InvalidFormError(error)
+
+    from server.services import repositories  # noqa: PLC0415
+
+    if repositories.get_by_id(repository_id) is None:
+        error = f"Repository with ID '{repository_id}' does not exist."
+        raise InvalidFormError(error)
+
+    user_defined_id = group.user_defined_id
+    if not user_defined_id:
+        error = "Group ID is required to create a group."
+        raise InvalidFormError(error)
+
+    if user_defined_id:
+        max_id_length = config.GROUPS.max_id_length - len(repository_id)
+        if len(user_defined_id) > max_id_length:
+            error = "Group ID is too long."
+            raise InvalidFormError(error)
+
+        id_pattern = config.GROUPS.id_patterns.user_defined
+        group.id = id_pattern.format(
+            repository_id=repository_id, user_defined_id=user_defined_id
+        )
+
+    if group.public is None:
+        group.public = GROUP_DEFAULT_PUBLIC
+    if group.member_list_visibility is None:
+        group.member_list_visibility = GROUP_DEFAULT_MEMBER_LIST_VISIBILITY
+
+    return make_map_group(group), repository_id
+
+
+def make_map_group(group: GroupDetail) -> MapGroup:
+    """Convert a GroupDetail instance to a MapGroup instance.
+
+    Args:
+        group (GroupDetail): The GroupDetail instance to convert.
+
+    Returns:
+        MapGroup: The converted MapGroup instance.
+    """
+    map_group = MapGroup(
+        id=group.id,
+        display_name=group.display_name,
+        public=group.public,
+        description=group.description,
+        member_list_visibility=group.member_list_visibility,
+    )
+
+    if group._users:
+        map_group.members = [
+            MemberUser(type="User", value=user.id, display=user.user_name)
+            for user in group._users
+        ]
+
+    if group._admins:
+        map_group.administrators = [
+            GroupAdministrator(value=admin.id, display=admin.user_name)
+            for admin in group._admins
+        ]
+
+    if group._services:
+        map_group.services = [
+            GroupService(value=service.id, display=service.service_name)
+            for service in group._services
+        ]
+
+    return map_group

@@ -6,11 +6,14 @@ const { stateAsCreate: state } = useGroupForm()
 
 const { handleFetchError } = useErrorHandling()
 const onSubmit = async (data: GroupCreateForm) => {
-  const { ...payload } = data
+  const payload: GroupCreatePayload = {
+    ...data,
+    repository: { id: data.repository.value! },
+  }
   try {
     await $fetch('/api/groups', {
       method: 'POST',
-      body: payload as GroupCreatePayload,
+      body: payload,
     })
 
     toast.add({

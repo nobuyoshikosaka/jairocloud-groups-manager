@@ -54,7 +54,7 @@ const {
 })
 setupRepoScroll(repositorySelect)
 
-const maxIdLength = computed(() => getMaxIdLength(state.value.repository.id),
+const maxIdLength = computed(() => getMaxIdLength(state.value.repository.value || ''),
 )
 
 const form = useTemplateRef('form')
@@ -74,7 +74,7 @@ const onCancel = () => {
 <template>
   <UForm
     ref="form"
-    :schema="schema" :state="state" class="space-y-6"
+    :schema="schema" :state="state" class="space-y-6" :novalidate="true"
     @submit="(event) => onSubmit(
       event as FormSubmitEvent<GroupCreateForm | GroupUpdateForm>,
     )"
@@ -87,38 +87,37 @@ const onCancel = () => {
     <UFormField
       name="repository" :error-pattern="/repository\..*/"
       :label="$t('group.repository')"
-      :description="$t('group.repository-description')"
-      :ui="{ wrapper: 'mb-2' }" :required="mode !== 'view'"
+      :description="mode === 'new' ? $t('group.repository-description') : ''"
+      :ui="{ wrapper: 'mb-2' }" :required="mode === 'new'"
     >
       <USelectMenu
+        v-if="mode === 'new'"
         ref="repositorySelect"
-        v-model="state.repository.id"
-        :search-term="repoSearchTerm" value-key="value" size="xl"
+        v-model="state.repository as { label: string, value: string }"
+        :search-term="repoSearchTerm" size="xl"
         :placeholder="$t('group.placeholder.repository')"
         :items="repositoryNames" :loading="repoSearchStatus === 'pending'" ignore-filter
         :ui="{ base: 'w-full' }" :disabled="mode !== 'new'"
         @update:open="onRepoOpen"
       />
+      <div
+        v-else
+        class="f-ful mt-1 px-3 py-2 text-base"
+      >
+        {{ state.repository.label || '-' }}
+      </div>
     </UFormField>
 
     <UFormField
-      :label="$t('group.id')" :ui="{ wrapper: 'mb-2' }"
+      name="userDefinedId"
+      :label="$t('group.id')"
+      :description="mode === 'new' ? $t('group.id-description') : ''"
+      :ui="{ wrapper: 'mb-2' }"
       :required="mode === 'new'"
     >
-      <div
-        v-if="mode !== 'new'"
-        class="f-ful mt-1 px-3 py-2 text-base"
-      >
-        {{ stateAsEdit.id || '-' }}
-        <UButton
-          icon="i-lucide-copy" variant="ghost" color="neutral"
-          :ui="{ base: 'p-0 ml-2', leadingIcon: 'size-3' }"
-          @click="() => copyId(stateAsEdit.id)"
-        />
-      </div>
       <!-- eslint-disable vue/attribute-hyphenation -->
       <UInput
-        v-else
+        v-if="mode === 'new'"
         v-model="stateAsCreate.userDefinedId" size="xl"
         :ui="{ root: 'w-full' }"
         :placeholder="$t('group.placeholder.id')"
@@ -129,6 +128,17 @@ const onCancel = () => {
           {{ stateAsCreate.userDefinedId.length }} / {{ maxIdLength }}
         </template>
       </UInput>
+      <div
+        v-else
+        class="f-ful mt-1 px-3 py-2 text-base"
+      >
+        {{ stateAsEdit.id || '-' }}
+        <UButton
+          icon="i-lucide-copy" variant="ghost" color="neutral"
+          :ui="{ base: 'p-0 ml-2', leadingIcon: 'size-3' }"
+          @click="() => copyId(stateAsEdit.id)"
+        />
+      </div>
     </UFormField>
 
     <UFormField

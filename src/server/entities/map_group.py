@@ -24,7 +24,7 @@ class MapGroup(BaseModel):
     schemas: t.Annotated[t.Sequence[str], Field(frozen=True)] = [MAP_GROUP_SCHEMA]
     """Schema URIs that define the attributes present in the Group resource."""
 
-    id: str
+    id: str | None = None
     """The unique identifier for the group."""
 
     external_id: str | None = None

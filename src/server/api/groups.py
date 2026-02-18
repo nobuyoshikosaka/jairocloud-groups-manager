@@ -60,7 +60,7 @@ def get(query: GroupsQuery) -> tuple[SearchResult | ErrorResponse, int]:
     return results, 200
 
 
-@bp.get("")
+@bp.post("")
 @bp.post("/")
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
