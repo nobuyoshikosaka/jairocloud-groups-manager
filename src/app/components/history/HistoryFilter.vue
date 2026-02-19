@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { t: $t } = useI18n()
+const { features: { repositories: { 'server-search': serverSearch } } } = useAppConfig()
 
 const {
   tab,
@@ -113,7 +114,8 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
     <USelectMenu
       ref="repositorySelect"
-      v-model:search-term="repositoryFilter.searchTerm.value" ignore-filter
+      v-model:search-term="repositoryFilter.searchTerm.value"
+      :ignore-filter="serverSearch"
       :placeholder="repositoryFilter.placeholder"
       :icon="repositoryFilter.icon" :items="repositoryFilter.items"
       :multiple="repositoryFilter.multiple" :loading="repositoryFilter.loading"

@@ -15,8 +15,11 @@ const useGroupsTable = () => {
   const { t: $t } = useI18n()
   const { copy } = useClipboard()
 
-  const { table: { pageSize: pageSizeConfig },
-    features: { groups: { 'sort-columns': sortColumns } } } = useAppConfig()
+  const {
+    table: { pageSize: pageSizeConfig },
+    features: { groups: { 'sort-columns': sortColumns },
+      repositories: { 'server-search': serverSearch } },
+  } = useAppConfig()
 
   const query = computed<GroupsSearchQuery>(() => normalizeGroupsQuery(route.query))
   const updateQuery = async (newQuery: Partial<GroupsSearchQuery>) => {
@@ -283,6 +286,7 @@ const useGroupsTable = () => {
     } = useSelectMenuInfiniteScroll<RepositorySummary>({
       url: repositorySelect.url,
       limit: pageSizeConfig.repositories[0],
+      server: serverSearch,
       transform: repository => ({
         label: repository.serviceName,
         value: repository.id,

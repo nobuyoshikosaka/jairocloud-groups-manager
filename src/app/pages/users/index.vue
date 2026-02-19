@@ -13,7 +13,8 @@ const table = useTemplateRef('table')
 const { table: { pageSize: { users: pageOptions } },
   features: { users: { 'filter-by-last-modified': filterByLastModified,
     'filter-by-both-role-group': filterByBoth,
-    'search-only-username': sercheOnlyUserName } },
+    'search-only-username': sercheOnlyUserName },
+  repositories: { 'server-search': serverSearch } },
 } = useAppConfig()
 
 const { handleFetchError } = useErrorHandling()
@@ -165,7 +166,8 @@ const pageInfo = makePageInfo(searchResult)
     <template #content>
       <USelectMenu
         ref="repositorySelect"
-        v-model:search-term="repositoryFilter.searchTerm.value" ignore-filter
+        v-model:search-term="repositoryFilter.searchTerm.value"
+        :ignore-filter="serverSearch"
         :placeholder="repositoryFilter.placeholder"
         :icon="repositoryFilter.icon" :items="repositoryFilter.items"
         :multiple="repositoryFilter.multiple" :loading="repositoryFilter.loading"

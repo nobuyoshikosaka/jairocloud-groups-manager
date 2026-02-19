@@ -5,6 +5,7 @@ type UseSelectMenuInfiniteScrollOptions<T> = {
   debounce?: number
   scrollDistance?: number
   query?: Record<string, string | number | boolean>
+  server?: boolean
 }
 
 type UseSelectMenuInfiniteScrollReturn = {

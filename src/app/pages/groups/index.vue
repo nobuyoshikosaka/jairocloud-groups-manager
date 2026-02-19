@@ -9,7 +9,9 @@ const {
 const { searchTerm, pageNumber, pageSize } = criteria
 
 const table = useTemplateRef('table')
-const { table: { pageSize: { groups: pageOptions } } } = useAppConfig()
+const { table: { pageSize: { groups: pageOptions } },
+  features: { repositories: { 'server-search': serverSearch } },
+} = useAppConfig()
 
 const { handleFetchError } = useErrorHandling()
 const { data: searchResult, status, refresh } = useFetch<GroupsSearchResult>('/api/groups', {
@@ -153,7 +155,8 @@ const pageInfo = makePageInfo(searchResult)
     <template #content>
       <USelectMenu
         ref="repositorySelect"
-        v-model:search-term="repositoryFilter.searchTerm.value" ignore-filter
+        v-model:search-term="repositoryFilter.searchTerm.value"
+        :ignore-filter="serverSearch"
         :placeholder="repositoryFilter.placeholder"
         :icon="repositoryFilter.icon" :items="repositoryFilter.items"
         :multiple="repositoryFilter.multiple" :loading="repositoryFilter.loading"

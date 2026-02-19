@@ -14,7 +14,10 @@ const emit = defineEmits<{
   'cancel': []
 }>()
 
-const { table: { pageSize } } = useAppConfig()
+const {
+  table: { pageSize },
+  features: { repositories: { 'server-search': serverSearch } },
+} = useAppConfig()
 const { currentUser } = useAuth()
 const { schema } = useUserSchema(() => properties.mode)
 const { preferredLanguageOptions, userRoleOptions } = useUserFormOptions()
@@ -52,6 +55,7 @@ const {
     label: repository.serviceName,
     value: repository.id,
   }),
+  server: serverSearch,
 })
 setupRepoScroll(repositorySelect)
 
@@ -291,7 +295,8 @@ const onCancel = () => {
           v-model="state.repositoryRoles[index] as { label: string, value: string }"
           v-model:search-term="repoSearchTerm" size="xl"
           :placeholder="$t('user.placeholder.repository-name')"
-          :items="repositoryNames" :loading="repoSearchStatus === 'pending'" ignore-filter
+          :items="repositoryNames" :loading="repoSearchStatus === 'pending'"
+          :ignore-filter="serverSearch"
           class="flex-2"
           @update:open="onRepoOpen"
         />

@@ -169,8 +169,12 @@ const wayf = {
 const features = {
   /** repositories feature flags */
   repositories: {
-    /** Whether to display the search box  */
-    'term-search': false,
+    /**
+     * If true, the search will be performed on the server side.
+     * If false, the search will be performed on the client (browser) side.
+     */
+    'server-search': true,
+
     /** Whether to allow sorting columns */
     'sort-columns': false,
   },

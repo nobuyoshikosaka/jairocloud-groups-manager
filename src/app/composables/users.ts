@@ -11,9 +11,6 @@ import type { CalendarDate } from '@internationalized/date'
 import type { Row } from '@tanstack/table-core'
 import type { ButtonProps, DropdownMenuItem, TableColumn, TableRow } from '@nuxt/ui'
 
-const { features: { users: { 'sort-columns': sortColumns,
-  'file-upload': fileUpload } } } = useAppConfig()
-
 const useUsersTable = () => {
   const route = useRoute()
 
@@ -21,7 +18,11 @@ const useUsersTable = () => {
   const { t: $t } = useI18n()
   const { copy } = useClipboard()
 
-  const { table: { pageSize: pageSizeConfig } } = useAppConfig()
+  const {
+    table: { pageSize: pageSizeConfig },
+    features: { users: { 'sort-columns': sortColumns, 'file-upload': fileUpload },
+      repositories: { 'server-search': serverSearch } },
+  } = useAppConfig()
 
   /** Reactive query object */
   const query = computed<UsersSearchQuery>(() => normalizeUsersQuery(route.query))
@@ -379,6 +380,7 @@ const useUsersTable = () => {
     } = useSelectMenuInfiniteScroll<RepositorySummary>({
       url: repositorySelect.url,
       limit: pageSizeConfig.repositories[0],
+      server: serverSearch,
       transform: repository => ({
         label: repository.serviceName,
         value: repository.id,

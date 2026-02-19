@@ -13,7 +13,7 @@ const { searchTerm, pageNumber, pageSize } = criteria
 const table = useTemplateRef('table')
 const {
   table: { pageSize: { repositories: pageOptions } },
-  features: { repositories: { 'term-search': termSearchConfig } },
+  features: { repositories: { 'server-search': serverSearchConfig } },
 } = useAppConfig()
 
 const { handleFetchError } = useErrorHandling()
@@ -77,7 +77,7 @@ const pageInfo = makePageInfo(searchResult)
 
   <div class="grid grid-cols-3 gap-4 my-4 h-8">
     <UInput
-      v-if="termSearchConfig"
+      v-if="serverSearchConfig"
       v-model="searchTerm" :placeholder="$t('repositories.table.search-placeholder')"
       icon="i-lucide-search" :ui="{ trailing: 'pe-1.5' }"
       @keydown.enter="() => updateQuery({ q: searchTerm, p: 1 })"
