@@ -63,12 +63,12 @@ def get_permitted_repository_ids() -> set[str]:
 
     is_member_of: str = current_user.is_member_of
     group_ids = extract_group_ids(is_member_of)
-    affiliations, _ = detect_affiliations(group_ids)
+    roles = detect_affiliations(group_ids).roles
 
     return {
         aff.repository_id
-        for aff in affiliations
-        if aff.repository_id and aff.role == USER_ROLES.REPOSITORY_ADMIN
+        for aff in roles
+        if aff.repository_id and USER_ROLES.REPOSITORY_ADMIN in aff.role
     }
 
 
