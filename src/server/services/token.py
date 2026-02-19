@@ -6,7 +6,7 @@
 
 import requests
 
-from flask import url_for
+from flask import current_app, url_for
 
 from server.clients import auth
 from server.config import config
@@ -24,6 +24,9 @@ from .service_settings import (
 def get_access_token() -> str:
     """Get the OAuth access token.
 
+    Get the access token from database.
+    If the token is expired or invalid, attempt to refresh it.
+
     Returns:
         str: The access token if available, otherwise None.
 
@@ -35,7 +38,10 @@ def get_access_token() -> str:
         error = "OAuth tokens are not stored on the server."
         raise OAuthTokenError(error)
 
-    return token.access_token
+    if check_token_validity(token.access_token):
+        return token.access_token
+
+    return refresh_access_token()
 
 
 def get_client_secret() -> str:
@@ -140,6 +146,30 @@ def issue_access_token(code: str) -> str:
     save_oauth_token(token)
 
     return token.access_token
+
+
+def check_token_validity(token: str) -> bool:
+    """Check the validity of an OAuth access token.
+
+    Args:
+        token (str): The access token to check.
+
+    Returns:
+        bool: True if the token is valid, False otherwise.
+    """
+    try:
+        result = auth.check_token_validity(token)
+    except requests.HTTPError as exc:
+        json = exc.response.json()
+        warning = f"Failed to check token validity: {json['error_description']}"
+        current_app.logger.warning(warning)
+        return False
+    except requests.JSONDecodeError:
+        warning = "Failed to decode token check response from mAP Core API."
+        current_app.logger.warning(warning)
+        return False
+
+    return result
 
 
 def refresh_access_token() -> str:

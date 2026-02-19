@@ -134,6 +134,7 @@
     "error": {
     },
     "id": "Group ID",
+    "id-description": "Group identifier. The string limit changes depending on the selected repository.",
     "member-list-visibility": {
       "hidden": "Hidden",
       "private": "Visible only to members",
@@ -159,12 +160,16 @@
       "displayName": {
         "required": "Display name is required field."
       },
+      "groupId": {
+        "max-length": "Group ID must be less than or equal to {max} characters.",
+        "required": "Group ID is a required field."
+      },
       "memberListVisibility": {
         "invalid": "Select the member's visibility status from the dropdown list."
       },
       "repository": {
         "id": {
-          "required": "Repository selection is required"
+          "required": "Repository selection is required."
         }
       }
     }
@@ -334,7 +339,7 @@
       },
       "serviceUrl": {
         "invalid": "URL is invalid.",
-        "max-length": "The URL must contain {max} characters.",
+        "max-length": "The URL must be less than or equal to {max} characters.",
         "required": "URL is a required field."
       }
     }

@@ -1,16 +1,51 @@
 <script setup lang="ts">
-import type { FetchError } from 'ofetch'
-
 const toast = useToast()
 const { stateAsCreate: state } = useGroupForm()
 
 const { handleFetchError } = useErrorHandling()
 const onSubmit = async (data: GroupCreateForm) => {
-  const { ...payload } = data
+  const payload: GroupCreatePayload = {
+    ...data,
+    repository: { id: data.repository.value! },
+  }
+
   try {
     await $fetch('/api/groups', {
       method: 'POST',
-      body: payload as GroupCreatePayload,
+      body: payload,
+      onResponseError: ({ response }) => {
+        switch (response.status) {
+          case 400: {
+            toast.add({
+              title: $t('toast.error.validation.title'),
+              description: $t('toast.error.validation.description'),
+              color: 'error',
+              icon: 'i-lucide-circle-x',
+            })
+            break
+          }
+          case 403: {
+            showError({
+              status: 403,
+              message: $t('error-page.forbidden.group-create'),
+            })
+            break
+          }
+          case 409: {
+            toast.add({
+              title: $t('toast.error.conflict.title'),
+              description: $t('toast.error.conflict.description'),
+              color: 'error',
+              icon: 'i-lucide-circle-x',
+            })
+            break
+          }
+          default: {
+            handleFetchError({ response })
+            break
+          }
+        }
+      },
     })
 
     toast.add({
@@ -21,38 +56,8 @@ const onSubmit = async (data: GroupCreateForm) => {
     })
     await navigateTo('/groups')
   }
-  catch (error) {
-    switch ((error as FetchError).status) {
-      case 400: {
-        toast.add({
-          title: $t('toast.error.validation.title'),
-          description: $t('toast.error.validation.description'),
-          color: 'error',
-          icon: 'i-lucide-circle-x',
-        })
-        break
-      }
-      case 403: {
-        showError({
-          status: 403,
-          message: $t('error-page.forbidden.group-create'),
-        })
-        break
-      }
-      case 409: {
-        toast.add({
-          title: $t('toast.error.conflict.title'),
-          description: $t('toast.error.conflict.description'),
-          color: 'error',
-          icon: 'i-lucide-circle-x',
-        })
-        break
-      }
-      default: {
-        handleFetchError({ response: (error as FetchError).response! })
-        break
-      }
-    }
+  catch {
+    // Already handled in onResponseError
   }
 }
 </script>
@@ -77,7 +82,7 @@ const onSubmit = async (data: GroupCreateForm) => {
 
       <GroupForm
         :model-value="state" mode="new"
-        @submit="(data) => onSubmit(data as GroupCreateForm)"
+        @submit="(event) => onSubmit(event.data as GroupCreateForm)"
         @cancel="() => navigateTo('/groups')"
       />
     </UCard>

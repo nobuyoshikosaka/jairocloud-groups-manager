@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { camelCase } from 'scule'
 
-import type { FetchError } from 'ofetch'
-
 const route = useRoute()
 const toast = useToast()
 
@@ -81,6 +79,39 @@ const onSubmit = async (data: UserUpdateForm) => {
     await $fetch(`/api/users/${userId.value}`, {
       method: 'PUT',
       body: payload,
+      onResponseError: ({ response }) => {
+        switch (response.status) {
+          case 400: {
+            toast.add({
+              title: $t('toast.error.validation.title'),
+              description: $t('toast.error.validation.description'),
+              color: 'error',
+              icon: 'i-lucide-circle-x',
+            })
+            break
+          }
+          case 403: {
+            showError({
+              status: 403,
+              message: $t('error-page.forbidden.user-edit'),
+            })
+            break
+          }
+          case 409: {
+            toast.add({
+              title: $t('toast.error.conflict.title'),
+              description: $t('toast.error.conflict.description'),
+              color: 'error',
+              icon: 'i-lucide-circle-x',
+            })
+            break
+          }
+          default: {
+            handleFetchError({ response })
+            break
+          }
+        }
+      },
     })
 
     toast.add({
@@ -91,38 +122,8 @@ const onSubmit = async (data: UserUpdateForm) => {
     })
     await navigateTo('/users')
   }
-  catch (error) {
-    switch ((error as FetchError).status) {
-      case 400: {
-        toast.add({
-          title: $t('toast.error.validation.title'),
-          description: $t('toast.error.validation.description'),
-          color: 'error',
-          icon: 'i-lucide-circle-x',
-        })
-        break
-      }
-      case 403: {
-        showError({
-          status: 403,
-          message: $t('error-page.forbidden.user-edit'),
-        })
-        break
-      }
-      case 409: {
-        toast.add({
-          title: $t('toast.error.conflict.title'),
-          description: $t('toast.error.conflict.description'),
-          color: 'error',
-          icon: 'i-lucide-circle-x',
-        })
-        break
-      }
-      default: {
-        handleFetchError({ response: (error as FetchError).response! })
-        break
-      }
-    }
+  catch {
+    // Already handled in onResponseError
   }
 }
 
@@ -163,7 +164,8 @@ const onCancel = () => {
 
       <UserForm
         v-model="state" :mode="mode"
-        @submit="(data) => onSubmit(data as UserUpdateForm)" @cancel="onCancel"
+        @submit="(event) => onSubmit(event.data as UserUpdateForm)"
+        @cancel="onCancel"
       />
     </UCard>
   </div>

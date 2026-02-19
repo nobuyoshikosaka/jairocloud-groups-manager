@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { FetchError } from 'ofetch'
-
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -60,7 +58,7 @@ watch(group, (newGroup: GroupDetail) => {
     displayName: newGroup.displayName || defaultForm.displayName,
     description: newGroup.description || defaultForm.description,
     repository: newGroup.repository
-      ? { id: newGroup.repository.id, label: newGroup.repository.serviceName }
+      ? { value: newGroup.repository.id, label: newGroup.repository.serviceName }
       : defaultForm.repository,
     public: newGroup.public ?? defaultForm.public,
     memberListVisibility: newGroup.memberListVisibility || defaultForm.memberListVisibility,
@@ -70,10 +68,44 @@ watch(group, (newGroup: GroupDetail) => {
 
 const onSubmit = async (data: GroupUpdateForm) => {
   const { id, repository, created, ...payload } = data
+
   try {
     await $fetch(`/api/groups/${groupId.value}`, {
       method: 'PUT',
       body: payload as GroupUpdatePayload,
+      onResponseError: ({ response }) => {
+        switch (response.status) {
+          case 400: {
+            toast.add({
+              title: $t('toast.error.validation.title'),
+              description: $t('toast.error.validation.description'),
+              color: 'error',
+              icon: 'i-lucide-circle-x',
+            })
+            break
+          }
+          case 403: {
+            showError({
+              statusCode: 403,
+              message: $t('error-page.forbidden.group-edit'),
+            })
+            break
+          }
+          case 409: {
+            toast.add({
+              title: $t('toast.error.conflict.title'),
+              description: $t('toast.error.conflict.description'),
+              color: 'error',
+              icon: 'i-lucide-circle-x',
+            })
+            break
+          }
+          default: {
+            handleFetchError({ response })
+            break
+          }
+        }
+      },
     })
 
     toast.add({
@@ -84,38 +116,8 @@ const onSubmit = async (data: GroupUpdateForm) => {
     })
     await router.replace({ name: 'groups-id', params: { id: groupId.value } })
   }
-  catch (error) {
-    switch ((error as FetchError).status) {
-      case 400: {
-        toast.add({
-          title: $t('toast.error.validation.title'),
-          description: $t('toast.error.validation.description'),
-          color: 'error',
-          icon: 'i-lucide-circle-x',
-        })
-        break
-      }
-      case 403: {
-        showError({
-          statusCode: 403,
-          message: $t('error-page.forbidden.group-edit'),
-        })
-        break
-      }
-      case 409: {
-        toast.add({
-          title: $t('toast.error.conflict.title'),
-          description: $t('toast.error.conflict.description'),
-          color: 'error',
-          icon: 'i-lucide-circle-x',
-        })
-        break
-      }
-      default: {
-        handleFetchError({ response: (error as FetchError).response! })
-        break
-      }
-    }
+  catch {
+  // Already handled in onResponseError
   }
 }
 
@@ -165,7 +167,7 @@ const onCancel = () => {
 
       <GroupForm
         v-model="state" :mode="mode"
-        @submit="(data) => onSubmit(data as GroupUpdateForm)" @cancel="onCancel"
+        @submit="(event) => onSubmit(event.data as GroupUpdateForm)" @cancel="onCancel"
       />
     </UCard>
   </div>

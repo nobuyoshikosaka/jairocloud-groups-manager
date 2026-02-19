@@ -26,7 +26,9 @@ from .search_queries import (
     make_criteria_object,
 )
 from .transformers import (
+    prepare_group,
     prepare_role_groups,
     prepare_service,
+    validate_group_to_map_group,
     validate_repository_to_map_service,
 )

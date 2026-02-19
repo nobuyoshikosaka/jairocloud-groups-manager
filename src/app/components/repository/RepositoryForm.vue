@@ -4,12 +4,12 @@ import type { FormErrorEvent, FormSubmitEvent } from '@nuxt/ui'
 interface Properties {
   modelValue: RepositoryForm | RepositoryCreateForm
   mode: FormMode
+  onSubmit: (event: FormSubmitEvent<RepositoryForm | RepositoryCreateForm>) => Promise<void>
 }
 const properties = defineProps<Properties>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: RepositoryForm | RepositoryCreateForm]
-  'submit': [data: RepositoryForm | RepositoryCreateForm]
   'error': [event: FormErrorEvent]
   'cancel': []
 }>()
@@ -33,9 +33,6 @@ const removeEntityId = (index: number) => {
 }
 
 const form = useTemplateRef('form')
-const onSubmit = (event: FormSubmitEvent<RepositoryForm | RepositoryCreateForm>) => {
-  emit('submit', event.data)
-}
 const onError = (event: FormErrorEvent) => {
   handleFormError(event)
   emit('error', event)
@@ -63,22 +60,30 @@ const onCancel = () => {
       :ui="{ wrapper: 'mb-2' }" :required="mode !== 'view'"
     >
       <UInput
+        v-if="mode !== 'view'"
         v-model="state.serviceName" size="xl"
         :placeholder="$t('repository.placeholders.service-name')"
-        :ui="{ root: 'w-full' }" :disabled="mode === 'view'"
+        :ui="{ root: 'w-full' }"
       />
+      <div
+        v-else
+        class="f-ful mt-1 px-3 py-2 text-base"
+      >
+        {{ state.serviceName || '-' }}
+      </div>
     </UFormField>
 
     <UFormField
       name="serviceUrl"
       :label="$t('repository.service-url')"
       :description="$t('repository.service-url-description')"
-      :ui="{ wrapper: 'mb-2' }" :required="mode !== 'view'"
+      :ui="{ wrapper: 'mb-2' }" :required="mode === 'new'"
     >
       <UInput
+        v-if="mode === 'new'"
         v-model="state.serviceUrl" size="xl"
         :placeholder="$t('repository.placeholders.service-url')"
-        :ui="{ root: 'w-full', base: 'pl-17' }" :disabled="mode === 'view'"
+        :ui="{ root: 'w-full', base: 'pl-17' }"
       >
         <template #leading>
           <span class="text-base">https://</span>
@@ -88,6 +93,12 @@ const onCancel = () => {
           {{ state.serviceUrl.length }} / {{ maxUrlLength }}
         </template>
       </UInput>
+      <div
+        v-else
+        class="f-ful mt-1 px-3 py-2 text-base"
+      >
+        https://{{ state.serviceUrl || '-' }}
+      </div>
     </UFormField>
 
     <UFormField
@@ -110,20 +121,28 @@ const onCancel = () => {
         />
       </template>
 
-      <UInput
-        v-for="(entityId, index) in state.entityIds"
-        :key="index" v-model="state.entityIds[index]" size="xl"
-        :placeholder="$t('repository.placeholders.entity-ids')"
-        :ui="{ root: 'w-full' }" :disabled="mode === 'view'"
-      >
-        <template v-if="mode !== 'view' && state.entityIds.length > 1" #trailing>
-          <UButton
-            icon="i-lucide-x" variant="ghost" color="neutral" size="sm"
-            :ui="{ base: 'p-0' }"
-            @click="removeEntityId(index)"
-          />
-        </template>
-      </UInput>
+      <template v-for="(entityId, index) in state.entityIds" :key="index">
+        <UInput
+          v-if="mode !== 'view'"
+          v-model="state.entityIds[index]" size="xl"
+          :placeholder="$t('repository.placeholders.entity-ids')"
+          :ui="{ root: 'w-full' }"
+        >
+          <template v-if="state.entityIds.length > 1" #trailing>
+            <UButton
+              icon="i-lucide-x" variant="ghost" color="neutral" size="sm"
+              :ui="{ base: 'p-0' }"
+              @click="removeEntityId(index)"
+            />
+          </template>
+        </UInput>
+        <div
+          v-else
+          class="f-ful mt-1 px-3 py-2 text-base"
+        >
+          {{ entityId }}
+        </div>
+      </template>
     </UFormField>
 
     <h3 v-if="mode !== 'new'" class="text-lg font-semibold mt-2">
@@ -177,11 +196,13 @@ const onCancel = () => {
         v-if="mode === 'new'"
         :label="$t('button.save')"
         type="submit" icon="i-lucide-save" color="info" variant="subtle"
+        loading-auto
       />
       <UButton
         v-else
         :label="$t('button.update')"
         type="submit" icon="i-lucide-save" color="info" variant="subtle"
+        loading-auto
       />
     </div>
   </UForm>

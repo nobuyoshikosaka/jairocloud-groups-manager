@@ -275,6 +275,9 @@ class LocalStorageConfig(BaseModel):
 class SpConfig(BaseModel):
     """Schema for Service Provider configuration."""
 
+    connecter_id: str
+    """SP Connecter ID for this application."""
+
     entity_id: str
     """Entity ID of the Service Provider."""
 
@@ -292,7 +295,7 @@ class RepositoriesConfig(BaseModel):
     """Patterns for repository-related IDs."""
 
     max_url_length: t.Annotated[int, "expression"] = 50
-    """Maximum allowed length for repository URLs, expressed as a Python expression."""
+    """Maximum allowed length for repository URL, expressed as a Python expression."""
 
     @field_validator("max_url_length", mode="before")
     @classmethod
@@ -332,6 +335,31 @@ class GroupsConfig(BaseModel):
 
     name_patterns: GroupNamePatternsConfig
     """Patterns for Group resource names."""
+
+    max_id_length: t.Annotated[int, "expression"] = 50
+    """Maximum allowed length for group ID, expressed as a Python expression."""
+
+    @field_validator("max_id_length", mode="before")
+    @classmethod
+    def validate_max_id_length(cls, value: str) -> int:
+        """Validate and evaluate the max_id_length expression.
+
+        Args:
+            value (str): The expression to evaluate for max_id_length.
+
+        Returns:
+            int: The evaluated max_id_length value.
+
+        Raises:
+            ValueError: If the expression is invalid or does not evaluate to an integer.
+        """
+        if not (pursed := safe_eval(value)) or not isinstance(pursed, int):
+            error = (
+                "max_url_length must be an expression that evaluates to an integer, "
+                f"got: {value}"
+            )
+            raise ValueError(error)
+        return pursed
 
 
 class GroupIdPatternsConfig(BaseModel):

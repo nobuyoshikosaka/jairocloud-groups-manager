@@ -24,7 +24,7 @@ interface GroupDetail extends GroupSummary {
 }
 
 type GroupForm = Omit<Required<GroupDetail>, 'repository'> & {
-  repository: { id: string, label: string }
+  repository: { value?: string, label?: string }
 }
 
 type GroupCreateForm = Omit<GroupForm, 'id' | 'created' | 'usersCount'>

@@ -13,7 +13,7 @@ from pydantic import BaseModel, EmailStr, HttpUrl
 from server.const import USER_ROLES
 
 from .common import camel_case_config, forbid_extra_config
-from .map_group import MapGroup, Visibility
+from .map_group import Visibility
 from .map_user import MapUser
 
 
@@ -59,24 +59,6 @@ class GroupSummary(BaseModel):
 
     model_config = camel_case_config | forbid_extra_config
     """Configure to use camelCase aliasing and forbid extra fields."""
-
-    @classmethod
-    def from_map_group(cls, group: MapGroup) -> GroupSummary:
-        """Create a GroupSummary instance from a MapGroup instance.
-
-        Args:
-            group (MapGroup): The MapGroup instance to convert.
-
-        Returns:
-            GroupSummary: The created GroupSummary instance.
-        """
-        return cls(
-            id=group.id,
-            display_name=group.display_name,
-            public=group.public,
-            member_list_visibility=group.member_list_visibility,
-            users_count=len(group.members) if group.members else 0,
-        )
 
 
 class UserSummary(BaseModel):

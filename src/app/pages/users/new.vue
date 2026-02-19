@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { FetchError } from 'ofetch'
-
 const toast = useToast()
 
 const { stateAsCreate: state } = useUserForm()
@@ -18,6 +16,39 @@ const onSubmit = async (data: UserCreateForm) => {
     await $fetch('/api/users', {
       method: 'POST',
       body: payload,
+      onResponseError: ({ response }) => {
+        switch (response.status) {
+          case 400: {
+            toast.add({
+              title: $t('toast.error.validation.title'),
+              description: $t('toast.error.validation.description'),
+              color: 'error',
+              icon: 'i-lucide-circle-x',
+            })
+            break
+          }
+          case 403: {
+            showError({
+              status: 403,
+              message: $t('error-page.forbidden.user-create'),
+            })
+            break
+          }
+          case 409: {
+            toast.add({
+              title: $t('toast.error.conflict.title'),
+              description: $t('toast.error.conflict.description'),
+              color: 'error',
+              icon: 'i-lucide-circle-x',
+            })
+            break
+          }
+          default: {
+            handleFetchError({ response })
+            break
+          }
+        }
+      },
     })
 
     toast.add({
@@ -28,38 +59,8 @@ const onSubmit = async (data: UserCreateForm) => {
     })
     await navigateTo('/users')
   }
-  catch (error) {
-    switch ((error as FetchError).status) {
-      case 400: {
-        toast.add({
-          title: $t('toast.error.validation.title'),
-          description: $t('toast.error.validation.description'),
-          color: 'error',
-          icon: 'i-lucide-circle-x',
-        })
-        break
-      }
-      case 403: {
-        showError({
-          status: 403,
-          message: $t('error-page.forbidden.user-create'),
-        })
-        break
-      }
-      case 409: {
-        toast.add({
-          title: $t('toast.error.conflict.title'),
-          description: $t('toast.error.conflict.description'),
-          color: 'error',
-          icon: 'i-lucide-circle-x',
-        })
-        break
-      }
-      default: {
-        handleFetchError({ response: (error as FetchError).response! })
-        break
-      }
-    }
+  catch {
+    // Already handled in onResponseError
   }
 }
 </script>
@@ -83,9 +84,8 @@ const onSubmit = async (data: UserCreateForm) => {
       </template>
 
       <UserForm
-        v-model="state"
-        mode="new"
-        @submit="onSubmit"
+        v-model="state" mode="new"
+        @submit="(event) => onSubmit(event.data)"
         @cancel="() => navigateTo('/users')"
       />
     </UCard>

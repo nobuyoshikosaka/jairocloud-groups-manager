@@ -85,7 +85,7 @@ def search(
         CredentialsError: If the client credentials are invalid.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
-    default_include = {"id", "service_name", "service_url"}
+    default_include = {"id", "service_name", "service_url", "entity_ids"}
 
     try:
         query = build_search_query(criteria)
@@ -232,14 +232,13 @@ def create(repository: RepositoryDetail) -> RepositoryDetail:
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
-        InvalidFormError: If failed to prepare MapService from RepositoryDetail.
+        InvalidFormError: If failed to validate repository form data for creation.
         ResourceInvalid: If the Repository resource data is invalid.
         SystemAdminNotFound: If no system administrators are found in the system.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
     admins = get_system_admins()
 
-    service = prepare_service(repository, admins)
     role_groups = prepare_role_groups(
         t.cast("str", repository.id), t.cast("str", repository.service_name), admins
     )
@@ -295,7 +294,8 @@ def update(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
     """Update an existing Repository resource.
 
     Args:
-        repository (RepositoryDetail): The Repository resource to update.
+        repository (RepositoryDetail):
+            The Repository data to update. The `id` field is required.
 
     Returns:
         RepositoryDetail: The updated Repository resource.
@@ -303,6 +303,7 @@ def update(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
+        InvalidFormError: If failed to validate repository form data for update.
         ResourceInvalid: If the Repository resource data is invalid.
         ResourceNotFound: If the Repository resource does not exist.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
@@ -312,22 +313,27 @@ def update(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
 
     validated = validate_repository_to_map_service(repository)
 
-    repository_id = resolve_service_id(repository_id=t.cast("str", repository.id))
+    repository_id = t.cast("str", repository.id)
+    service_id = t.cast("str", validated.id)
     current = get_by_id(repository_id)
     if current is None:
         error = f"Repository '{repository_id}' Not Found"
         raise ResourceNotFound(error)
 
+    if validated.service_url and validated.service_url != current.service_url:
+        error = "Service URL could not be updated."
+        raise InvalidFormError(error)
+
     operations: list[PatchOperation[MapService]] = build_patch_operations(
         current.to_map_service(),
         validated,
-        include={"service_name", "service_url", "suspended", "entity_ids"},
+        include={"service_name", "suspended", "entity_ids"},
     )
     try:
         access_token = get_access_token()
         client_secret = get_client_secret()
         result: MapService | MapError = services.patch_by_id(
-            repository_id,
+            service_id,
             operations,
             exclude={"meta"},
             access_token=access_token,
@@ -368,11 +374,13 @@ def update(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
     return RepositoryDetail.from_map_service(result)
 
 
-def update_put(repository: RepositoryDetail) -> RepositoryDetail:
+def update_put(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
     """Update an existing Repository resource (replace with PUT).
 
     Args:
-        repository (RepositoryDetail): The Repository resource to update.
+        repository (RepositoryDetail):
+            The Repository data to update. The `id` field is required.
+
 
     Returns:
         RepositoryDetail: The updated Repository resource.
@@ -380,6 +388,7 @@ def update_put(repository: RepositoryDetail) -> RepositoryDetail:
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
+        InvalidFormError: If failed to validate repository form data for update.
         ResourceInvalid: If the Repository resource data is invalid.
         ResourceNotFound: If the Repository resource does not exist.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
@@ -388,6 +397,16 @@ def update_put(repository: RepositoryDetail) -> RepositoryDetail:
         return update(repository)
 
     validated = validate_repository_to_map_service(repository)
+
+    repository_id = t.cast("str", repository.id)
+    current = get_by_id(repository_id)
+    if current is None:
+        error = f"Repository '{repository_id}' Not Found"
+        raise ResourceNotFound(error)
+
+    if validated.service_url and validated.service_url != current.service_url:
+        error = "Service URL could not be updated."
+        raise InvalidFormError(error)
 
     try:
         access_token = get_access_token()

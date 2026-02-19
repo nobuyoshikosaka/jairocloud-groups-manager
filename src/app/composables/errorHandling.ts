@@ -1,14 +1,15 @@
 import type { FetchResponse } from 'ofetch'
 
-const useErrorHandling = () => {
+export const createFetchErrorHandler = (
+  $t: ReturnType<typeof useI18n>['t'],
+) => {
   const route = useRoute()
   const toast = useToast()
-  const { t: $t } = useI18n()
 
   const { publicRoutes } = useAppConfig()
   const { checkout } = useAuth()
 
-  const handleFetchError = async ({ response }: { response: FetchResponse<unknown> }) => {
+  return async ({ response }: { response: FetchResponse<unknown> }) => {
     const errorId = `error-${response.status}`
     if (toast.toasts.value.some(t => t.id === errorId)) return
 
@@ -84,6 +85,12 @@ const useErrorHandling = () => {
       }
     }
   }
+}
+
+const useErrorHandling = () => {
+  const { t: $t } = useI18n()
+
+  const handleFetchError = createFetchErrorHandler($t)
 
   return { handleFetchError }
 }
