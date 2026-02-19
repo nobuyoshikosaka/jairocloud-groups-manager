@@ -15,6 +15,7 @@ from server.const import USER_ROLES
 from server.entities.group_detail import GroupDetail
 from server.entities.search_request import FilterOption, SearchResult
 from server.exc import (
+    InvalidFormError,
     InvalidQueryError,
     ResourceInvalid,
     ResourceNotFound,
@@ -88,6 +89,8 @@ def post(
 
     try:
         result = groups.create(body)
+    except InvalidFormError:
+        return ErrorResponse(code="", message="invalid group information"), 400
     except ResourceInvalid:
         return ErrorResponse(code="", message="id already exist"), 409
 
@@ -144,8 +147,11 @@ def id_put(group_id: str, body: GroupDetail) -> tuple[GroupDetail | ErrorRespons
             code="", message=f"Not have permission to edit {group_id}."
         ), 403
 
+    body.id = group_id
     try:
         result = groups.update(body)
+    except InvalidFormError as ex:
+        return ErrorResponse(code="", message=str(ex)), 400
     except ResourceInvalid as ex:
         return ErrorResponse(code="", message=str(ex)), 409
     except ResourceNotFound as ex:

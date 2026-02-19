@@ -229,7 +229,7 @@ def create(group: GroupDetail) -> GroupDetail:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
         ResourceInvalid: If the Group resource data is invalid.
-        InvalidFormError: If failed to prepare MapGroup from GroupDetail.
+        InvalidFormError: If failed to validate group form data for creation.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
     admins = get_system_admins()
@@ -280,8 +280,7 @@ def update(group: GroupDetail) -> GroupDetail:
     """Update group from mAP Core API by group_id.
 
     Args:
-        group (GroupDetail):
-            Detail information about the group update from the input data.
+        group (GroupDetail): The Group data to update. The `id` field is required.
 
     Returns:
         GroupDetail: The updated Group detail object.
@@ -289,6 +288,7 @@ def update(group: GroupDetail) -> GroupDetail:
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
+        InvalidFormError: If failed to validate group form data for update.
         ResourceInvalid: If the Group resource data is invalid.
         ResourceNotFound: If the Group resource is not found.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
@@ -296,20 +296,20 @@ def update(group: GroupDetail) -> GroupDetail:
     if config.MAP_CORE.update_strategy == "put":
         return update_put(group)
 
-    validated = validate_group_to_map_group(group, mode="update")
-
-    group_id = t.cast("str", group.id)
-    current: GroupDetail | None = get_by_id(group_id)
-    if current is None:
-        error = f"'Group {group_id}' Not Found"
-        raise ResourceNotFound(error)
-
-    operations: list[PatchOperation[MapGroup]] = build_patch_operations(
-        current.to_map_group(),
-        validated,
-        include={"display_name", "public", "description", "member_list_visibility"},
-    )
     try:
+        validated = validate_group_to_map_group(group, mode="update")
+
+        group_id = t.cast("str", group.id)
+        current: GroupDetail | None = get_by_id(group_id)
+        if current is None:
+            error = f"'Group {group_id}' Not Found"
+            raise ResourceNotFound(error)
+
+        operations: list[PatchOperation[MapGroup]] = build_patch_operations(
+            current.to_map_group(),
+            validated,
+            include={"display_name", "public", "description", "member_list_visibility"},
+        )
         access_token = get_access_token()
         client_secret = get_client_secret()
         result: MapGroup | MapError = groups.patch_by_id(
@@ -340,7 +340,7 @@ def update(group: GroupDetail) -> GroupDetail:
         error = "Failed to parse Group resource from mAP Core API."
         raise UnexpectedResponseError(error) from exc
 
-    except OAuthTokenError, CredentialsError:
+    except OAuthTokenError, CredentialsError, InvalidFormError:
         raise
 
     if isinstance(result, MapError):
@@ -354,8 +354,7 @@ def update_put(group: GroupDetail) -> GroupDetail:
     """Update group from mAP Core API by group_id (replace with PUT).
 
     Args:
-        group (GroupDetail):
-            Detail information about the group update from the input data.
+        group (GroupDetail): The Group data to update. The `id` field is required.
 
     Returns:
         GroupDetail: The updated Group detail object.
@@ -363,6 +362,7 @@ def update_put(group: GroupDetail) -> GroupDetail:
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
+        InvalidFormError: If failed to validate group form data for update.
         ResourceInvalid: If the Group resource data is invalid.
         ResourceNotFound: If the Group resource is not found.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
@@ -370,9 +370,9 @@ def update_put(group: GroupDetail) -> GroupDetail:
     if config.MAP_CORE.update_strategy == "patch":
         return update(group)
 
-    validated = validate_group_to_map_group(group, mode="update")
-
     try:
+        validated = validate_group_to_map_group(group, mode="update")
+
         access_token = get_access_token()
         client_secret = get_client_secret()
         result: MapGroup | MapError = groups.put_by_id(
@@ -402,7 +402,7 @@ def update_put(group: GroupDetail) -> GroupDetail:
         error = "Failed to parse Group resource from mAP Core API."
         raise UnexpectedResponseError(error) from exc
 
-    except OAuthTokenError, CredentialsError:
+    except OAuthTokenError, CredentialsError, InvalidFormError:
         raise
 
     if isinstance(result, MapError):
