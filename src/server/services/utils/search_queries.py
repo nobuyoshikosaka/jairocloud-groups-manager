@@ -266,13 +266,13 @@ def build_users_search_query(criteria: UsersCriteria) -> SearchRequestParameter:
 
     if criteria.q:
         # partial match search on user_name, emails, edu_person_principal_names
-        filter_expr.append(
-            " or ".join([
-                f'({path("user_name")} co "{criteria.q}")',
+        term_filter = [f'({path("user_name")} co "{criteria.q}")']
+        if not config.FEATURES.search_only_username:
+            term_filter.extend([
                 f'({path("emails.value")} co "{criteria.q}")',
                 f'({path("edu_person_principal_names.value")} co "{criteria.q}")',
             ])
-        )
+        filter_expr.append(" or ".join(term_filter))
 
     if criteria.i:
         # exact match search on IDs

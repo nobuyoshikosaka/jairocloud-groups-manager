@@ -96,6 +96,12 @@ class RuntimeConfig(BaseSettings):
 
     DEVELOP: DevelopConfig | None = None
 
+    FEATURES: FeaturesConfig
+    """Feature flags for enabling/disabling application features.
+
+        These are due to temporary constraints
+        in the future, all features will be enabled and the settings will be deleted."""
+
     @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> URL:
@@ -540,6 +546,18 @@ class DevAccountConfig(BaseModel):
 
     user_name: str
     """User name of the development account."""
+
+
+class FeaturesConfig(BaseModel):
+    """Schema for feature flags configuration."""
+
+    search_only_username: bool = True
+    """Whether user search by user name only in users.
+    If false, Enable search by username, email, or ePPN.
+    """
+
+    enable_bulk_operation: bool = False
+    """Whether mAP Core API bulk operation is enabled or disabled."""
 
 
 def safe_eval(expr: str) -> int | str:

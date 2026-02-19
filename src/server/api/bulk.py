@@ -14,8 +14,15 @@ from flask_login import current_user
 from flask_pydantic import validate
 from redis.exceptions import ConnectionError as RedisConnectionError
 
-from server.api.helpers import validate_files
-from server.api.schemas import (
+from server.config import config
+from server.entities.bulk import ResultSummary, ValidateSummary
+from server.entities.login_user import LoginUser
+from server.exc import RecordNotFound
+from server.services import bulks, history_table
+from server.services.utils import require_enabled
+
+from .helpers import validate_files
+from .schemas import (
     BulkBody,
     ErrorResponse,
     ExcuteRequest,
@@ -23,11 +30,6 @@ from server.api.schemas import (
     UploadFiles,
     UploadQuery,
 )
-from server.config import config
-from server.entities.bulk import ResultSummary, ValidateSummary
-from server.entities.login_user import LoginUser
-from server.exc import RecordNotFound
-from server.services import bulks, history_table
 
 
 bp = Blueprint("bulk", __name__)
@@ -36,6 +38,7 @@ bp = Blueprint("bulk", __name__)
 @bp.post("/upload-file")
 @validate_files
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def upload_file(
     form: TargetRepository, files: UploadFiles
 ) -> tuple[BulkBody | ErrorResponse, int]:
@@ -72,6 +75,7 @@ def upload_file(
 
 @bp.get("/validate/status/<string:task_id>")
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def validate_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
     """Get the status of a validation task.
 
@@ -95,6 +99,7 @@ def validate_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
 
 @bp.get("/validate/result/<string:task_id>")
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def validate_result(
     query: UploadQuery,
     task_id: str,
@@ -141,6 +146,7 @@ def validate_result(
 
 @bp.post("/execute")
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def execute(body: ExcuteRequest) -> tuple[BulkBody | ErrorResponse, int]:
     """Execute a bulk upload.
 
@@ -173,6 +179,7 @@ def execute(body: ExcuteRequest) -> tuple[BulkBody | ErrorResponse, int]:
 
 @bp.get("/execute/status/<string:task_id>")
 @validate()
+@require_enabled("enable_bulk_operation")
 def execute_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
     """Get the status of an execution task.
 
@@ -196,6 +203,7 @@ def execute_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
 
 @bp.get("/result/<string:history_id>")
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def result(
     history_id: UUID, query: UploadQuery
 ) -> tuple[ResultSummary | ErrorResponse, int]:

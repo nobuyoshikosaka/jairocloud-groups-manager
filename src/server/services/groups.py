@@ -351,6 +351,8 @@ def delete_multiple(group_ids: set[str]) -> set[str] | None:
         ResourceInvalid: If the Group resource data is invalid.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
+    if config.FEATURES.enable_bulk_operation:
+        return delete_multiple_sequentially(group_ids)
     operations = [
         BulkOperation(method="DELETE", path=f"/Groups/{group_id}")
         for group_id in group_ids
@@ -392,6 +394,35 @@ def delete_multiple(group_ids: set[str]) -> set[str] | None:
         for o in result.operations
         if type(o.response) is MapError
     }
+    return failed_list if failed_list != set() else None
+
+
+def delete_multiple_sequentially(group_ids: set[str]) -> set[str] | None:
+    """Delete groups from mAP Core API by group_ids asynchronously.
+
+    Args:
+        group_ids (list[str]): ID of the Group resource.
+
+    Returns:
+        list[str]: group id list of failed.
+
+    Raises:
+        OAuthTokenError: If the access token is invalid or expired.
+        CredentialsError: If the client credentials are invalid.
+    """
+    failed_list: set[str] = set()
+    for group_id in group_ids:
+        try:
+            delete_by_id(group_id)
+        except OAuthTokenError, CredentialsError:
+            raise
+        except (
+            ResourceNotFound,
+            ResourceInvalid,
+            UnexpectedResponseError,
+        ):
+            failed_list.add(group_id)
+
     return failed_list if failed_list != set() else None
 
 

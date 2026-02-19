@@ -213,3 +213,15 @@ url = "amqp://guest:guest@rabbitmq:5672//"
 
 # user name of the developer account.
 # user_name = ""
+
+
+# Feature flags for enabling or disabling application features.
+# These are due to temporary constraints
+# in the future, all features will be enabled and the settings will be deleted.
+[features]
+# Whether user search by user name only in users.
+# If false, Enable search by username, email, or ePPN.
+search_only_username = true
+
+# Whether mAP Core API bulk operation is enabled or disabled.
+enable_bulk_operation = false
