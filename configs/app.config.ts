@@ -44,6 +44,7 @@ const table = {
     groups: [20, 50, 100] as [number, ...number[]],
     users: [20, 50, 100] as [number, ...number[]],
     history: [20, 50, 100] as [number, ...number[]],
+    bulks: [20, 50, 100] as [number, ...number[]],
   },
 }
 
@@ -65,6 +66,18 @@ const groups = {
    * [Mandatory]
    */
   maxIdLength: 50 - 'jc_'.length - '_groups_'.length - 4,
+}
+
+const polling = {
+  /**
+   * Interval time (in milliseconds) for polling requests to check the status of task\
+   */
+  interval: 2000,
+
+  /**
+   * Maximum number of attempts for polling requests to check the status of task\
+   */
+  maxAttempts: 100,
 }
 
 const wayf = {
@@ -164,6 +177,8 @@ export default {
   repositories,
   /** Group configuration */
   groups,
+  /** Polling configuration */
+  polling,
   /** WAYF (Embedded DS) configuration */
   wayf,
 }

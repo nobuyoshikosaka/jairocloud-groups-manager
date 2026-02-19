@@ -44,6 +44,7 @@ def check() -> tuple[LoginUserState, int]:
     user = t.cast("LoginUser", current_user)
 
     return LoginUserState(
+        id=user.map_id,
         eppn=user.eppn,
         user_name=user.user_name,
         is_system_admin=user.is_system_admin,
@@ -64,20 +65,19 @@ def login() -> Response:
     if not eppn:
         return make_response(redirect("/?error=401"))
 
-    if not is_member_of or not user_name:
-        user = users.get_by_eppn(eppn)
-        if not user:
-            return make_response(redirect("/?error=401"))
+    user = users.get_by_eppn(eppn)
+    if not user:
+        return make_response(redirect("/?error=401"))
 
-        user_name = user.user_name if user_name is None else user_name
-        is_member_of = (
-            ";".join(
-                f"https://cg.gakunin.jp/gr/{urlparse.quote(g.id, safe='')}"
-                for g in user.groups or []
-            )
-            if is_member_of is None
-            else is_member_of
+    user_name = user.user_name if user_name is None else user_name
+    is_member_of = (
+        ";".join(
+            f"https://cg.gakunin.jp/gr/{urlparse.quote(g.id, safe='')}"
+            for g in user.groups or []
         )
+        if is_member_of is None
+        else is_member_of
+    )
 
     groups = extract_group_ids(is_member_of)
     user_roles, _ = detect_affiliations(groups)
@@ -88,7 +88,11 @@ def login() -> Response:
         return make_response(redirect("/?error=403"))
 
     user = LoginUser(
-        eppn=eppn, is_member_of=is_member_of, user_name=user_name, session_id=""
+        eppn=eppn,
+        is_member_of=is_member_of,
+        user_name=user_name,
+        map_id=t.cast("str", user.id),
+        session_id="",
     )
     alias: t.Callable[[str], str] = LoginUser.model_config.get(
         "alias_generator", lambda x: x

@@ -49,6 +49,7 @@ def create_developer_blueprint(config: RuntimeConfig) -> Blueprint:
 
         account_data = dev_accounts[eppn]
         user = LoginUser(
+            map_id=account_data.id,
             eppn=account_data.eppn,
             is_member_of=account_data.is_member_of,
             user_name=account_data.user_name,

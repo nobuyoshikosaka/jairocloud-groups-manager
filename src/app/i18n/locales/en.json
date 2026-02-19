@@ -1,9 +1,85 @@
 {
+  "bulk": {
+    "about": "About bulk operations",
+    "about-description": "Users included in the file are newly registered or updated",
+    "about-description2": "Existing users are matched by id and updated if they match",
+    "about-description3": "You can choose to delete users who are not included in the file",
+    "about-description4": "Supported formats: TSV, CSV, Excel",
+    "column": {
+      "email": "E-mail",
+      "eppn": "ePPN",
+      "groups": "Group ID",
+      "row": "row",
+      "status": "status",
+      "user-name": "name"
+    },
+    "completed-at": "End date and time",
+    "description": "You can perform bulk operations on users belonging to a repository by uploading files.",
+    "deselect_all": "Release all",
+    "empty": "empty",
+    "excute": {
+    },
+    "execute": {
+      "failed": "User update failed",
+      "result_failed": "Failed to get execution results"
+    },
+    "file-format-error": "The file format is not supported. \nChoose TSV, CSV, or Excel file.",
+    "file-required": "Please select file",
+    "file-validate-error": "File validation failed",
+    "filter": "filter",
+    "import": {
+    },
+    "import-results": "Batch operation results",
+    "missing-user": {
+      "confirm": "Confirm deletion",
+      "confirm_desc": "The selected ${count} users will be deleted. \nThis operation cannot be undone.",
+      "select": "Please select the user to delete."
+    },
+    "missing_user": "User not included in file",
+    "operator": "Execution user",
+    "repository-required": "Please select a repository",
+    "select-repository": "Please select a repository",
+    "select_all": "Select all",
+    "start-at": "Start date and time",
+    "status": {
+      "create": "create",
+      "delete": "delete",
+      "error": "error",
+      "skip": "No updates",
+      "update": "update"
+    },
+    "step": {
+      "complete": "completion",
+      "complete_description": "Upload result",
+      "select_file": "File selection",
+      "select_file_description": "CSV,TSV or Excel file",
+      "validate": "data validation",
+      "validate_description": "Confirm changes"
+    },
+    "target-repository": "Operation target repository",
+    "title": "Bulk user operations",
+    "upload": {
+      "execute": "Execute upload"
+    },
+    "upload-field": "Select or drag files",
+    "upload-file": "upload file",
+    "upload-file-info": "Batch operation results",
+    "validation": {
+      "error": "Invalid data detected",
+      "error-detail": "Please correct the file and upload it again.",
+      "fetch_failed": "Failed to obtain verification results",
+      "fix_error": "Please fix the error",
+      "results": "data preview"
+    },
+    "view-all": "Show all"
+  },
   "button": {
     "add": "Add",
+    "back": "return",
     "cancel": "Cancel",
     "create-new": "Create new",
     "delete": "Delete",
+    "next": "to the next",
     "reload": "Reload",
     "save": "Save",
     "update": "Update",
@@ -133,20 +209,26 @@
     "logoAlt": "Header App Logo"
   },
   "history": {
+    "available": "Re-download",
     "cancel": "Number of cancellations",
     "description": "You can check the history of file uploads and downloads.",
+    "download": {
+      "date": "Download date and time"
+    },
     "empty": "No data matching your search criteria was found",
     "empty-data": "No data",
     "expired": "Expired",
     "failed": "failure",
     "failed-count": "Number of failures",
     "file": "file",
-    "filter": "filter",
+    "filter": {
+      "options_not_found": "Failed to get filter",
+      "title": "filter"
+    },
     "first-download": "First download",
     "group-count": "Number of groups",
     "more": "Show more",
     "operation": "Execution conditions",
-    "operation-date": "Execution date and time",
     "operator": "Execution user",
     "private": "make private",
     "progress": "Processing",
@@ -156,9 +238,13 @@
     "reset": "reset",
     "show-detail": "Show details",
     "status": "status",
-    "succes": "success",
+    "success": "success",
     "success-count": "Number of successes",
     "sum": "Total number of downloads | Total number of uploads",
+    "tab": {
+      "download": "Download history",
+      "upload": "Upload history"
+    },
     "table": {
       "column": {
         "download-date": "Download date and time",
@@ -172,7 +258,10 @@
     "table-title": "History list",
     "target": "Download target | Upload target",
     "title": "History",
-    "tub": "Download history | Upload history",
+    "unavailable": "Expired",
+    "upload": {
+      "date": "Upload date and time"
+    },
     "uploaded-at": "Upload date and time",
     "user-count": "Number of users",
     "view": "Number of items displayed"

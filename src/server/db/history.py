@@ -83,10 +83,7 @@ class Files(db.Model):
         nullable=False,
     )
     """Repositories, groups, and users contained in the file."""
-
-    __table_args__ = (
-        Index("ix_files_file_content", "file_content", postgresql_using="gin"),
-    )
+    __table_args__ = (Index(None, "file_content", postgresql_using="gin"),)
 
 
 class DownloadHistory(db.Model):
@@ -161,11 +158,12 @@ class UploadHistory(db.Model):
 
     __tablename__ = "upload_history"
 
-    type Status = t.Literal["S", "P", "F"]
+    type Status = t.Literal["S", "P", "F", "C"]
     """Allowed status values for the upload history.
     - 'S': Success
     - 'P': In Progress
     - 'F': Failed
+    - 'C': Cancel
     """
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -219,9 +217,10 @@ class UploadHistory(db.Model):
 
     status: Mapped[Status] = mapped_column(
         String(1),
+        default="C",
         nullable=False,
     )
-    """Status: 'S' (success), 'F' (failure), 'P' (in progress)."""
+    """Status: 'C' (cancel) 'S' (success), 'F' (failure), 'P' (in progress)."""
 
     results: Mapped[_ResultData] = mapped_column(
         MutableDict.as_mutable(JSON().with_variant(postgresql.JSONB, "postgresql")),
@@ -234,5 +233,5 @@ class UploadHistory(db.Model):
             status.in_(t.get_args(Status.__value__)),
             name="status",
         ),
-        Index("ix_upload_history_results", "results", postgresql_using="gin"),
+        Index(None, "results", postgresql_using="gin"),
     )

@@ -144,3 +144,10 @@ class InvalidFormError(JAIROCloudGroupsManagerError):
 
     Errors caused by invalid form data in API requests.
     """
+
+
+class ImmutableError(JAIROCloudGroupsManagerError):
+    """Exception for immutable attribute modification errors.
+
+    Errors caused by attempts to modify immutable attributes.
+    """

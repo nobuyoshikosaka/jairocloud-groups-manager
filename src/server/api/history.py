@@ -9,105 +9,120 @@ import typing as t
 from pathlib import Path
 from uuid import UUID
 
-from flask import Blueprint, Response, send_file
+from flask import Blueprint, Response, current_app, send_file
 from flask_login import login_required
 from flask_pydantic import validate
 
-from server.api.helpers import roles_required
-from server.api.schemas import ErrorResponse, HistoryPublic
 from server.const import USER_ROLES
 from server.entities.history_detail import HistoryQuery
 from server.entities.search_request import FilterOption, SearchResult
-from server.exc import DatabaseError, RecordNotFound
+from server.exc import DatabaseError, InvalidQueryError, RecordNotFound
 from server.services import history
+
+from .helpers import roles_required
+from .schemas import ErrorResponse, HistoryPublic, OperatorQuery
 
 
 bp = Blueprint("history", __name__)
 
 
-@bp.get("/<tub>/filter-options")
+@bp.get("/filter-options")
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_many=True)
-def filter_options(
-    tub: t.Literal["download", "upload"],
-) -> tuple[list[FilterOption], int] | tuple[ErrorResponse, int]:
+def filter_options() -> list[FilterOption]:
+    """Get filter options for history data.
+
+    Returns:
+        list[FilterOption]: list of filter options for history data
+    """
+    return history.get_filters()
+
+
+@bp.get("/<tab>/filter-options/operators")
+@login_required
+@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
+@validate(response_by_alias=True, exclude_none=True)
+def filter_options_operators(
+    tab: t.Literal["download", "upload"], query: OperatorQuery
+) -> tuple[SearchResult, int] | tuple[ErrorResponse, int]:
     """Get filter options for history data.
 
     Args:
-        tub (t.Literal["download", "upload"]): Type of history (download or upload)
+        tab (t.Literal["download", "upload"]): Type of history (download or upload)
+        query (OperatorQuery): Query parameters for filtering operator options
 
     Returns:
-        HistoryDataFilter: if successful and status code 200
-        ErrorResponse: if an error occurs  and status code 500
+        SearchResult: if successful and status code 200
+        ErrorResponse: if an error occurs  and status code 400
     """
     try:
-        history_filter = history.get_filters(tub)
-    except ValueError as ex:
-        return ErrorResponse(code="", message=str(ex)), 500
+        result = history.get_filter_option(tab, key="o", criteria=query)
+    except InvalidQueryError as ex:
+        return ErrorResponse(code="", message=str(ex)), 400
+    return result, 200
 
-    return history_filter, 200
 
-
-@bp.get("/<string:tub>")
+@bp.get("/<string:tab>")
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
-@validate()
+@validate(response_by_alias=True, exclude_none=True)
 def get(
-    tub: t.Literal["download", "upload"], query: HistoryQuery
+    tab: t.Literal["download", "upload"], query: HistoryQuery
 ) -> tuple[SearchResult | ErrorResponse, int]:
     """Get history data.
 
     Args:
         query (HistoryQuery): Query parameters for filtering history data
-        tub (t.Literal["download", "upload"]): Type of history (download or upload)
+        tab (t.Literal["download", "upload"]): Type of history (download or upload)
 
     Returns:
         SearchResult: if successful and status code 200
         ErrorResponse: if a connection error occurs and status code 503
     """
     try:
-        if tub == "download":
+        if tab == "download":
             result = history.get_download_history_data(query)
         else:
             result = history.get_upload_history_data(query)
     except DatabaseError:
-        error = f"{tub} table connection error"
+        error = f"{tab} table connection error"
+        current_app.logger.error(error)
         return ErrorResponse(code="", message=error), 503
     return result, 200
 
 
-@bp.put("/<tub>/<history_id>/public-status")
+@bp.put("/<tab>/<history_id>/public-status")
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN)
-@validate()
+@validate(response_by_alias=True)
 def public_status(
-    tub: t.Literal["download", "upload"], history_id: UUID, body: HistoryPublic
-) -> tuple[bool | ErrorResponse, int]:
+    tab: t.Literal["download", "upload"], history_id: UUID, body: HistoryPublic
+) -> tuple[HistoryPublic | ErrorResponse, int]:
     """Update the public status of a history item.
 
     Args:
-        tub (t.Literal["download", "upload"]): Type of history (download or upload)
+        tab (t.Literal["download", "upload"]): Type of history (download or upload)
         history_id (UUID): Unique identifier of the history item
         body (HistoryPublic): Request body containing the new public status
 
     Returns:
-        bool: True if the update was successful, False otherwise
+        HistoryPublic: The updated public status of the history item
         int: HTTP status code
     """
     try:
         result: bool = history.update_public_status(
-            tub=tub, history_id=history_id, public=body.public
+            tab=tab, history_id=history_id, public=body.public
         )
     except RecordNotFound as ex:
         return ErrorResponse(code="", message=str(ex)), 404
-    return result, 200
+    return HistoryPublic(public=result), 200
 
 
 @bp.get("/files/<file_id>")
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
-@validate()
+@validate(response_by_alias=True)
 def files(file_id: UUID) -> Response | tuple[ErrorResponse, int]:
     """Download a file associated with a history item.
 
@@ -122,13 +137,17 @@ def files(file_id: UUID) -> Response | tuple[ErrorResponse, int]:
         file_path = Path(path_str)
     except RecordNotFound as ex:
         return ErrorResponse(code="", message=str(ex)), 404
+    if not file_path.exists():
+        error = f"File not found: {file_id}"
+        current_app.logger.error(error)
+        return ErrorResponse(code="", message=error), 404
     return send_file(path_or_file=file_path)
 
 
 @bp.get("/files/<file_id>/exists")
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
-@validate()
+@validate(response_by_alias=True)
 def is_exist_files(file_id: UUID) -> tuple[bool | ErrorResponse, int]:
     """Check if the file exists.
 

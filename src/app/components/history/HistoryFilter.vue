@@ -1,12 +1,8 @@
 <script setup lang="ts">
-interface HistoryFilterProperties {
-  target: 'download' | 'upload'
-}
-const properties = defineProps<HistoryFilterProperties>()
-
 const { t: $t } = useI18n()
 
 const {
+  tab,
   criteria: {
     specifiedRepos,
     specifiedGroups,
@@ -17,152 +13,127 @@ const {
     dateRange,
     formattedDateRange,
   },
-  targetLabel,
-} = useHistoryFilter({ target: properties.target })
+  updateQuery,
+  isFiltered,
+  makeHistoryFilters,
+  loading,
+} = useHistoryFilter()
 
-const targetReference = toRef(properties, 'target')
+const { handleFetchError } = useErrorHandling()
+
 const {
-  operatorOptions,
-  repoOptions,
-  groupOptions,
-  userOptions,
-  loading: loadingOptions,
-  error: optionsError,
-  loadOptions,
-} = useHistoryFilterOptions(targetReference)
-
-onMounted(loadOptions)
-
-const operatorModel = computed<SelectOption[]>({
-  get() {
-    if (!Array.isArray(specifiedOperators.value)) return []
-    const set = new Set(specifiedOperators.value)
-    return operatorOptions.value.filter(opt => set.has(opt.value))
-  },
-  set(selected: SelectOption[]) {
-    specifiedOperators.value = selected.map(s => s.value)
-  },
+  data: filterOptions,
+} = useFetch<FilterOption[]>('/api/history/filter-options', {
+  method: 'GET',
+  onResponseError: ({ response }) => handleFetchError({ response }),
+  lazy: true,
+  server: false,
 })
-
-const repoModel = computed<SelectOption[]>({
-  get() {
-    if (!Array.isArray(specifiedRepos.value)) return []
-    const set = new Set(specifiedRepos.value)
-    return repoOptions.value.filter(opt => set.has(opt.value))
-  },
-  set(selected: SelectOption[]) {
-    specifiedRepos.value = selected.map(s => s.value)
-  },
-})
-
-const groupModel = computed<SelectOption[]>({
-  get() {
-    if (!Array.isArray(specifiedGroups.value)) return []
-    const set = new Set(specifiedGroups.value)
-    return groupOptions.value.filter(opt => set.has(opt.value))
-  },
-  set(selected: SelectOption[]) {
-    specifiedGroups.value = selected.map(s => s.value)
-  },
-})
-
-const userModel = computed<SelectOption[]>({
-  get() {
-    if (!Array.isArray(specifiedUsers.value)) return []
-    const set = new Set(specifiedUsers.value)
-    return userOptions.value.filter(opt => set.has(opt.value))
-  },
-  set(selected: SelectOption[]) {
-    specifiedUsers.value = selected.map(s => s.value)
-  },
-})
+const repositorySelect = useTemplateRef('repositorySelect')
+const groupSelect = useTemplateRef('groupSelect')
+const userSelect = useTemplateRef('userSelect')
+const operatorSelect = useTemplateRef('operatorSelect')
+const { repositoryFilter, groupFilter, userFilter, operatorFilter }
+  = makeHistoryFilters(filterOptions, {
+    repositorySelect: { ref: repositorySelect, url: '/api/repositories' },
+    groupSelect: { ref: groupSelect, url: '/api/groups' },
+    userSelect: { ref: userSelect, url: '/api/users' },
+    operatorSelect: { ref: operatorSelect,
+      url: `/api/history/${tab.value}/filter-options/operators` },
+  })
 </script>
 
 <template>
-  <UCard variant="outline" class="mb-6">
-    <template #header>
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold">
-          {{ $t('history.filter') }}
-        </h2>
-        <UButton
-          v-if="isFiltered"
-          :label="$t('history.reset')"
-          icon="i-lucide-rotate-ccw"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          @click="resetFilters"
-        />
-      </div>
-    </template>
+  <div class="flex items-center justify-between space-y-2">
+    <h2 class="text-lg font-semibold">
+      {{ $t('history.filter.title') }}
+    </h2>
+    <UButton
+      v-if="isFiltered"
+      :label="$t('history.reset')"
+      icon="i-lucide-rotate-ccw"
+      color="neutral"
+      variant="ghost"
+      size="xs"
+      @click="() => {
+        updateQuery({
+          tab: tab,
+          s: undefined,
+          e: undefined,
+          r: undefined,
+          g: undefined,
+          u: undefined,
+          o: undefined,
+          p: 1,
+        })
+        specifiedRepos = []
+        specifiedGroups = []
+        specifiedUsers = []
+        specifiedOperators = []
+        dateRange.start = undefined
+        dateRange.end = undefined
+      }"
+    />
+  </div>
 
-    <div v-if="loadingOptions" class="text-sm text-muted mb-2">
-      {{ $t('common.loading') }}
-    </div>
+  <div v-if="loading" class="text-sm text-muted mb-2">
+    {{ $t('common.loading') }}
+  </div>
 
-    <div v-if="optionsError" class="text-sm text-error mb-4">
-      {{ optionsError }}
-    </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+    <UPopover :popper="{ placement: 'bottom-start' }">
+      <UInput
+        icon="i-lucide-calendar"
+        :placeholder="$t('history.upload.date')"
+        :model-value="formattedDateRange"
+        readonly
+        :ui="{ base: `text-left ${dateRange.start ? '' : 'text-dimmed'}` }"
+        class="w-full"
+      />
+      <template #content>
+        <UCalendar
+          v-model="dateRange" :number-of-months="2" class="p-2" range
+          @update:valid-model-value="() => updateQuery(
+            { s: dateRange.start?.toString(), e: dateRange.end?.toString(), p: 1 },
+          )"
+        />
+      </template>
+    </UPopover>
 
-    <UFormField :label="$t('history.operation')" class="mb-4">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <UPopover :popper="{ placement: 'bottom-start' }">
-          <UInput
-            icon="i-lucide-calendar"
-            :placeholder="$t('history.operation-date')"
-            :model-value="formattedDateRange"
-            readonly
-            class="w-full"
-          />
-          <template #content>
-            <UCalendar
-              v-model="dateRange"
-              range
-              :number-of-months="2"
-              class="p-2"
-            />
-          </template>
-        </UPopover>
+    <USelectMenu
+      ref="operatorSelect"
+      v-model:search-term="operatorFilter.searchTerm.value" ignore-filter
+      :placeholder="operatorFilter.placeholder"
+      :icon="operatorFilter.icon" :items="operatorFilter.items"
+      :multiple="operatorFilter.multiple" :loading="operatorFilter.loading"
+      @update:open="operatorFilter.onOpen" @update:model-value="operatorFilter.onUpdated"
+    />
+  </div>
 
-        <USelectMenu
-          v-model="operatorModel"
-          :placeholder="$t('history.operator')"
-          icon="i-lucide-user"
-          :items="operatorOptions"
-          multiple
-          searchable
-        />
-      </div>
-    </UFormField>
-
-    <UFormField :label="targetLabel">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <USelectMenu
-          v-model="repoModel"
-          :placeholder="$t('repositories.title')"
-          icon="i-lucide-folder"
-          :items="repoOptions"
-          multiple
-          searchable
-        />
-        <USelectMenu
-          v-model="groupModel"
-          :placeholder="$t('groups.title')"
-          icon="i-lucide-users"
-          :items="groupOptions"
-          multiple
-          searchable
-        />
-        <USelectMenu
-          v-model="userModel"
-          :placeholder="$t('users.title')"
-          icon="i-lucide-user"
-          :items="userOptions"
-          multiple
-          searchable
-        />
-      </div>
-    </UFormField>
-  </UCard>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+    <USelectMenu
+      ref="repositorySelect"
+      v-model:search-term="repositoryFilter.searchTerm.value" ignore-filter
+      :placeholder="repositoryFilter.placeholder"
+      :icon="repositoryFilter.icon" :items="repositoryFilter.items"
+      :multiple="repositoryFilter.multiple" :loading="repositoryFilter.loading"
+      @update:open="repositoryFilter.onOpen" @update:model-value="repositoryFilter.onUpdated"
+    />
+    <USelectMenu
+      ref="groupSelect"
+      v-model:search-term="groupFilter.searchTerm.value" ignore-filter
+      :placeholder="groupFilter.placeholder"
+      :icon="groupFilter.icon" :items="groupFilter.items"
+      :multiple="groupFilter.multiple" :loading="groupFilter.loading"
+      @update:open="groupFilter.onOpen" @update:model-value="groupFilter.onUpdated"
+    />
+    <USelectMenu
+      ref="userSelect"
+      v-model:search-term="userFilter.searchTerm.value" ignore-filter
+      :placeholder="userFilter.placeholder"
+      :icon="userFilter.icon" :items="userFilter.items"
+      :multiple="userFilter.multiple" :loading="userFilter.loading"
+      @update:open="userFilter.onOpen" @update:model-value="userFilter.onUpdated"
+    />
+  </div>
 </template>

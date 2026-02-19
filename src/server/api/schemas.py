@@ -10,10 +10,13 @@ These schemas used in request and response validation.
 import typing as t
 
 from datetime import date
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
+from werkzeug.datastructures import FileStorage
 
 from server.entities.common import camel_case_config
+from server.entities.user_detail import UserDetail
 
 
 ignore_extra_config = ConfigDict(
@@ -29,6 +32,9 @@ ignore_extra_config = ConfigDict(
 
 class LoginUserState(BaseModel):
     """Schema for logged-in user state response."""
+
+    id: str
+    """The ID of the user."""
 
     eppn: str
     """The eduPersonPrincipalName of the user."""
@@ -222,3 +228,91 @@ class HistoryPublic(BaseModel):
 
     public: bool
     """Public status."""
+
+
+class OperatorQuery(BaseModel):
+    """Schema for operator query parameters."""
+
+    q: t.Annotated[str | None, "query"] = None
+    """Search term to filter operators."""
+
+    p: t.Annotated[int | None, "page"] = None
+    """Page number to retrieve."""
+
+    l: t.Annotated[int | None, "length"] = None  # noqa: E741
+    """Page size (number of items per page)."""
+
+    model_config = ignore_extra_config
+    """Configure to ignore extra fields."""
+
+
+class TargetRepository(BaseModel):
+    """Schema for target repository."""
+
+    repository_id: str
+    """ID of the target repository."""
+
+    model_config = camel_case_config
+    """Configure to use camelCase aliasing."""
+
+
+class UploadFiles(BaseModel):
+    """Schema for upload files."""
+
+    bulk_file: FileStorage
+    """File to upload."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Configure to allow arbitrary types."""
+
+
+class BulkBody(BaseModel):
+    """Schema for response body of bulk upload processing."""
+
+    temp_file_id: UUID | None = None
+    """Temporary ID for the bulk upload session."""
+
+    history_id: UUID | None = None
+    """History ID associated with the bulk upload."""
+
+    task_id: str | None = None
+    """Task ID associated with the bulk upload."""
+
+    status: str | None = None
+    """Status of the bulk upload."""
+
+    model_config = camel_case_config
+    """Configure to use camelCase aliasing."""
+
+
+class ExcuteRequest(BaseModel):
+    """Schema for requset body of bulk upload execution."""
+
+    temp_file_id: UUID | None = None
+    """Temporary ID for the upload session."""
+
+    repository_id: str | None = None
+    """ID of the target repository."""
+
+    task_id: str | None = None
+    """Task ID associated with the upload."""
+
+    delete_users: list[UserDetail] | None = None
+    """List of users whose files are to be deleted."""
+
+    model_config = camel_case_config
+    """Configure to use camelCase aliasing."""
+
+
+class UploadQuery(BaseModel):
+    """Query parameters for upload history data."""
+
+    f: t.Annotated[list[int] | None, "filter"] = None
+    """Filter by status.
+    0:create, 1:delete, 2:error, 3:skip, 4:update"""
+
+    p: t.Annotated[int | None, "page"] = None
+    """Page number to retrieve."""
+
+    l: t.Annotated[int | None, "length"] = None  # noqa: E741
+    """Page size (number of items per page)."""

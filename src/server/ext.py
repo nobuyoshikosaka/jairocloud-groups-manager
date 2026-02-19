@@ -6,6 +6,8 @@
 
 import typing as t
 
+from pathlib import Path
+
 from sqlalchemy_utils import database_exists
 
 from .api.router import create_api_blueprint
@@ -62,6 +64,7 @@ class JAIROCloudGroupsManager:
         self.datastore = setup_datastore(app, self.config)
         app.register_blueprint(create_api_blueprint(), url_prefix="/api")
         register_cli_commands(app)
+        self.init_storage()
 
         if app.debug or app.config.get("ENV") == "development":
             self.dev_contrib(app)
@@ -95,6 +98,14 @@ class JAIROCloudGroupsManager:
 
         db.init_app(app)
         load_models()
+
+    def init_storage(self) -> None:
+        """Initialize the storage for this extension."""
+        if self.config.STORAGE.type == "local":
+            temp_dir = Path(self.config.STORAGE.local.temporary)
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            storage_dir = Path(self.config.STORAGE.local.storage)
+            storage_dir.mkdir(parents=True, exist_ok=True)
 
     def dev_contrib(self, app: Flask) -> None:
         """Provide development contribution utilities."""

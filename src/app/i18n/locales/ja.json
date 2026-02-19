@@ -1,9 +1,85 @@
 {
+  "bulk": {
+    "about": "一括操作について",
+    "about-description": "ファイルに含まれるユーザーは新規登録または更新されます。",
+    "about-description2": "既存ユーザーはidで照合し、一致する場合は更新されます",
+    "about-description3": "ファイルに含まれていないユーザーの削除を選択できます",
+    "about-description4": "対応形式: TSV, CSV, Excel",
+    "column": {
+      "email": "E-maile",
+      "eppn": "ePPN",
+      "groups": "グループ ID",
+      "row": "行",
+      "status": "ステータス",
+      "user-name": "名前"
+    },
+    "completed-at": "終了日時",
+    "description": "ファイルのアップロードによりリポジトリに所属するユーザーを一括操作することができます。",
+    "deselect_all": "すべて解除",
+    "empty": "空",
+    "excute": {
+    },
+    "execute": {
+      "failed": "ユーザーの更新に失敗しました",
+      "result_failed": "実行結果の取得に失敗しました"
+    },
+    "file-format-error": "対応していないファイル形式です。TSV、CSV、またはExcelファイルを選択してください。",
+    "file-required": "ファイルを選択してください",
+    "file-validate-error": "ファイルの検証に失敗しました",
+    "filter": "フィルター",
+    "import": {
+    },
+    "import-results": "一括操作結果",
+    "missing-user": {
+      "confirm": "削除の確認",
+      "confirm_desc": "選択した${count}件のユーザーは削除されます。この操作は元に戻せません。",
+      "select": "削除するユーザーを選択してください。"
+    },
+    "missing_user": "ファイルに含まれていないユーザー",
+    "operator": "実行ユーザー",
+    "repository-required": "リポジトリを選択してください",
+    "select-repository": "リポジトリを選択してください",
+    "select_all": "すべて選択",
+    "start-at": "開始日時",
+    "status": {
+      "create": "作成",
+      "delete": "削除",
+      "error": "エラー",
+      "skip": "更新なし",
+      "update": "更新"
+    },
+    "step": {
+      "complete": "完了",
+      "complete_description": "アップロード結果",
+      "select_file": "ファイル選択",
+      "select_file_description": "CSV,TSVまたはExcelファイル",
+      "validate": "データ検証",
+      "validate_description": "変更内容の確認"
+    },
+    "target-repository": "操作対象リポジトリ",
+    "title": "ユーザー一括操作",
+    "upload": {
+      "execute": "アップロード実行"
+    },
+    "upload-field": "ファイルを選択またはドラッグ&ドロップ",
+    "upload-file": "アップロードファイル",
+    "upload-file-info": "一括操作結果",
+    "validation": {
+      "error": "不正なデータが検出されました",
+      "error-detail": "ファイルを修正して再度アップロードしてください。",
+      "fetch_failed": "検証結果の取得に失敗しました",
+      "fix_error": "エラーを修正してください",
+      "results": "データプレビュー"
+    },
+    "view-all": "すべて表示"
+  },
   "button": {
     "add": "追加",
+    "back": "戻る",
     "cancel": "取り消し",
     "create-new": "新規作成",
     "delete": "削除",
+    "next": "次へ",
     "reload": "再読み込み",
     "save": "保存",
     "update": "更新",
@@ -119,20 +195,25 @@
     "logoAlt": "ヘッダーロゴ"
   },
   "history": {
-    "cancel": "中止件数",
+    "available": "再ダウンロード",
     "description": "ファイルのアップロード・ダウウンロードの履歴を確認できます。",
+    "download": {
+      "date": "ダウンロード日時"
+    },
     "empty": "検索条件に一致するデータが見つかりませんでした",
     "empty-data": "データがありません",
     "expired": "期限切れ",
     "failed": "失敗",
     "failed-count": "失敗件数",
     "file": "ファイル",
-    "filter": "フィルター",
+    "filter": {
+      "options_not_found": "フィルターの取得に失敗しました",
+      "title": "フィルター"
+    },
     "first-download": "初回ダウンロード",
     "group-count": "グループ数",
     "more": "さらに表示",
     "operation": "実行条件",
-    "operation-date": "実行日時",
     "operator": "実行ユーザー",
     "private": "非公開にする",
     "progress": "処理中",
@@ -142,9 +223,13 @@
     "reset": "リセット",
     "show-detail": "詳細を表示",
     "status": "ステータス",
-    "succes": "成功",
+    "success": "成功",
     "success-count": "成功件数",
     "sum": "総ダウンロード回数 | 総アップロード回数",
+    "tab": {
+      "download": "ダウンロード履歴",
+      "upload": "アップロード履歴"
+    },
     "table": {
       "column": {
         "download-date": "ダウンロード日時",
@@ -158,7 +243,10 @@
     "table-title": "履歴一覧",
     "target": "ダウンロード対象 | アップロード対象",
     "title": "履歴",
-    "tub": "ダウンロード履歴 | アップロード履歴",
+    "unavailable": "期限切れ",
+    "upload": {
+      "date": "アップロード日時"
+    },
     "uploaded-at": "アップロード日時",
     "user-count": "ユーザー数",
     "view": "表示件数"

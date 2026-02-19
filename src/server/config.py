@@ -557,6 +557,9 @@ class DevelopConfig(BaseModel):
 class DevAccountConfig(BaseModel):
     """Schema for development account configuration."""
 
+    id: str
+    """mAP Core ID of the development account."""
+
     eppn: str
     """EPPN of the development account."""
 

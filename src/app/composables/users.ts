@@ -84,7 +84,7 @@ const useUsersTable = () => {
     {
       icon: 'i-lucide-file-up',
       label: $t('button.upload'),
-      to: '/upload',
+      to: '/bulk',
       color: 'primary',
       variant: 'solid',
     },

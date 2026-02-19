@@ -89,5 +89,14 @@ const normalizeHistoryQuery = (query: LocationQuery): HistoryQuery => {
   }
 }
 
+const normalizeUploadQuery = (query: LocationQuery): UploadQuery => {
+  const { table: { pageSize } } = useAppConfig()
+  return {
+    f: query.f ? toArray(query.f) : undefined,
+    p: Number(query.p) || 1,
+    l: Number(query.l) || pageSize.bulks?.[0],
+  }
+}
+
 export { normalizeRepositoriesQuery, normalizeGroupsQuery, normalizeUsersQuery,
-  normalizeHistoryQuery }
+  normalizeHistoryQuery, normalizeUploadQuery }

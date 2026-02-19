@@ -54,6 +54,7 @@ def prepare_service(
 
     Raises:
         SystemAdminNotFound: If no administrators are provided.
+        SystemAdminNotFound: If no administrators are provided.
     """
     service = validate_repository_to_map_service(repository)
     repository_id = resolve_repository_id(service_id=service.id)
