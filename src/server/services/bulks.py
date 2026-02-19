@@ -227,7 +227,7 @@ def get_repository_member(repository_id: str) -> RepositoryMember:
     result = groups.search(
         utils.make_criteria_object("groups", r=[repository_id]), raw=True
     ).resources
-    group_ids = {g.id for g in result}
+    group_ids = {g.id for g in result if g.id}
     user_ids = {
         m.value for g in result if g.members for m in g.members if m.type == "User"
     }
@@ -784,7 +784,7 @@ def _build_groups_update_bulk_operations(
     group_user_ops: dict[str, dict[str, set[str]]],
 ) -> list[BulkOperation]:
     bulk_ops: list[BulkOperation] = []
-    system_user_id = groups.get_system_admin()
+    system_user_id = groups.get_system_admins()
     for gid, ops in group_user_ops.items():
         target = groups.get_by_id(gid, raw=True)
         user_list = set()

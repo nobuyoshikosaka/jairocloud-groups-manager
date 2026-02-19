@@ -204,7 +204,7 @@ def build_groups_search_query(criteria: GroupsCriteria) -> SearchRequestParamete
 
 
 def _group_groups_filter(criteria: GroupsCriteria, id_path: str) -> str:
-    """Generate a filter string for group IDs based on criteria."""  # noqa:
+    """Generate a filter string for group IDs based on criteria."""
     criteria = _patch_falsey_to_none(criteria, {"r"})
     is_system_admin = (
         getattr(criteria, "super", False) or is_current_user_system_admin()
