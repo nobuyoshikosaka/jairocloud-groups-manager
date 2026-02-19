@@ -62,7 +62,14 @@ def test_config():
                 "contributor": "jc_{repository_id}_roles_contributor_test",
                 "general_user": "jc_{repository_id}_roles_generaluser_test",
                 "user_defined": "jc_{repository_id}_groups_{user_defined_id}_test",
-            }
+            },
+            "name_patterns": {
+                "system_admin": "group_sysadm_{user_defined_id}_test",
+                "repository_admin": "group_repoadm_{repository_name}_{user_defined_id}_test",
+                "community_admin": "group_comadm_{repository_name}_{user_defined_id}_test",
+                "contributor": "group_contributor_{repository_name}_{user_defined_id}_test",
+                "general_user": "group_generaluser_{repository_name}_{user_defined_id}_test",
+            },
         },
         "POSTGRES": {"db": "jctest", "host": db_host},
         "REDIS": {

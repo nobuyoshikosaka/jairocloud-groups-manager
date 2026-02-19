@@ -20,7 +20,7 @@
       "type": "User",
       "display": "John Doe",
       "value": "00404105-6f3e-47bb-b839-ad093153b34c",
-      "customRole": null
+      "customRoles": null
     },
     {
       "$ref": "https://sptest.cg.example.jp/api/v2/Groups/jairo_test_lower_group",
