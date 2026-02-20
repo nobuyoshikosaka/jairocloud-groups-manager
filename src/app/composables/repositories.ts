@@ -74,6 +74,7 @@ const useRepositoriesTable = () => {
         ? sortableHeader('id')
         : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.id),
       cell: ({ row }) => row.original.spConnectorId,
+      enableGlobalFilter: false,
     },
     {
       accessorKey: 'serviceName',
@@ -112,6 +113,7 @@ const useRepositoriesTable = () => {
     },
     {
       accessorKey: 'entityIds',
+      accessorFn: row => row.entityIds?.[0],
       header: () => sortColumns
         ? sortableHeader('entityIds')
         : h('span', { class: 'text-xs text-default font-medium' }, columnNames.value.entityIds),

@@ -272,6 +272,7 @@
       "no-repositories-description": "あなたには管理できるリポジトリがありません",
       "no-repositories-title": "リポジトリが見つかりません",
       "search-placeholder": "リポジトリ名、URL、EntityIDで検索...",
+      "search-placeholder-service-name-only": "リポジトリ名で検索...",
       "title": "リポジトリ一覧"
     },
     "title": "リポジトリ",
@@ -502,8 +503,8 @@
   },
   "users": {
     "alert": {
-      "filter-by-last-modified-disabled": "現在、機能が制限されているため、最終更新日時によるフィルターはご利用いただけません。",
-      "filter-by-both-role-group-disabled": "現在、機能が制限されているため、ロールとグループのフィルターを同時に選択することができません。"
+      "filter-by-both-role-group-disabled": "現在、機能が制限されているため、ロールとグループのフィルターを同時に選択することができません。",
+      "filter-by-last-modified-disabled": "現在、機能が制限されているため、最終更新日時によるフィルターはご利用いただけません。"
     },
     "button": {
       "selected-users-actions": "選択ユーザーへのアクション",

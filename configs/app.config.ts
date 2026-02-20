@@ -173,7 +173,7 @@ const features = {
      * If true, the search will be performed on the server side.
      * If false, the search will be performed on the client (browser) side.
      */
-    'server-search': true,
+    'server-search': false,
 
     /** Whether to allow sorting columns */
     'sort-columns': false,

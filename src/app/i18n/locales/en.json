@@ -288,6 +288,7 @@
       "no-repositories-description": "you have no repositories to manage",
       "no-repositories-title": "No repositories found",
       "search-placeholder": "Search by repository name, URL, EntityID...",
+      "search-placeholder-service-name-only": "Search by repository name...",
       "title": "Repositories List"
     },
     "title": "Repositories",
@@ -532,8 +533,8 @@
   },
   "users": {
     "alert": {
-      "filter-by-last-modified-disabled": "Due to limited functionality, filtering by last updated time is currently not available.",
-      "filter-by-both-role-group-disabled": "Currently, due to limited functionality, it is not possible to select role and group filters at the same time."
+      "filter-by-both-role-group-disabled": "Currently, due to limited functionality, it is not possible to select role and group filters at the same time.",
+      "filter-by-last-modified-disabled": "Due to limited functionality, filtering by last updated time is currently not available."
     },
     "button": {
       "selected-users-actions": "Actions for selected users",
