@@ -62,7 +62,7 @@ watch(group, (newGroup: GroupDetail) => {
       : defaultForm.repository,
     public: newGroup.public ?? defaultForm.public,
     memberListVisibility: newGroup.memberListVisibility || defaultForm.memberListVisibility,
-    created: created ? dateFormatter.format(created) : defaultForm.created,
+    created: created ? datetimeFormatter.format(created) : defaultForm.created,
   } as GroupUpdateForm)
 }, { immediate: true })
 

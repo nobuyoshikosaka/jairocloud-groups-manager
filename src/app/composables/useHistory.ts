@@ -11,6 +11,7 @@ const toast = useToast()
 const useHistory = () => {
   const route = useRoute()
   const { t: $t } = useI18n()
+  const { currentUser } = useAuth()
 
   const query = computed<HistoryQuery>(() => normalizeHistoryQuery(route.query))
   const updateQuery = async (newQuery: Partial<HistoryQuery>) => {
@@ -66,24 +67,32 @@ const useHistory = () => {
       header: () => sortableHeader('timestamp'),
       cell: ({ row }) => {
         const timestamp = new Date(row.original.timestamp)
-        return dateFormatter.format(timestamp)
+        return datetimeFormatter.format(timestamp)
       },
     },
     {
       accessorKey: 'operator',
-      header: $t('history.operator'),
+      header: () => h(
+        'span', { class: 'text-xs text-default font-medium' },
+        $t('history.operator')),
       cell: ({ row }) => row.original.operator.userName,
     },
     { accessorKey: 'users',
-      header: $t('history.user-count'),
+      header: () => h(
+        'span', { class: 'text-xs text-default font-medium' },
+        $t('history.user-count')),
       cell: ({ row }) => row.original.userCount,
     },
     { accessorKey: 'groups',
-      header: $t('history.group-count'),
+      header: () => h(
+        'span', { class: 'text-xs text-default font-medium' },
+        $t('history.group-count')),
       cell: ({ row }) => row.original.groupCount,
     },
     { accessorKey: 'status',
-      header: $t('history.status'),
+      header: () => h(
+        'span', { class: 'text-xs text-default font-medium' },
+        $t('history.status')),
       cell: ({ row }) => {
         const status = row.original.status
         switch (status) {
@@ -132,24 +141,32 @@ const useHistory = () => {
       header: () => sortableHeader('timestamp'),
       cell: ({ row }) => {
         const timestamp = new Date(row.original.timestamp)
-        return dateFormatter.format(timestamp)
+        return datetimeFormatter.format(timestamp)
       },
     },
     {
       accessorKey: 'operator',
-      header: $t('history.operator'),
+      header: () => h(
+        'span', { class: 'text-xs text-default font-medium' },
+        $t('history.operator')),
       cell: ({ row }) => row.original.operator.userName,
     },
     { accessorKey: 'users',
-      header: $t('history.user-count'),
+      header: () => h(
+        'span', { class: 'text-xs text-default font-medium' },
+        $t('history.user-count')),
       cell: ({ row }) => row.original.userCount,
     },
     { accessorKey: 'groups',
-      header: $t('history.group-count'),
+      header: () => h(
+        'span', { class: 'text-xs text-default font-medium' },
+        $t('history.group-count')),
       cell: ({ row }) => row.original.groupCount,
     },
     { accessorKey: 're-download',
-      header: $t('history.re-download'),
+      header: () => h(
+        'span', { class: 'text-xs text-default font-medium' },
+        $t('history.re-download')),
       cell: ({ row }) => {
         return h(UButton, {
           color: 'primary',
@@ -173,8 +190,11 @@ const useHistory = () => {
     },
     { accessorKey: 'actions',
       header: '',
-      cell: ({ row }) =>
-        h(
+      cell: ({ row }) => {
+        if (!currentUser.value?.isSystemAdmin) {
+          return
+        }
+        return h(
           'div',
           { class: 'text-right' },
           h( // @ts-expect-error: props type mismatch
@@ -194,7 +214,8 @@ const useHistory = () => {
                 'aria-label': 'Actions dropdown',
               }),
           ),
-        ),
+        )
+      },
     },
   ])
 
@@ -203,13 +224,13 @@ const useHistory = () => {
       ? (tab.value === 'download' ? $t('history.download.date') : $t('history.upload.date'))
       : ''
     const iconSet = {
-      asc: 'i-lucide-arrow-down-a-z',
-      desc: 'i-lucide-arrow-up-a-z',
+      asc: 'i-lucide-arrow-down-0-1',
+      desc: 'i-lucide-arrow-up-0-1',
       none: 'i-lucide-arrow-up-down',
     } as const
 
     type SortDirection = keyof typeof iconSet
-    const sortDirection = sortOrder.value as SortDirection | undefined
+    const sortDirection = (sortOrder.value as SortDirection | undefined) ?? 'desc'
 
     return h(UButton, {
       color: sortDirection ? 'primary' : 'neutral',
@@ -220,7 +241,6 @@ const useHistory = () => {
       class: 'font-medium cursor-pointer',
       onClick() {
         if (sortDirection === 'asc') updateQuery({ d: 'desc' })
-        else if (sortDirection === 'desc') updateQuery({ d: undefined })
         else updateQuery({ d: 'asc' })
       },
     })
@@ -229,7 +249,7 @@ const useHistory = () => {
   function getActionItems(
     row: Row<UploadHistoryData>,
   ): DropdownMenuItem[] {
-    return [
+    const items: DropdownMenuItem[] = [
       {
         label: row.original.public ? $t('history.private') : $t('history.public'),
         onSelect: async () => {
@@ -250,6 +270,7 @@ const useHistory = () => {
         },
       },
     ]
+    return currentUser.value?.isSystemAdmin ? items : items.slice(1)
   }
   function getDownloadActionItems(
     row: Row<DownloadHistoryData>,
@@ -525,7 +546,7 @@ const useHistoryFilter = () => {
   })
 
   const formattedDateRange = computed(() => {
-    if (!dateRange.value.start) return $t('users.table.column.last-modified')
+    if (!dateRange.value.start) return $t('history.date')
     const from = dateFormatter.format(dateRange.value.start.toDate(getLocalTimeZone()))
     const to = dateRange.value.end
       ? dateFormatter.format(dateRange.value.end.toDate(getLocalTimeZone()))

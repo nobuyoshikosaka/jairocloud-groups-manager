@@ -49,12 +49,8 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
       {{ $t('history.filter.title') }}
     </h2>
     <UButton
-      v-if="isFiltered"
-      :label="$t('history.reset')"
-      icon="i-lucide-rotate-ccw"
-      color="neutral"
-      variant="ghost"
-      size="xs"
+      :label="$t('history.reset')" icon="i-lucide-rotate-ccw" color="neutral" variant="ghost"
+      size="xs" :disabled="!isFiltered"
       @click="() => {
         updateQuery({
           tab: tab,
@@ -84,7 +80,6 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
     <UPopover :popper="{ placement: 'bottom-start' }">
       <UInput
         icon="i-lucide-calendar"
-        :placeholder="$t('history.upload.date')"
         :model-value="formattedDateRange"
         readonly
         :ui="{ base: `text-left ${dateRange.start ? '' : 'text-dimmed'}` }"
@@ -105,7 +100,7 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
       v-model:search-term="operatorFilter.searchTerm.value" ignore-filter
       :placeholder="operatorFilter.placeholder"
       :icon="operatorFilter.icon" :items="operatorFilter.items"
-      :multiple="operatorFilter.multiple" :loading="operatorFilter.loading"
+      :multiple="operatorFilter.multiple" :loading="operatorFilter.loading" clear
       @update:open="operatorFilter.onOpen" @update:model-value="operatorFilter.onUpdated"
     />
   </div>
@@ -116,7 +111,7 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
       v-model:search-term="repositoryFilter.searchTerm.value" ignore-filter
       :placeholder="repositoryFilter.placeholder"
       :icon="repositoryFilter.icon" :items="repositoryFilter.items"
-      :multiple="repositoryFilter.multiple" :loading="repositoryFilter.loading"
+      :multiple="repositoryFilter.multiple" :loading="repositoryFilter.loading" clear
       @update:open="repositoryFilter.onOpen" @update:model-value="repositoryFilter.onUpdated"
     />
     <USelectMenu
@@ -124,7 +119,7 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
       v-model:search-term="groupFilter.searchTerm.value" ignore-filter
       :placeholder="groupFilter.placeholder"
       :icon="groupFilter.icon" :items="groupFilter.items"
-      :multiple="groupFilter.multiple" :loading="groupFilter.loading"
+      :multiple="groupFilter.multiple" :loading="groupFilter.loading" clear
       @update:open="groupFilter.onOpen" @update:model-value="groupFilter.onUpdated"
     />
     <USelectMenu
@@ -132,7 +127,7 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
       v-model:search-term="userFilter.searchTerm.value" ignore-filter
       :placeholder="userFilter.placeholder"
       :icon="userFilter.icon" :items="userFilter.items"
-      :multiple="userFilter.multiple" :loading="userFilter.loading"
+      :multiple="userFilter.multiple" :loading="userFilter.loading" clear
       @update:open="userFilter.onOpen" @update:model-value="userFilter.onUpdated"
     />
   </div>

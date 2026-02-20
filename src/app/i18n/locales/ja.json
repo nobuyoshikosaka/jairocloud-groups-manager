@@ -196,6 +196,7 @@
   },
   "history": {
     "available": "再ダウンロード",
+    "date": "実行日時",
     "description": "ファイルのアップロード・ダウウンロードの履歴を確認できます。",
     "download": {
       "date": "ダウンロード日時"

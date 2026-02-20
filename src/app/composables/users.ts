@@ -229,7 +229,7 @@ const useUsersTable = () => {
       header: () => sortableHeader('lastModified'),
       cell: ({ row }) =>
         row.original.lastModified
-          ? dateFormatter.format(new Date(row.original.lastModified))
+          ? datetimeFormatter.format(new Date(row.original.lastModified))
           : undefined,
     },
     {

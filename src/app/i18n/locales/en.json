@@ -211,6 +211,7 @@
   "history": {
     "available": "Re-download",
     "cancel": "Number of cancellations",
+    "date": "Execution date and time",
     "description": "You can check the history of file uploads and downloads.",
     "download": {
       "date": "Download date and time"

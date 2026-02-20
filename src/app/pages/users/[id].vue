@@ -62,8 +62,8 @@ watch(user, (newUser: UserDetail) => {
     groups: newUser.groups?.length
       ? newUser.groups?.map(group => ({ id: group.id, label: group.displayName }))
       : defaultForm.groups,
-    created: created ? dateFormatter.format(created) : defaultForm.created,
-    lastModified: lastModified ? dateFormatter.format(lastModified) : defaultForm.lastModified,
+    created: created ? datetimeFormatter.format(created) : defaultForm.created,
+    lastModified: lastModified ? datetimeFormatter.format(lastModified) : defaultForm.lastModified,
   } as UserForm)
 }, { immediate: true })
 

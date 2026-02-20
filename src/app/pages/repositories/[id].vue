@@ -69,7 +69,7 @@ watch(repository, (newRepo: RepositoryDetail) => {
     entityIds: newRepo.entityIds?.length ? [...newRepo.entityIds] : [...defaultData.entityIds],
     spConnectorId: newRepo.spConnectorId || defaultData.spConnectorId,
     active: newRepo.active ?? defaultData.active,
-    created: date ? dateFormatter.format(date) : defaultData.created,
+    created: date ? datetimeFormatter.format(date) : defaultData.created,
   })
 }, { immediate: true })
 
