@@ -5,6 +5,7 @@
 """Provides utilities for service."""
 
 from .affiliations import detect_affiliation, detect_affiliations
+from .decoraters import session_required
 from .patch_operations import build_patch_operations, build_update_member_operations
 from .permissions import (
     extract_group_ids,

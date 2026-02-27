@@ -167,3 +167,9 @@ following conditions:
 - The URL ends with a semicolon (";") or the end of the string.
 - URLs ending with "/admin" are excluded from matching.
 """
+
+
+class ValidationEntity:
+    """Constants for validation entities."""
+
+    USER_NAME_MAX_LENGTH: Final = 50

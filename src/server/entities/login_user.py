@@ -33,6 +33,9 @@ class LoginUser(BaseModel, UserMixin):
     user_name: str
     """The display name of the user."""
 
+    map_id: str
+    """The mAP Core ID of the user."""
+
     session_id: t.Annotated[str, Field(exclude=True)]
     """Session ID associated with the login user."""
 
