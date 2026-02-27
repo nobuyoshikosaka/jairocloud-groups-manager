@@ -77,6 +77,30 @@ def test_refresh_session_over(app, datastore, mocker: MockerFixture):
         account_store.delete.assert_called_once()
 
 
+def test_refresh_session_absolute(app, datastore, mocker: MockerFixture):
+    mocker.patch("server.config.config.SESSION.strategy", "absolute")
+    _, account_store, _ = datastore
+    with app.test_request_context("/"):
+        res = auth.refresh_session()
+        assert res is None
+        account_store.expire.assert_not_called()
+        account_store.delete.assert_not_called()
+
+
+def test_refresh_session_invalid_ttl(app, datastore, mocker: MockerFixture):
+    _, account_store, _ = datastore
+    test_session_id = "test_session_id"
+    test_login_date = datetime.now(UTC).isoformat()
+    account_store.hget.return_value = test_login_date.encode("utf-8")
+    mocker.patch("server.config.config.SESSION.sliding_lifetime", -1)
+    with app.test_request_context("/"):
+        login_user(mock_repoadmin_login_user)
+        session["_id"] = test_session_id
+        res = auth.refresh_session()
+        assert res is None
+        account_store.expire.assert_not_called()
+
+
 def test_load_user_not_eppn():
     empty_eppn = ""
     user = auth.load_user(empty_eppn)
