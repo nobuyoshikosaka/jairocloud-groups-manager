@@ -76,6 +76,7 @@ def test_config():
         "REDIS": {
             "cache_type": "RedisCache",
             "single": {"base_url": f"redis://{redis_host}:6379/0"},
+            "key_prefix": "jcgroups-test",
         },
         "RABBITMQ": {"url": f"amqp://guest:guest@{amqp_host}:5672//"},
     })

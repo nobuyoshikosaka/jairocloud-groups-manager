@@ -33,6 +33,7 @@ def detect_affiliations(group_ids: list[str]) -> Affiliations:
             - groups: list of user-defined groups
               that is, (`repository_id`, `group_id`, `user_defined_id`, `type`="group").
     """
+    print(f"Detecting affiliations from group IDs: {group_ids}")
     detect_affiliations = [
         detect
         for group_id in group_ids
