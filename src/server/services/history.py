@@ -6,7 +6,7 @@
 
 import typing as t
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 from types import SimpleNamespace
 from uuid import UUID
 
@@ -138,7 +138,7 @@ def _build_filters_for_history(
 
     if criteria.s and criteria.e:
         start = criteria.s
-        end = datetime.combine(criteria.e, time.max)
+        end = criteria.e + timedelta(days=1)
         filters.extend((
             history_model.timestamp >= start,
             history_model.timestamp < end,
@@ -151,7 +151,8 @@ def _build_filters_for_history(
             history_model.timestamp < end,
         ))
     elif criteria.e and not criteria.s:
-        filters.append(history_model.timestamp <= criteria.e)
+        end = criteria.e + timedelta(days=1)
+        filters.append(history_model.timestamp < end)
 
     if history_type == "download":
         if not criteria.i:
