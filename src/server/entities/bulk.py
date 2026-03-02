@@ -47,6 +47,12 @@ class ValidateSummary(BaseModel):
     missing_user: list[UserDetail] = []
     """The list of missing users."""
 
+    offset: int
+    """The offset for pagination."""
+
+    page_size: int
+    """The page size for pagination."""
+
     model_config = camel_case_config | forbid_extra_config
     """Configure camelCase aliasing and forbid extra fields."""
 

@@ -80,6 +80,7 @@ def test_config():
             "key_prefix": "jcgroups-test",
         },
         "RABBITMQ": {"url": f"amqp://guest:guest@{amqp_host}:5672//"},
+        "STORAGE": {"local": {"temporary": "/var/tmp/jcgroups"}},  # noqa: S108
     })
 
 

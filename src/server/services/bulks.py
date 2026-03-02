@@ -86,7 +86,11 @@ def validate_upload_data(
     )
 
     results = ValidateSummary(
-        results=check_results, summary=summary, missing_user=missing_users
+        results=check_results,
+        summary=summary,
+        missing_user=missing_users,
+        offset=0,
+        page_size=len(check_results),
     )
     return history_table.create_upload(
         operator_id=operator_id,
@@ -147,14 +151,14 @@ def build_user_from_file(
     data = defaultdict(lambda: defaultdict(list))
     new_data = defaultdict(lambda: defaultdict(list))
     for row in it:
-        if row is None:
+        if not row:
             continue
         r = list(row)
 
         rid = r[id_idx]
         if not rid:
             user_name_idx = idx_of.get("user_name")
-            if user_name_idx is None:
+            if not user_name_idx or not r[user_name_idx]:
                 continue
             user_name_value = r[user_name_idx]
             bucket = new_data[user_name_value]
@@ -198,8 +202,13 @@ def _read_file(file_path: str) -> t.Generator:
         ws = wb.active
         if ws:
             iterator = ws.iter_rows(values_only=True)
+        else:
+            error = f"{path}: No active sheet found in the Excel file."
+            current_app.logger.error(error)
+            raise ResourceInvalid(error)
     if iterator is None:
         error = f"{path.suffix}: Unsupported file format."
+        current_app.logger.error(error)
         raise ResourceInvalid(error)
 
     yield iterator
@@ -237,8 +246,8 @@ def build_user_detail_from_dict(
             else ""
         )
 
-        eppns: set[str] = set(columns.get("edu_person_principal_names[]") or [])
-        emails: set[str] = set(columns.get("emails[]") or [])
+        eppns: list[str] = list(set(columns.get("edu_person_principal_names[]") or []))
+        emails: list[str] = list(set(columns.get("emails[]") or []))
 
         gid_list: list[str] = list(columns.get("groups[].id") or [])
         gname_list: list[str] = list(columns.get("groups[].name") or [])
@@ -297,8 +306,8 @@ def build_user_detail_from_dict_by_name(
             else ""
         )
 
-        eppns: set[str] = set(columns.get("edu_person_principal_names[]") or [])
-        emails: set[str] = set(columns.get("emails[]") or [])
+        eppns: list[str] = list(set(columns.get("edu_person_principal_names[]") or []))
+        emails: list[str] = list(set(columns.get("emails[]") or []))
 
         gid_list: list[str] = list(columns.get("groups[].id") or [])
         gname_list: list[str] = list(columns.get("groups[].name") or [])
@@ -483,16 +492,14 @@ def _check_immutable_attributes(
     Returns:
         str | None: The name of the immutable attribute if found, None otherwise.
     """
+    if original.user_name != update_user.user_name:
+        return "user_name is immutable"
     if original.emails != update_user.emails:
-        return "emails"
+        return "emails are immutable"
     if original.eppns != update_user.eppns:
-        return "eppns"
+        return "eppns are immutable"
     if original.preferred_language != update_user.preferred_language:
-        return "preferred_language"
-    if original.last_modified != update_user.last_modified:
-        return "last_modified"
-    if original.created != update_user.created:
-        return "created"
+        return "preferred_language is immutable"
     return None
 
 
@@ -634,7 +641,7 @@ def save_file(temp_file_id: UUID) -> UUID:
     try:
         files = history_table.get_file_by_id(temp_file_id)
         repository_id = files.file_content["repositories"][0]["id"]
-    except (KeyError, AttributeError) as e:
+    except (RecordNotFound, IndexError) as e:
         current_app.logger.error("Failed to retrieve temporary file: %s", temp_file_id)
         raise ResourceNotFound(str(e)) from e
 
@@ -843,13 +850,14 @@ def get_upload_result(
     summary = history_table.get_upload_results(history_id, "summary")
 
     payload = {
-        "results": raw_results,
+        "items": raw_results,
         "summary": summary,
         "fileId": upload.file_id,
         "fileName": Path(upload.file.file_path).name,
         "operator": upload.operator_name or upload.operator_id,
         "startTimestamp": upload.timestamp,
         "endTimestamp": upload.end_timestamp,
+        "total": 0,
         "offset": offset,
         "pageSize": size,
     }
