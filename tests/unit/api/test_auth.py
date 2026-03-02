@@ -178,5 +178,5 @@ def test_logout(app, session_id):
         login_user(mock_repoadmin_login_user)
         session["_id"] = session_id
         resp, code = auth.logout()
-    assert resp == ""
+    assert resp == ""  # noqa: PLC1901
     assert code == HTTPStatus.NO_CONTENT
