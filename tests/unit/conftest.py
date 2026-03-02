@@ -58,11 +58,11 @@ def test_config():
         "GROUPS": {
             "id_patterns": {
                 "system_admin": "jc_roles_sysadm_test",
-                "repository_admin": "jc_{repository_id}_roles_repoadm_test",
-                "community_admin": "jc_{repository_id}_roles_comadm_test",
-                "contributor": "jc_{repository_id}_roles_contributor_test",
-                "general_user": "jc_{repository_id}_roles_generaluser_test",
-                "user_defined": "jc_{repository_id}_groups_{user_defined_id}_test",
+                "repository_admin": "jc_{repository_id}_ro_radm_test",
+                "community_admin": "jc_{repository_id}_ro_cadm_test",
+                "contributor": "jc_{repository_id}_ro_cont_test",
+                "general_user": "jc_{repository_id}_ro_user_test",
+                "user_defined": "jc_{repository_id}_gr_{user_defined_id}_test",
             },
             "name_patterns": {
                 "system_admin": "ジャイロクラウドシステム管理者_テスト",

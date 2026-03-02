@@ -52,7 +52,7 @@ def test_build_search_query_invalid_query(app, mocker: MockerFixture):
                 filter=(
                     '((serviceName co "test") or (serviceUrl co "test") or (entityIds.value co "test")) and '
                     '(groups.value eq "jc_roles_sysadm_test") and (id sw "jc_") and '
-                    '(groups.value eq "jc_repo1_roles_repoadm_test")'
+                    '(groups.value eq "jc_repo1_ro_radm_test")'
                 ),
                 start_index=1,
                 count=20,
@@ -65,7 +65,7 @@ def test_build_search_query_invalid_query(app, mocker: MockerFixture):
             False,
             {"repo1", "repo2"},
             SearchRequestParameter(
-                filter='(groups.value eq "jc_roles_sysadm_test") and (groups.value eq "jc_repo1_roles_repoadm_test")',
+                filter='(groups.value eq "jc_roles_sysadm_test") and (groups.value eq "jc_repo1_ro_radm_test")',
                 start_index=None,
                 count=None,
                 sort_by="entityIds.value",
@@ -91,7 +91,7 @@ def test_build_search_query_invalid_query(app, mocker: MockerFixture):
             SearchRequestParameter(
                 filter=(
                     '(groups.value eq "jc_roles_sysadm_test") and (id eq "") and '
-                    '(groups.value eq "jc_repo1_roles_repoadm_test")'
+                    '(groups.value eq "jc_repo1_ro_radm_test")'
                 ),
                 start_index=None,
                 count=20,
@@ -271,7 +271,7 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
             SearchRequestParameter(
                 filter=(
                     '(groups.value eq "jc_repo1_groups_test1") and (groups.value sw "jc_" and '
-                    'groups.value ew "_roles_repoadm_test")'
+                    'groups.value ew "_ro_radm_test")'
                 ),
                 start_index=None,
                 count=20,
@@ -284,7 +284,7 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
             set(),
             Affiliations(roles=[], groups=[]),
             SearchRequestParameter(
-                filter='groups.value eq "jc_repo1_roles_comadm_test"',
+                filter='groups.value eq "jc_repo1_ro_cadm_test"',
                 start_index=None,
                 count=20,
                 sort_by=None,
@@ -360,8 +360,8 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
             SearchRequestParameter(
                 filter=(
                     '(groups.value eq "jc_roles_sysadm_test" or groups.value sw "jc_" and '
-                    'groups.value ew "_roles_repoadm_test" or groups.value sw "jc_" and '
-                    'groups.value ew "_roles_contributor_test")'
+                    'groups.value ew "_ro_radm_test" or groups.value sw "jc_" and '
+                    'groups.value ew "_ro_cont_test")'
                 ),
                 start_index=None,
                 count=20,
@@ -452,7 +452,7 @@ def test_build_users_search_query_system_admin(
             ),
             SearchRequestParameter(
                 filter=(
-                    '(groups.value eq "jc_repo1_groups_test1" and groups.value eq "jc_repo1_roles_repoadm_test") '
+                    '(groups.value eq "jc_repo1_groups_test1" and groups.value eq "jc_repo1_ro_radm_test") '
                     'and (groups.value ne "jc_roles_sysadm_test")'
                 ),
                 start_index=None,
@@ -493,7 +493,7 @@ def test_build_users_search_query_system_admin(
             {"repo1"},
             Affiliations(roles=[], groups=[]),
             SearchRequestParameter(
-                filter='(groups.value eq "jc_repo1_roles_repoadm_test") and (groups.value ne "jc_roles_sysadm_test")',
+                filter='(groups.value eq "jc_repo1_ro_radm_test") and (groups.value ne "jc_roles_sysadm_test")',
                 start_index=None,
                 count=20,
                 sort_by=None,
