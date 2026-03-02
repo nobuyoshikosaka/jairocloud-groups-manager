@@ -71,6 +71,7 @@ def test_config():
                 "contributor": "{repository_name}投稿ユーザー_テスト",
                 "general_user": "{repository_name}一般ユーザー_テスト",
             },
+            "max_id_length": "50 - len('jc_') - len('_gr_')",
         },
         "POSTGRES": {"db": "jctest", "host": db_host},
         "REDIS": {

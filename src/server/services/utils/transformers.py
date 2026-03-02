@@ -26,7 +26,7 @@ from server.entities.map_group import (
     Service as GroupService,
 )
 from server.entities.map_service import (
-    Administrator,
+    Administrator as ServiceAdministrator,
     Group as MapServiceGroup,
     MapService,
     ServiceEntityID,
@@ -66,7 +66,7 @@ def prepare_service(
         raise SystemAdminNotFound(error)
 
     service.administrators = [
-        Administrator(value=user_id) for user_id in administrators
+        ServiceAdministrator(value=user_id) for user_id in administrators
     ]
     service.groups = [
         MapServiceGroup(
@@ -359,7 +359,7 @@ def validate_group_to_map_group(
 ) -> MapGroup: ...
 
 
-def validate_group_to_map_group(  # noqa: C901
+def validate_group_to_map_group(
     group: GroupDetail, *, mode: t.Literal["create", "update"]
 ) -> tuple[MapGroup, str] | MapGroup:
     """Validate the GroupDetail instance and convert it to a MapGroup instance.
@@ -402,16 +402,15 @@ def validate_group_to_map_group(  # noqa: C901
         error = "Group ID is required to create a group."
         raise InvalidFormError(error)
 
-    if user_defined_id:
-        max_id_length = config.GROUPS.max_id_length - len(repository_id)
-        if len(user_defined_id) > max_id_length:
-            error = "Group ID is too long."
-            raise InvalidFormError(error)
+    max_id_length = config.GROUPS.max_id_length - len(repository_id)
+    if len(user_defined_id) > max_id_length:
+        error = "Group ID is too long."
+        raise InvalidFormError(error)
 
-        id_pattern = config.GROUPS.id_patterns.user_defined
-        group.id = id_pattern.format(
-            repository_id=repository_id, user_defined_id=user_defined_id
-        )
+    id_pattern = config.GROUPS.id_patterns.user_defined
+    group.id = id_pattern.format(
+        repository_id=repository_id, user_defined_id=user_defined_id
+    )
 
     if group.public is None:
         group.public = GROUP_DEFAULT_PUBLIC
