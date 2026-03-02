@@ -18,6 +18,7 @@ from server.entities.map_error import MapError
 from server.entities.map_group import MapGroup
 from server.entities.patch_request import PatchOperation, PatchRequestPayload
 from server.entities.search_request import SearchRequestParameter, SearchResponse
+from server.signals import group_deleted, group_updated
 
 from .decoraters import cache_resource
 from .utils import compute_signature, get_time_stamp
@@ -275,7 +276,7 @@ def put_by_id(
     resource = adapter.validate_json(response.text)
 
     if isinstance(resource, MapGroup):
-        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
+        group_updated.send(None, group=resource)
 
     return resource
 
@@ -344,7 +345,7 @@ def patch_by_id(
     resource = adapter.validate_json(response.text)
 
     if isinstance(resource, MapGroup):
-        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
+        group_updated.send(None, group=resource)
 
     return resource
 
@@ -386,7 +387,7 @@ def delete_by_id(
         response.raise_for_status()
 
     if not response.text:
-        get_by_id.clear_cache(group_id)  # pyright: ignore[reportFunctionMemberAccess]
+        group_updated.send(None, group=MapGroup(id=group_id))
         return None
 
     return MapError.model_validate_json(response.text)
@@ -404,3 +405,56 @@ def _get_alias_generator() -> t.Callable[[str], str]:
 
 alias_generator: t.Callable[[str], str] = _get_alias_generator()
 del _get_alias_generator
+
+
+@group_updated.connect
+@group_deleted.connect
+def handle_group_updated(
+    _sender: object,
+    group: MapGroup | None = None,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
+    """Handle group_updated signal to clear cache of the updated group.
+
+    Args:
+        group (MapGroup): The updated Group resource.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    if group:
+        get_by_id.clear_cache(group.id)  # pyright: ignore[reportFunctionMemberAccess]
+
+
+@group_updated.connect
+@group_deleted.connect
+def handle_group_updated_by_id(
+    _sender: object,
+    group_id: str | None = None,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
+    """Handle group_updated signal to clear cache of the updated group by ID.
+
+    Args:
+        sender: The sender of the signal.
+        group_id (str): ID of the updated Group resource.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    if group_id:
+        get_by_id.clear_cache(group_id)  # pyright: ignore[reportFunctionMemberAccess]
+
+
+@group_updated.connect
+@group_deleted.connect
+def handle_group_updated_by_ids(
+    _sender: object,
+    group_ids: list[str] | None = None,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
+    """Handle group_updated signal to clear cache of the updated groups by IDs.
+
+    Args:
+        sender: The sender of the signal.
+        group_ids (list): IDs of the updated Group resources.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    if group_ids:
+        get_by_id.clear_cache(*group_ids)  # pyright: ignore[reportFunctionMemberAccess]

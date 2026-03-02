@@ -18,6 +18,7 @@ from server.entities.map_error import MapError
 from server.entities.map_service import MapService
 from server.entities.patch_request import PatchOperation, PatchRequestPayload
 from server.entities.search_request import SearchRequestParameter, SearchResponse
+from server.signals import repository_deleted, repository_updated
 
 from .decoraters import cache_resource
 from .utils import compute_signature, get_time_stamp
@@ -281,7 +282,7 @@ def put_by_id(
     resource = adapter.validate_json(response.text)
 
     if isinstance(resource, MapService):
-        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
+        repository_updated.send(None, service=resource)
 
     return resource
 
@@ -351,7 +352,7 @@ def patch_by_id(
     resource = adapter.validate_json(response.text)
 
     if isinstance(resource, MapService):
-        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
+        repository_updated.send(None, service=resource)
 
     return resource
 
@@ -393,7 +394,7 @@ def delete_by_id(
         response.raise_for_status()
 
     if not response.text:
-        get_by_id.clear_cache(service_id)  # pyright: ignore[reportFunctionMemberAccess]
+        repository_updated.send(None, service=MapService(id=service_id))
         return None
 
     return MapError.model_validate_json(response.text)
@@ -411,3 +412,29 @@ def _get_alias_generator() -> t.Callable[[str], str]:
 
 alias_generator: t.Callable[[str], str] = _get_alias_generator()
 del _get_alias_generator
+
+
+@repository_updated.connect
+@repository_deleted.connect
+def handle_repository_updated(_sender: object, service: MapService, **kwargs) -> None:  # noqa: ANN003, ARG001
+    """Handle repository updated signal to clear cache for the updated service.
+
+    Args:
+        sender: The sender of the signal.
+        service (MapService): The updated Service resource.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    get_by_id.clear_cache(service.id)  # pyright: ignore[reportFunctionMemberAccess]
+
+
+@repository_updated.connect
+@repository_deleted.connect
+def handle_repository_updated_by_id(_sender: object, service_id: str, **kwargs) -> None:  # noqa: ANN003, ARG001
+    """Handle repository updated signal to clear cache for the updated service by ID.
+
+    Args:
+        sender: The sender of the signal.
+        service_id (str): The ID of the updated Service resource.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    get_by_id.clear_cache(service_id)  # pyright: ignore[reportFunctionMemberAccess]
