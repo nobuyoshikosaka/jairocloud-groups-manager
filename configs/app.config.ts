@@ -56,7 +56,7 @@ const repositories = {
    * in `server.config.toml` accordingly to keep them consistent.
    * [Mandatory]
    */
-  maxUrlLength: 50 - 'https://'.length - 'jc_'.length - 9,
+  maxUrlLength: 50 - 'jc_'.length - '_ro_radm'.length - 2,
 }
 
 const groups = {
@@ -65,7 +65,7 @@ const groups = {
    * (excluding the “jc_” prefix assigned to the ID and additional padding) \
    * [Mandatory]
    */
-  maxIdLength: 50 - 'jc_'.length - '_groups_'.length - 4,
+  maxIdLength: 50 - 'jc_'.length - '_gr_'.length,
 }
 
 const polling = {

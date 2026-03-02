@@ -76,7 +76,7 @@ def cache_resource[T: t.Callable](
             result = func(*args, **kwargs)
 
             nonlocal timeout
-            timeout = timeout or config.REDIS.default_timeout
+            timeout = timeout or config.REDIS.cache_timeout
             if isinstance(result, MapError) or timeout is None:
                 timeout = 3
 

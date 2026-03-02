@@ -56,17 +56,24 @@ def connection(
     """
     app = app or current_app
     config = config or config_
+    timeout = config.REDIS.socket_timeout
     try:
         if config.REDIS.cache_type == "RedisCache":
             base_url = config.REDIS.single.base_url.rstrip("/")
             store = Redis.from_url(f"{base_url}/{db}")
         else:
             sentinels = sentinel.Sentinel(
-                [(node.host, node.port) for node in config.REDIS.sentinel.sentinels],
-                socket_timeout=0.1,
+                [(node.host, node.port) for node in config.REDIS.sentinel.nodes],
+                socket_timeout=timeout,
+                socket_connect_timeout=timeout,
                 decode_responses=False,
             )
-            store = sentinels.master_for(config.REDIS.sentinel.master_name, db=db)
+            store = sentinels.master_for(
+                config.REDIS.sentinel.master_name,
+                db=db,
+                socket_timeout=timeout,
+                socket_connect_timeout=timeout,
+            )
 
     except ValueError as exc:
         error = E.INVALID_REDIS_CONFIG % {"error": str(exc)}

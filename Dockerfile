@@ -70,5 +70,6 @@ COPY . .
 RUN uv pip install .
 
 ENV FLASK_ENV=production
+ENV FLASK_APP="server.app"
 
 CMD ["/usr/bin/supervisord", "-c", "supervisord.web.conf"]
