@@ -22,6 +22,8 @@ from server.entities.search_request import SearchResponse, SearchResult
 from server.entities.summaries import UserSummary
 from server.entities.user_detail import UserDetail
 from server.exc import (
+    ApiClientError,
+    ApiRequestError,
     CredentialsError,
     InvalidQueryError,
     OAuthTokenError,
@@ -30,6 +32,7 @@ from server.exc import (
     UnexpectedResponseError,
 )
 from server.services.utils.transformers import prepare_user, validate_user_to_map_user
+from server.signals import user_deleted, user_updated
 
 from .token import get_access_token, get_client_secret
 from .utils import (
@@ -487,6 +490,9 @@ def update_affiliations(user: UserDetail) -> UserDetail:
 
     Raises:
         ResourceNotFound: If the User resource is not found.
+        OAuthTokenError: If the access token is invalid or expired.
+        CredentialsError: If the client credentials are invalid.
+        ExceptionGroup: If there are multiple errors while updating affiliations.
     """
     user_id = t.cast("str", user.id)
     current: UserDetail | None = get_by_id(user_id)
@@ -507,6 +513,7 @@ def update_affiliations(user: UserDetail) -> UserDetail:
 
     from server.services import groups  # noqa: PLC0415
 
+    errors: list[Exception] = []
     for op in operations:
         if op.op == "replace":
             continue
@@ -517,7 +524,24 @@ def update_affiliations(user: UserDetail) -> UserDetail:
         else:
             continue
 
-        groups.update_member(group_id, **{op.op: {user_id}})
+        try:
+            groups.update_member(group_id, **{op.op: {user_id}})
+
+        except OAuthTokenError, CredentialsError:
+            raise
+        except (ApiClientError, ApiRequestError) as exc:
+            current_app.logger.error(
+                "Failed to update affiliations for user '%s' in group '%s'",
+                user_id,
+                group_id,
+            )
+            errors.append(exc)
+
+    user_updated.send(None, user=user)
+
+    if errors:
+        error = "Failed to update some affiliations for the user."
+        raise ExceptionGroup(error, errors)
 
     return t.cast("UserDetail", get_by_id(user_id))
 
@@ -604,3 +628,24 @@ def count(criteria: UsersCriteria) -> int:
         raise InvalidQueryError(results.detail)
 
     return results.total_results
+
+
+@user_updated.connect
+@user_deleted.connect
+def handle_user_updated(
+    _sender: object,
+    user: UserDetail | None = None,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
+    """Handle user_updated signal to clear cache of the updated user.
+
+    Args:
+        sender: The sender of the signal.
+        user (UserDetail): The updated User resource.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    if not isinstance(user, UserDetail):
+        return
+    users.get_by_id.clear_cache(user.id)  # pyright: ignore[reportFunctionMemberAccess]
+    if user.eppns:
+        users.get_by_eppn.clear_cache(*user.eppns)  # pyright: ignore[reportFunctionMemberAccess]

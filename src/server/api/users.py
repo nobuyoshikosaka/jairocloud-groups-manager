@@ -10,9 +10,10 @@ from flask_pydantic import validate
 
 from server.const import USER_ROLES
 from server.entities.search_request import FilterOption, SearchResult
-from server.entities.user_detail import RepositoryRole, UserDetail
+from server.entities.user_detail import UserDetail
 from server.exc import (
     InvalidQueryError,
+    RequestConflict,
     ResourceInvalid,
     ResourceNotFound,
 )
@@ -74,7 +75,7 @@ def post(
         - If other error, status code 500
 
     """
-    if not has_permission(body.repository_roles):
+    if not has_permission(body):
         return ErrorResponse(code="", message="not has permission"), 403
 
     try:
@@ -108,7 +109,7 @@ def id_get(user_id: str) -> tuple[UserDetail | ErrorResponse, int]:
     if user is None:
         return ErrorResponse(code="", message="user not found"), 404
 
-    if not has_permission(user.repository_roles):
+    if not has_permission(user):
         return ErrorResponse(code="", message="not has permission"), 403
 
     return user, 200
@@ -137,28 +138,30 @@ def id_put(user_id: str, body: UserDetail) -> tuple[UserDetail | ErrorResponse, 
     if body.is_system_admin and not is_current_user_system_admin():
         return ErrorResponse(code="", message="not has permission"), 403
 
-    if not has_permission(body.repository_roles):
+    if not has_permission(body):
         return ErrorResponse(code="", message="not has permission"), 403
 
     body.id = user_id
     try:
         updated = users.update(body)
-    except ResourceNotFound as e:
-        return ErrorResponse(code="", message=str(e)), 404
-    except ResourceInvalid as e:
-        return ErrorResponse(code="", message=str(e)), 409
+    except* ResourceNotFound as e:
+        error = ErrorResponse(code="", message=str(e)), 404
+    except* (ResourceInvalid, RequestConflict) as e:
+        error = ErrorResponse(code="", message=str(e)), 409
+    else:
+        return updated, 200
 
-    return updated, 200
+    return error
 
 
-def has_permission(roles: list[RepositoryRole] | None) -> bool:
+def has_permission(user: UserDetail) -> bool:
     """Check user controll permmision.
 
     If the logged-in user is a system administrator or
     an administrator of the target repository, that user has permission.
 
     Args:
-       roles (list | None): Roles of the target user in each repository.
+       user (UserDetail): User information.
 
     Returns:
         bool:
@@ -168,8 +171,12 @@ def has_permission(roles: list[RepositoryRole] | None) -> bool:
     if is_current_user_system_admin():
         return True
 
+    if user.is_system_admin:
+        return False
+
+    roles = user.repository_roles or []
     permitted_repository_ids = get_permitted_repository_ids()
-    return any(repo.id in permitted_repository_ids for repo in roles or [])
+    return any(repo.id in permitted_repository_ids for repo in roles)
 
 
 @bp.get("/filter-options")
