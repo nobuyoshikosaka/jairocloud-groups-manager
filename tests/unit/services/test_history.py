@@ -12,7 +12,7 @@ from server.db.history import DownloadHistory, Files, UploadHistory, _FileConten
 from server.entities.history_detail import DownloadHistoryData, HistoryQuery, HistorySummary, UploadHistoryData
 from server.entities.search_request import SearchResult
 from server.entities.summaries import UserSummary
-from server.exc import DatabaseError, InvalidQueryError, RecordNotFound
+from server.exc import DatabaseError, RecordNotFound
 from server.services import history
 
 
@@ -320,35 +320,6 @@ def test__build_filters_for_history(
         assert compiled.params == expected_param
 
     repoadmin_filter.assert_not_called() if is_system_admin else repoadmin_filter.assert_called_once()
-
-
-@pytest.mark.parametrize(
-    ("tub", "key", "criteria", "expected"),
-    [
-        (
-            "upload",
-            "o",
-            HistoryQuery(p=1, l=20),
-            SearchResult[UserSummary](total=0, page_size=20, offset=0, resources=[]),
-        ),
-        (
-            "download",
-            "r",
-            HistoryQuery(r=["repo1"]),
-            InvalidQueryError,
-        ),
-    ],
-)
-def test_get_filter_option(app, mocker: MockerFixture, tub, key, criteria, expected):
-    db = mocker.MagicMock()
-    mocker.patch("server.services.history.db", db)
-    if expected == InvalidQueryError:
-        with pytest.raises(InvalidQueryError) as exc:
-            history.get_filter_option(tub, key, criteria)
-        assert str(exc.value) == f"Unsupported criteria type: {type(criteria)}"
-    else:
-        filter_option = history.get_filter_option(tub, key, criteria)
-        assert filter_option == expected
 
 
 def test_update_public_status_not_found(app, mocker: MockerFixture):

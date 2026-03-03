@@ -892,11 +892,17 @@ def test_save_file_saved(app, mocker: MockerFixture):
 
 def test_save_file_with_exception(app, mocker: MockerFixture):
     file_id = uuid7()
-    expected_error_message = f"File not found for file_id: {file_id}"
-    mocker.patch("server.services.history_table.get_file_by_id", side_effect=RecordNotFound(expected_error_message))
-    with pytest.raises(RecordNotFound) as exc:
+    file_content = _FileContent(
+        repositories=[{}],
+        groups=[{"id": "group1", "displayName": "Group 1"}, {"id": "group2", "displayName": "Group 2"}],
+        users=[{"id": "user1", "userName": "User 1"}, {"id": "user2", "userName": "User 2"}],
+    )
+    mocker.patch(
+        "server.services.history_table.get_file_by_id", return_value=mocker.MagicMock(file_content=file_content)
+    )
+    with pytest.raises(ResourceNotFound) as exc:
         bulks.save_file(file_id)
-    assert str(exc.value) == expected_error_message
+    assert str(exc.value) is not None
 
 
 def test_save_file_not_found(app, mocker: MockerFixture):

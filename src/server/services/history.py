@@ -266,44 +266,6 @@ def get_filter_items(
     raise InvalidQueryError(error)
 
 
-def get_filter_option(
-    tab: t.Literal["download", "upload"], key: str, criteria: OperatorsCriteria
-) -> SearchResult[UserSummary]:
-    """Get filter options for history data.
-
-    Args:
-        tab (Literal["download", "upload"]): Type of history (download or upload)
-        key (str): The key of the filter option to retrieve.
-        criteria (OperatorsCriteria): The search criteria for filtering operators.
-
-    Returns:
-        SearchResult: filter options for history data.
-
-    Raises:
-        InvalidQueryError: If the filter key is invalid.
-    """
-    table = UploadHistory if tab == "upload" else DownloadHistory
-    if key == "o":
-        stmt = select(table.operator_id, table.operator_name).distinct()
-        page = criteria.p or 1
-        page_size = criteria.l or DEFAULT_SEARCH_COUNT
-        offset = (page - 1) * page_size
-        stmt = stmt.limit(page_size).offset(offset)
-
-        results = db.session.execute(stmt).all()
-        items = [
-            UserSummary(id=operator_id, user_name=operator_name)
-            for operator_id, operator_name in results
-        ]
-        return SearchResult(
-            resources=items, total=0, page_size=page_size, offset=offset
-        )
-
-    error = f"Unsupported criteria type: {type(criteria)}"
-    current_app.logger.error(error)
-    raise InvalidQueryError(error)
-
-
 def update_public_status(
     *, tab: t.Literal["download", "upload"], history_id: UUID, public: bool
 ) -> bool:
