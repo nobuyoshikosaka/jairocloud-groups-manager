@@ -18,6 +18,7 @@ from server.entities.history_detail import HistoryQuery
 from server.entities.search_request import FilterOption, SearchResult
 from server.exc import DatabaseError, InvalidQueryError, RecordNotFound
 from server.services import history
+from server.services.utils import search_history_filter_options
 
 from .helpers import roles_required
 from .schemas import ErrorResponse, HistoryPublic, OperatorQuery
@@ -36,7 +37,7 @@ def filter_options() -> list[FilterOption]:
     Returns:
         list[FilterOption]: list of filter options for history data
     """
-    return history.get_filters()
+    return search_history_filter_options()
 
 
 @bp.get("/<tab>/filter-options/operators")
@@ -57,7 +58,7 @@ def filter_options_operators(
         ErrorResponse: if an error occurs  and status code 400
     """
     try:
-        result = history.get_filter_option(tab, key="o", criteria=query)
+        result = history.get_filter_items(tab, key="o", criteria=query)
     except InvalidQueryError as ex:
         return ErrorResponse(code="", message=str(ex)), 400
     return result, 200

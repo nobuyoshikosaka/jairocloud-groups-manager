@@ -9,10 +9,9 @@ import typing as t
 
 from server.const import USER_ROLES
 from server.entities.search_request import FilterOption
-from server.services.utils import (
-    is_current_user_system_admin,
-)
-from server.services.utils.search_queries import (
+
+from .permissions import is_current_user_system_admin
+from .search_queries import (
     Criteria,
     GroupsCriteria,
     UsersCriteria,
@@ -297,3 +296,33 @@ def _allow_multiple(protocol_cls: type, attr_name: str) -> bool:
         return any(t.get_origin(arg) is list or arg is list for arg in args)
 
     return origin is list or arg_type is list
+
+
+def search_history_filter_options() -> list[FilterOption]:
+    """Provide filter options for searching history data.
+
+    Returns:
+        list[FilterOption]: List of filter options for history search.
+    """
+    items = [
+        # lazy load repositories.
+    ]
+
+    return [
+        FilterOption(
+            key="o", description="operator", type="string", multiple=True, items=items
+        ),
+        FilterOption(
+            key="r",
+            description="repositories",
+            type="string",
+            multiple=True,
+            items=items,
+        ),
+        FilterOption(
+            key="g", description="groups", type="string", multiple=True, items=items
+        ),
+        FilterOption(
+            key="u", description="users", type="string", multiple=True, items=items
+        ),
+    ]

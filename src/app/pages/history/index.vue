@@ -1,18 +1,10 @@
 <script setup lang="ts">
 import type { TabsItem } from '@nuxt/ui'
 
-const { t: $t } = useI18n()
-
-const { loading,
-  query,
-  makePageInfo,
-  updateQuery,
-  loadChildren,
-  togglePublicStatus,
-  tab,
-  uploadColumns,
-  downloadColumns,
-  isFileAvailable } = useHistory()
+const {
+  loading, query, makePageInfo, updateQuery, loadChildren, togglePublicStatus,
+  tab, uploadColumns, downloadColumns, isFileAvailable,
+} = useHistory()
 
 const tabItems = computed<TabsItem[]>(() => [
   { label: $t('history.tab.download'), icon: 'i-lucide-download', slot: 'download',

@@ -17,10 +17,10 @@ from server.exc import (
     ResourceNotFound,
 )
 from server.services import users
-from server.services.filter_options import search_users_options
 from server.services.utils import (
     get_permitted_repository_ids,
     is_current_user_system_admin,
+    search_users_options,
 )
 
 from .helpers import roles_required

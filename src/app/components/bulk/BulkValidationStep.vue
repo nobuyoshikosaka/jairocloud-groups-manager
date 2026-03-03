@@ -6,7 +6,6 @@ const emit = defineEmits<{
   prev: []
 }>()
 
-const { t: $t } = useI18n()
 const toast = useToast()
 
 const taskId = inject<Ref<string | undefined>>('taskId', ref(undefined))

@@ -41,6 +41,7 @@ from server.entities.patch_request import RemoveOperation
 from server.entities.summaries import GroupSummary
 from server.entities.user_detail import UserDetail
 from server.exc import (
+    FileValidationError,
     OAuthTokenError,
     RecordNotFound,
     ResourceInvalid,
@@ -547,24 +548,29 @@ def update_users(
         OAuthTokenError: If there is an issue with the access token.
         UnexpectedResponseError: If there is an unexpected response from mAP Core API.
         ResourceInvalid: If there is an invalid resource error from mAP Core API.
-        ValueError: If there are errors in the validation results.
+        FileValidationError: If there are errors in the validation results.
     """
     upload_data = history_table.get_upload_by_id(history_id)
     if not upload_data:
         error = f"History not found: {history_id}"
         current_app.logger.error(error)
         raise ResourceNotFound(error)
+
+    # file content must contain at least one repository.
     repository_id = upload_data.file.file_content["repositories"][0]["id"]
     check_results: list[CheckResult] = upload_data.results.get("results", [])
+
     summary = upload_data.results.get("summary", {})
-    if t.cast("int", summary.get("error", 1)) > 0:
+    if summary.get("error", 1) > 0:
         error = "There are errors in the validation results."
         current_app.logger.error(error)
-        raise ValueError(error)
+        raise FileValidationError(error)
+
     bulk_ops, count_delete = _build_bulk_operations_from_check_results(
         repository_id, check_results, delete_users
     )
     summary.update({"delete": count_delete})
+
     file_id = save_file(temp_file_id)
     history_table.update_upload_status(
         history_id=history_id,
@@ -573,6 +579,7 @@ def update_users(
         new_results={"results": check_results, "summary": summary},
     )
     history_table.delete_file_by_id(temp_file_id)
+
     try:
         access_token = get_access_token()
         client_secret = get_client_secret()
@@ -592,6 +599,7 @@ def update_users(
     if isinstance(result, MapError):
         current_app.logger.info(result.detail)
         raise ResourceInvalid(result.detail)
+
     count_error = 0
     for i, operation in enumerate(result.operations):
         if (

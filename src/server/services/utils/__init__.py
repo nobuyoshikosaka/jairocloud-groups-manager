@@ -6,6 +6,12 @@
 
 from .affiliations import detect_affiliation, detect_affiliations
 from .decoraters import session_required
+from .filter_options import (
+    search_groups_options,
+    search_history_filter_options,
+    search_repositories_options,
+    search_users_options,
+)
 from .patch_operations import build_patch_operations, build_update_member_operations
 from .permissions import (
     extract_group_ids,

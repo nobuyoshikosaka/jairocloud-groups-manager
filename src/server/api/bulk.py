@@ -83,7 +83,7 @@ def validate_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
         ErrorResponse: The response containing task status or error message
     """
     try:
-        res = bulks.validate_upload_data.AsyncResult(task_id)  # pyright: ignore[reportCallIssue]
+        res = bulks.validate_upload_data.AsyncResult(task_id)
     except RedisConnectionError:
         error = f"Failed to connect to Redis: {task_id}"
         return ErrorResponse(code="", message=error), 500
@@ -110,7 +110,7 @@ def validate_result(
         ErrorResponse: The response containing validation result or error message.
     """
     try:
-        res = bulks.validate_upload_data.AsyncResult(task_id)  # pyright: ignore[reportCallIssue]
+        res = bulks.validate_upload_data.AsyncResult(task_id)
     except RedisConnectionError:
         error = f"Failed to connect to Redis: {task_id}"
         return ErrorResponse(code="", message=error), 500

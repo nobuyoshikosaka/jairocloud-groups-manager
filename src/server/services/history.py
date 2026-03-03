@@ -22,7 +22,7 @@ from server.entities.history_detail import (
     DownloadHistoryData,
     UploadHistoryData,
 )
-from server.entities.search_request import FilterOption, SearchResult
+from server.entities.search_request import SearchResult
 from server.entities.summaries import UserSummary
 from server.exc import DatabaseError, InvalidQueryError, RecordNotFound
 
@@ -227,47 +227,7 @@ def get_download_history_data(
     )
 
 
-def get_filters() -> list[FilterOption]:
-    """Get available filters for history.
-
-    Returns:
-        list[FilterOption]: The available filters.
-    """
-    filters: list[FilterOption] = [
-        FilterOption(
-            key="o",
-            description="operator",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-        FilterOption(
-            key="r",
-            description="repositories",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-        FilterOption(
-            key="g",
-            description="groups",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-        FilterOption(
-            key="u",
-            description="users",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-    ]
-
-    return filters
-
-
-def get_filter_option(
+def get_filter_items(
     tab: t.Literal["download", "upload"], key: str, criteria: OperatorsCriteria
 ) -> SearchResult[UserSummary]:
     """Get filter options for history data.
