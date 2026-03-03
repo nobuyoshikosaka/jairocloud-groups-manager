@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from server.db.history import DownloadHistory, Files, UploadHistory, _FileContent, _ResultData
 from server.entities.history_detail import DownloadHistoryData, HistoryQuery, HistorySummary, UploadHistoryData
-from server.entities.search_request import FilterOption, SearchResult
+from server.entities.search_request import SearchResult
 from server.entities.summaries import UserSummary
 from server.exc import DatabaseError, InvalidQueryError, RecordNotFound
 from server.services import history
@@ -320,40 +320,6 @@ def test__build_filters_for_history(
         assert compiled.params == expected_param
 
     repoadmin_filter.assert_not_called() if is_system_admin else repoadmin_filter.assert_called_once()
-
-
-def test_get_filters(app):
-    result = history.get_filters()
-    assert result == [
-        FilterOption(
-            key="o",
-            description="operator",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-        FilterOption(
-            key="r",
-            description="repositories",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-        FilterOption(
-            key="g",
-            description="groups",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-        FilterOption(
-            key="u",
-            description="users",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-    ]
 
 
 @pytest.mark.parametrize(

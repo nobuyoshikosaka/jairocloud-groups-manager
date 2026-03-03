@@ -24,15 +24,18 @@ def test_filter_options(app, mocker: MockerFixture):
         app.test_request_context("/"),
     ):
         expected = [
+            FilterOption(key="o", description="operator", type="string", multiple=True, items=[]),
             FilterOption(
-                key="o",
-                description="operator",
+                key="r",
+                description="repositories",
                 type="string",
                 multiple=True,
                 items=[],
-            )
+            ),
+            FilterOption(key="g", description="groups", type="string", multiple=True, items=[]),
+            FilterOption(key="u", description="users", type="string", multiple=True, items=[]),
         ]
-        mock_get_filters = mocker.patch("server.services.history.get_filters", return_value=expected)
+        mock_get_filters = mocker.patch("server.api.history.search_history_filter_options", return_value=expected)
         test_func()
         mock_get_filters.assert_called_once_with()
 
@@ -44,7 +47,7 @@ def test_filter_options_operators(app, mocker: MockerFixture):
         app.test_request_context(),
     ):
         mock_get_filter_option = mocker.patch(
-            "server.services.history.get_filter_option",
+            "server.services.history.get_filter_items",
             return_value=expected,
         )
         resp = test_func(tab="download", query=OperatorQuery(p=1, l=20))
@@ -60,7 +63,7 @@ def test_filter_options_operators_invalid_query(app, mocker: MockerFixture):
     ):
         exception_message = "Invalid Unsupported criteria type: DummyCriteria"
         mock_get_filter_option = mocker.patch(
-            "server.services.history.get_filter_option",
+            "server.services.history.get_filter_items",
             side_effect=InvalidQueryError(exception_message),
         )
         resp = test_func(tab="download", query=OperatorQuery(p=0, l=20))

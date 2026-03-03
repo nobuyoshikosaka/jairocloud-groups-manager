@@ -18,6 +18,7 @@ from server.entities.map_error import MapError
 from server.entities.map_user import MapUser
 from server.entities.patch_request import PatchOperation, PatchRequestPayload
 from server.entities.search_request import SearchRequestParameter, SearchResponse
+from server.signals import user_deleted, user_updated
 
 from .decoraters import cache_resource
 from .utils import compute_signature, get_time_stamp
@@ -332,10 +333,7 @@ def put_by_id(
     resource = adapter.validate_json(response.text)
 
     if isinstance(resource, MapUser):
-        get_by_id.clear_cache(resource.id)  # pyright: ignore[reportFunctionMemberAccess]
-        get_by_eppn.clear_cache(  # pyright: ignore[reportFunctionMemberAccess]
-            *[eppn.value for eppn in resource.edu_person_principal_names or []]
-        )
+        user_updated.send(None, user=resource)
 
     return resource
 
@@ -405,10 +403,7 @@ def patch_by_id(
     resource = adapter.validate_json(response.text)
 
     if isinstance(resource, MapUser):
-        get_by_id.clear_cache(user_id)  # pyright: ignore[reportFunctionMemberAccess]
-        get_by_eppn.clear_cache(  # pyright: ignore[reportFunctionMemberAccess]
-            *[eppn.value for eppn in resource.edu_person_principal_names or []]
-        )
+        user_updated.send(None, user=resource)
 
     return resource
 
@@ -425,3 +420,57 @@ def _get_alias_generator() -> t.Callable[[str], str]:
 
 alias_generator: t.Callable[[str], str] = _get_alias_generator()
 del _get_alias_generator
+
+
+@user_updated.connect
+@user_deleted.connect
+def handle_user_updated(_sender: object, user: MapUser | None = None, **kwargs) -> None:  # noqa: ANN003, ARG001
+    """Handle user_updated signal to clear cache of the updated user.
+
+    Args:
+        sender: The sender of the signal.
+        user (MapUser): The updated User resource.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    if not isinstance(user, MapUser):
+        return
+    get_by_id.clear_cache(user.id)  # pyright: ignore[reportFunctionMemberAccess]
+    get_by_eppn.clear_cache(  # pyright: ignore[reportFunctionMemberAccess]
+        *[eppn.value for eppn in user.edu_person_principal_names or []]
+    )
+
+
+@user_updated.connect
+@user_deleted.connect
+def handle_user_updated_by_eppn(
+    _sender: object,
+    eppns: list[str] | None = None,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
+    """Handle user_updated signal to clear cache of the updated user by ePPN.
+
+    Args:
+        sender: The sender of the signal.
+        eppns (list): The ePPNs of the updated User resources.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    if eppns:
+        get_by_eppn.clear_cache(*eppns)  # pyright: ignore[reportFunctionMemberAccess]
+
+
+@user_updated.connect
+@user_deleted.connect
+def handle_user_updated_by_id(
+    _sender: object,
+    user_id: str | None = None,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
+    """Handle user_updated signal to clear cache of the updated user by ID.
+
+    Args:
+        sender: The sender of the signal.
+        user_id (str): The ID of the updated User resource.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    if user_id:
+        get_by_id.clear_cache(user_id)  # pyright: ignore[reportFunctionMemberAccess]

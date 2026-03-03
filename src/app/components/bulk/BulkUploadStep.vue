@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
-const { t: $t } = useI18n()
 const emit = defineEmits<{
   next: [taskId: string]
 }>()
@@ -113,7 +112,7 @@ setupRepoScroll(repositorySelect)
       </template>
     </UAlert>
     <UForm
-      :validate="validateFileFormat" :state="state" :validate-on="['change']"
+      :validate="validateFileFormat" :state="state"
       @submit="handleNext"
     >
       <UFormField

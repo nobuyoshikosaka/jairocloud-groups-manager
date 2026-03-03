@@ -157,7 +157,6 @@ const useBulk = <T extends UploadResult | ValidationResult>() => {
     pageSize,
     pageNumber,
     sortOrder,
-    STATUS_CONFIG,
     columns,
     makePageInfo,
     updateQuery,

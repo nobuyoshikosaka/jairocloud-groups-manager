@@ -21,11 +21,11 @@ from server.exc import (
     ResourceNotFound,
 )
 from server.services import groups
-from server.services.filter_options import search_groups_options
 from server.services.utils import (
     detect_affiliations,
     filter_permitted_group_ids,
     is_current_user_system_admin,
+    search_groups_options,
 )
 
 from .schemas import (

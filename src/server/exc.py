@@ -158,3 +158,17 @@ class ImmutableError(JAIROCloudGroupsManagerError):
 
     Errors caused by attempts to modify immutable attributes.
     """
+
+
+class BulkOperationError(JAIROCloudGroupsManagerError):
+    """Exception for bulk operation errors.
+
+    Errors caused by issues during bulk operations.
+    """
+
+
+class FileValidationError(BulkOperationError):
+    """Exception for validation errors in bulk operations.
+
+    Errors caused by validation failures during bulk operations.
+    """

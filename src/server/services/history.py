@@ -22,7 +22,7 @@ from server.entities.history_detail import (
     DownloadHistoryData,
     UploadHistoryData,
 )
-from server.entities.search_request import FilterOption, SearchResult
+from server.entities.search_request import SearchResult
 from server.entities.summaries import UserSummary
 from server.exc import DatabaseError, InvalidQueryError, RecordNotFound
 
@@ -228,44 +228,42 @@ def get_download_history_data(
     )
 
 
-def get_filters() -> list[FilterOption]:
-    """Get available filters for history.
+def get_filter_items(
+    tab: t.Literal["download", "upload"], key: str, criteria: OperatorsCriteria
+) -> SearchResult[UserSummary]:
+    """Get filter options for history data.
+
+    Args:
+        tab (Literal["download", "upload"]): Type of history (download or upload)
+        key (str): The key of the filter option to retrieve.
+        criteria (OperatorsCriteria): The search criteria for filtering operators.
 
     Returns:
-        list[FilterOption]: The available filters.
-    """
-    filters: list[FilterOption] = [
-        FilterOption(
-            key="o",
-            description="operator",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-        FilterOption(
-            key="r",
-            description="repositories",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-        FilterOption(
-            key="g",
-            description="groups",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-        FilterOption(
-            key="u",
-            description="users",
-            type="string",
-            multiple=True,
-            items=[],
-        ),
-    ]
+        SearchResult: filter options for history data.
 
-    return filters
+    Raises:
+        InvalidQueryError: If the filter key is invalid.
+    """
+    table = UploadHistory if tab == "upload" else DownloadHistory
+    if key == "o":
+        stmt = select(table.operator_id, table.operator_name).distinct()
+        page = criteria.p or 1
+        page_size = criteria.l or DEFAULT_SEARCH_COUNT
+        offset = (page - 1) * page_size
+        stmt = stmt.limit(page_size).offset(offset)
+
+        results = db.session.execute(stmt).all()
+        items = [
+            UserSummary(id=operator_id, user_name=operator_name)
+            for operator_id, operator_name in results
+        ]
+        return SearchResult(
+            resources=items, total=0, page_size=page_size, offset=offset
+        )
+
+    error = f"Unsupported criteria type: {type(criteria)}"
+    current_app.logger.error(error)
+    raise InvalidQueryError(error)
 
 
 def get_filter_option(

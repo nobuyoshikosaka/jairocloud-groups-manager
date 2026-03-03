@@ -1,6 +1,4 @@
 <script setup lang="ts">
-const { t: $t } = useI18n()
-
 const properties = defineProps<{
   historyId: string
   taskId: string

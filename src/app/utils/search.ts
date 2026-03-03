@@ -98,5 +98,7 @@ const normalizeUploadQuery = (query: LocationQuery): UploadQuery => {
   }
 }
 
-export { normalizeRepositoriesQuery, normalizeGroupsQuery, normalizeUsersQuery,
-  normalizeHistoryQuery, normalizeUploadQuery }
+export {
+  normalizeRepositoriesQuery, normalizeGroupsQuery, normalizeUsersQuery,
+  normalizeHistoryQuery, normalizeUploadQuery,
+}

@@ -23,7 +23,7 @@ from server.entities.patch_request import AddOperation, RemoveOperation
 from server.entities.search_request import SearchResponse
 from server.entities.summaries import GroupSummary
 from server.entities.user_detail import UserDetail
-from server.exc import OAuthTokenError, RecordNotFound, ResourceInvalid, ResourceNotFound
+from server.exc import FileValidationError, OAuthTokenError, RecordNotFound, ResourceInvalid, ResourceNotFound
 from server.services import bulks
 from server.services.utils.affiliations import Affiliations, _Group
 
@@ -769,7 +769,7 @@ def test_update_users_error_in_summary(app, mocker):
     upload_data.file.file_content = {"repositories": [{"id": "repo1"}]}
     upload_data.results = {"results": [], "summary": {"error": 1}}
     mocker.patch("server.services.history_table.get_upload_by_id", return_value=upload_data)
-    with pytest.raises(ValueError) as exc:  # noqa: PT011
+    with pytest.raises(FileValidationError) as exc:
         bulks.update_users(history_id, temp_file_id, delete_users=None)
     assert str(exc.value) == "There are errors in the validation results."
 
@@ -894,7 +894,7 @@ def test_save_file_with_exception(app, mocker: MockerFixture):
     file_id = uuid7()
     expected_error_message = f"File not found for file_id: {file_id}"
     mocker.patch("server.services.history_table.get_file_by_id", side_effect=RecordNotFound(expected_error_message))
-    with pytest.raises(ResourceNotFound) as exc:
+    with pytest.raises(RecordNotFound) as exc:
         bulks.save_file(file_id)
     assert str(exc.value) == expected_error_message
 

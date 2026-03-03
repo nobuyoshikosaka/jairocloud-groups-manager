@@ -318,7 +318,7 @@ const useHistory = () => {
       },
     })
 
-    const items = (data.value?.resources ?? []) as DownloadHistoryData[]
+    const items: DownloadHistoryData[] = data.value?.resources ?? []
 
     const group = downloadGroups.value.find(g => g.parent.id === parentId)
     if (!group) return
