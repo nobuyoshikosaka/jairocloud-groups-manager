@@ -268,7 +268,7 @@ class LocalStorageConfig(BaseModel):
     temporary: str = "/var/tmp/jcgroups"  # noqa: S108
     """Path to the temporary directory."""
 
-    storage: str = "/data/jcgroups"
+    storage: str = "/var/tmp/jcgroups"  # noqa: S108
     """Path to the storage directory."""
 
 
@@ -562,6 +562,9 @@ class DevelopConfig(BaseModel):
 
 class DevAccountConfig(BaseModel):
     """Schema for development account configuration."""
+
+    id: str
+    """mAP Core ID of the development account."""
 
     eppn: str
     """EPPN of the development account."""

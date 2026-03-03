@@ -39,7 +39,7 @@ def post(
 
     Returns:
         PostBulkResponse:
-            The BulkResponse resource if Bulk operation success, otherwise None.
+          The BulkResponse resource if Bulk operation success, otherwise None.
     """
     time_stamp = get_time_stamp()
     signature = compute_signature(client_secret, access_token, time_stamp)
@@ -62,8 +62,6 @@ def post(
         json={"request": auth_params} | payload,
         timeout=config.MAP_CORE.timeout,
     )
-
-    response.raise_for_status()
 
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()

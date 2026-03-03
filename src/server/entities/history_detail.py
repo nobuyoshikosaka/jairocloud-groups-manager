@@ -9,7 +9,7 @@ import typing as t
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from server.entities.summaries import GroupSummary, RepositorySummary, UserSummary
 
@@ -40,17 +40,20 @@ class DownloadHistoryData(BaseModel):
     parent_id: UUID | None = None
     """Parent download history ID, if applicable."""
 
+    file_id: UUID
+    """ID of the downloaded file."""
+
     file_path: str
     """Path of the downloaded file."""
 
-    repositories: list[RepositorySummary]
-    """List of repository IDs involved in the download."""
+    repository_count: int
+    """Number of repositories involved in the download."""
 
-    groups: list[GroupSummary]
-    """List of group IDs involved in the download."""
+    group_count: int
+    """Number of groups involved in the download."""
 
-    users: list[UserSummary]
-    """List of user IDs involved in the download."""
+    user_count: int
+    """Number of users involved in the download."""
 
     children_count: int = 0
     """Number of related child elements."""
@@ -80,23 +83,23 @@ class UploadHistoryData(BaseModel):
     status: t.Literal["S", "F", "P"]
     """Status of the upload operation."""
 
-    results: list[Results] = Field(default_factory=list)
-    """ """
-
     summary: HistorySummary | None = None
-    """ """
+    """Summary of the upload operation."""
 
     file_path: str
     """Path of the uploaded file."""
 
-    repositories: list[RepositorySummary]
-    """List of repository IDs involved in the upload."""
+    file_id: UUID
+    """ID of the uploaded file."""
 
-    groups: list[GroupSummary]
-    """List of group IDs involved in the upload."""
+    repository_count: int
+    """Number of repositories involved in the upload."""
 
-    users: list[UserSummary]
-    """List of user IDs involved in the upload."""
+    group_count: int
+    """Number of groups involved in the upload."""
+
+    user_count: int
+    """Number of users involved in the upload."""
 
     model_config = camel_case_config
     """Configure to use camelCase aliasing."""

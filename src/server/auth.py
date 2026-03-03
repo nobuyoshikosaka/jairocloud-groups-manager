@@ -39,6 +39,8 @@ def is_user_logged_in(current_user: LocalProxy) -> t.TypeGuard[LoginUser]:
 
 def refresh_session() -> None:
     """Extend the TTL of the Redis login state for login users."""
+    if config.SESSION.strategy == "absolute":
+        return
     if not is_user_logged_in(current_user):
         return
 
@@ -63,22 +65,37 @@ def refresh_session() -> None:
 
 
 @login_manager.user_loader
-def load_user(user_id: str) -> LoginUser | None:
-    """Load a user from the session using the user_id.
+def load_user(eppn: str) -> LoginUser | None:
+    """Load a user from the session using the eppn.
 
     Args:
-        user_id (str): The unique identifier for the user.
+        eppn (str): The unique identifier for the user.
 
     Returns:
         LoginUser | None: The loaded user object if found, otherwise None.
     """
-    if not user_id:
+    if not eppn:
         return None
 
     session_id: str | None = session.get("_id")
     if not session_id:
         return None
 
+    user = get_user_from_store(session_id)
+    if user and user.eppn != eppn:
+        return None
+    return user
+
+
+def get_user_from_store(session_id: str) -> LoginUser | None:
+    """Retrieve a user from the account store using eppn and session_id.
+
+    Args:
+        session_id (str): The unique identifier for the user's session.
+
+    Returns:
+        LoginUser | None: The user object if found, otherwise None.
+    """
     key = build_account_store_key(session_id)
     raw = account_store.hgetall(key)
     if not raw:
@@ -88,9 +105,6 @@ def load_user(user_id: str) -> LoginUser | None:
         k.decode("utf-8"): v.decode("utf-8")
         for k, v in t.cast("dict[bytes, bytes]", raw).items()
     }
-
-    if data["eppn"] != user_id:
-        return None
 
     return LoginUser.model_validate(data | {"session_id": session_id})
 

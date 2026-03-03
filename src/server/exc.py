@@ -83,6 +83,13 @@ class RecordNotFound(DatabaseError):  # noqa: N818
     """
 
 
+class InvalidRecordError(DatabaseError):
+    """Exception for invalid record errors.
+
+    Errors caused by invalid record data or structure.
+    """
+
+
 class DatastoreError(JAIROCloudGroupsManagerError):
     """Exception for datastore errors.
 
@@ -143,4 +150,11 @@ class InvalidFormError(JAIROCloudGroupsManagerError):
     """Exception for invalid form data errors.
 
     Errors caused by invalid form data in API requests.
+    """
+
+
+class ImmutableError(JAIROCloudGroupsManagerError):
+    """Exception for immutable attribute modification errors.
+
+    Errors caused by attempts to modify immutable attributes.
     """
