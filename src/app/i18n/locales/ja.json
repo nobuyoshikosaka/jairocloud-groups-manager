@@ -198,6 +198,14 @@
     "title": "グループ"
   },
   "header": {
+    "global-search": {
+      "matching": "「{searchTerm}」に一致する{category}",
+      "no-results": "「{searchTerm}」に一致する結果は見つかりませんでした。",
+      "pallet-placeholder": "リポジトリ、グループ、ユーザーを検索...",
+      "placeholder": "横断検索...",
+      "search-empty": "検索ワードを入力してください。",
+      "search-loading": "検索中..."
+    },
     "logoAlt": "ヘッダーロゴ"
   },
   "history": {

@@ -12,10 +12,11 @@ import typing as t
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, RootModel
 from werkzeug.datastructures import FileStorage
 
 from server.entities.common import camel_case_config
+from server.entities.search_request import SearchResult
 
 
 ignore_extra_config = ConfigDict(
@@ -69,6 +70,23 @@ class ErrorResponse(BaseModel):
 
     message: str
     """Error message."""
+
+
+class GlobalSearchQuery(BaseModel):
+    """Schema for global search query parameters."""
+
+    q: t.Annotated[str | None, "query"] = None
+    """Search term to filter results."""
+
+    l: t.Annotated[int | None, "length"] = None  # noqa: E741
+    """Page size (number of items per page)."""
+
+
+class GlobalSearchResult(RootModel):
+    """Schema for global search result."""
+
+    root: list[SearchResult]
+    """List of search results."""
 
 
 class RepositoriesQuery(BaseModel):

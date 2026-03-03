@@ -212,6 +212,14 @@
     "title": "Groups"
   },
   "header": {
+    "global-search": {
+      "matching": "{category} matching \"{searchTerm}\"",
+      "no-results": "No results were found matching \"{searchTerm}\".",
+      "pallet-placeholder": "Search repositories, users, groups...",
+      "placeholder": "Global search...",
+      "search-empty": "Please enter your search word.",
+      "search-loading": "Searching..."
+    },
     "logoAlt": "Header App Logo"
   },
   "history": {

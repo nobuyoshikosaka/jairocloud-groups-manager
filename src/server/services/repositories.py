@@ -130,13 +130,14 @@ def search(
 
     repository_summaries = [
         RepositorySummary(
-            id=resolve_repository_id(service_id=result.id),
+            id=repository_id,
             service_name=result.service_name,
             service_url=result.service_url,
             service_id=result.id,
             entity_ids=[eid.value for eid in result.entity_ids or []],
         )
         for result in results.resources
+        if (repository_id := resolve_repository_id(service_id=result.id))
     ]
 
     return SearchResult(

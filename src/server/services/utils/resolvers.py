@@ -12,12 +12,12 @@ from server.config import config
 @t.overload
 def resolve_repository_id(*, fqdn: str) -> str: ...
 @t.overload
-def resolve_repository_id(*, service_id: str) -> str: ...
+def resolve_repository_id(*, service_id: str) -> str | None: ...
 
 
 def resolve_repository_id(
     *, fqdn: str | None = None, service_id: str | None = None
-) -> str:
+) -> str | None:
     """Resolve the repository ID from either FQDN or service ID.
 
     Args:
@@ -25,7 +25,7 @@ def resolve_repository_id(
         service_id (str): The service ID.
 
     Returns:
-        str: The corresponding repository ID.
+        str: The corresponding repository ID, or None if it cannot be resolved.
 
     Raises:
         ValueError: If neither `fqdn` nor `resource_id` is provided.
@@ -37,6 +37,8 @@ def resolve_repository_id(
     if fqdn is not None:
         return fqdn.replace(".", "_").replace("-", "_")
     if service_id is not None:
+        if not service_id.startswith(prefix) or not service_id.endswith(suffix):
+            return None
         return service_id.removeprefix(prefix).removesuffix(suffix)
 
     error = "Either 'fqdn' or 'resource_id' must be provided."

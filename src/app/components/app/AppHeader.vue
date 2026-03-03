@@ -20,6 +20,8 @@ const { navigation: items, submenu } = useMenu()
       <AppLogo />
     </template>
 
+    <AppSearch v-if="isAuthenticated" />
+
     <template #right>
       <UColorModeButton />
       <ULocaleSelect

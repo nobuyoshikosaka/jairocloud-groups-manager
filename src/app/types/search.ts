@@ -75,6 +75,13 @@ type GroupsSearchResult = SearchResult<GroupSummary>
 /** User search result structure */
 type UsersSearchResult = SearchResult<UserSummary>
 
+/** Global search result structure */
+type GlobalSearchResults = (
+  RepositoriesSearchResult & { type: 'repositories' }
+  | GroupsSearchResult & { type: 'groups' }
+  | UsersSearchResult & { type: 'users' }
+)[]
+
 export type {
   FilterOption,
   RepositoriesSearchQuery, RepositoriesSortableKeys,
@@ -82,4 +89,5 @@ export type {
   UsersSearchQuery, UsersSortableKeys,
   SortOrder,
   SearchResult, UsersSearchResult, GroupsSearchResult, RepositoriesSearchResult,
+  GlobalSearchResults,
 }

@@ -48,6 +48,9 @@ class GroupSummary(BaseModel):
     display_name: str | None = None
     """The display name of the group. Alias to 'displayName'."""
 
+    repository_name: str | None = None
+    """The name of the repository the group belongs to. Alias to 'repositoryName'."""
+
     public: bool | None = None
     """Whether the group is public or private."""
 
