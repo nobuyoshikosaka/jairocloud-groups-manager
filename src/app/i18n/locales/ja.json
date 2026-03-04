@@ -21,7 +21,8 @@
     },
     "execute": {
       "failed": "ユーザーの更新に失敗しました",
-      "result_failed": "実行結果の取得に失敗しました"
+      "result_failed": "実行結果の取得に失敗しました",
+      "timeout": "一括更新処理がタイムアウトしました"
     },
     "file-format-error": "対応していないファイル形式です。TSV、CSV、またはExcelファイルを選択してください。",
     "file-required": "ファイルを選択してください",
@@ -36,6 +37,7 @@
       "select": "削除するユーザーを選択してください。"
     },
     "missing_user": "ファイルに含まれていないユーザー",
+    "no-results": "データが見つかりません",
     "operator": "実行ユーザー",
     "repository-required": "リポジトリを選択してください",
     "select-repository": "リポジトリを選択してください",
@@ -67,9 +69,11 @@
     "validation": {
       "error": "不正なデータが検出されました",
       "error-detail": "ファイルを修正して再度アップロードしてください。",
+      "failed": "ファイルの検証に失敗しました",
       "fetch_failed": "検証結果の取得に失敗しました",
       "fix_error": "エラーを修正してください",
-      "results": "データプレビュー"
+      "results": "データプレビュー",
+      "timeout": "ファイルの検証がタイムアウトしました"
     },
     "view-all": "すべて表示"
   },
@@ -94,7 +98,13 @@
     "loading": "読み込み中..."
   },
   "error-page": {
+    "failed": {
+      "bulk-validation": "ファイルの検証に失敗しました",
+      "load-more": "再ダウンロード履歴の取得に失敗しました"
+    },
     "forbidden": {
+      "bulk-edit": "このリポジトリのユーザーを操作する権限がありません。",
+      "bulk-result": "アップロード履歴を閲覧する権限がありません。",
       "group-access": "このグループにアクセスする権限がありません。",
       "group-create": "選択したリポジトリにグループを作成する権限がありません。",
       "group-delete": "このグループを削除する権限がありません。",
@@ -108,6 +118,8 @@
       "user-edit": "このユーザーの情報を変更する権限がありません。"
     },
     "not-found": {
+      "bulk-result": "該当するアップロード履歴が見つかりません。",
+      "bulk-validation": "ファイルの検証結果が見つかりません",
       "group": "該当するグループが見つかりません。",
       "repository": "該当するリポジトリが見つかりません。",
       "user": "該当するユーザーが見つかりません。"
@@ -221,6 +233,7 @@
     "failed": "失敗",
     "failed-count": "失敗件数",
     "file": "ファイル",
+    "file_not_available": "ファイルのダウンロードに失敗しました",
     "filter": {
       "options_not_found": "フィルターの取得に失敗しました",
       "title": "フィルター"
@@ -234,7 +247,7 @@
     "progress": "処理中",
     "public": "公開にする",
     "re-download": "再ダウンロード",
-    "re-download-count": "再DL",
+    "re-download-count": "再DL: {count}回",
     "reset": "リセット",
     "show-detail": "詳細を表示",
     "status": "ステータス",
@@ -258,6 +271,7 @@
     "table-title": "履歴一覧",
     "target": "ダウンロード対象 | アップロード対象",
     "title": "履歴",
+    "toggle_public_status_failed": "公開状態の更新に失敗しました",
     "unavailable": "期限切れ",
     "upload": {
       "date": "アップロード日時"

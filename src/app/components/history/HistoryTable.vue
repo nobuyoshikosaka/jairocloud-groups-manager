@@ -9,14 +9,17 @@ interface Properties<T> {
     showStatus?: boolean
   }
   columns: TableColumn<T, unknown>[]
+  childData?: DownloadHistoryData[]
   pageInfo: string
   offset: number
   fileAvailabilityCheck?: (data: DownloadHistoryData) => boolean
+  loadMoreChildren?: (row: DownloadHistoryData) => void
 }
 defineProps<Properties<T>>()
 
 const { pageSize, pageNumber, updateQuery } = useHistory()
 const { table: { pageSize: { history: pageOptions } } } = useAppConfig()
+const isRowExpandable = (row: DownloadHistoryData) => row.childrenCount && row.childrenCount > 0
 </script>
 
 <template>
@@ -41,12 +44,25 @@ const { table: { pageSize: { history: pageOptions } } } = useAppConfig()
     :columns="columns"
     row-key="id"
     :loading="false"
+    :expandable="isRowExpandable"
+    @expand="loadMoreChildren"
   >
     <template #empty>
       <UEmpty
         icon="i-lucide-search-x"
         :title="$t('history.empty-data')"
       />
+    </template>
+    <template #expanded>
+      <div v-if="tableConfig?.enableExpand && childData">
+        <div
+          v-for="child in childData"
+          :key="child.id"
+          class="pl-8 py-2 border-b last:border-b-0 bg-gray-50"
+        >
+          <div>{{ child.timestamp }} ({{ child.operator }})</div>
+        </div>
+      </div>
     </template>
   </UTable>
 

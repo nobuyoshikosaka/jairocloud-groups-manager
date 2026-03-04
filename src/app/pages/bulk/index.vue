@@ -4,9 +4,12 @@ const selectedRepository = ref<string | undefined>(undefined)
 provide('selectedRepository', selectedRepository)
 const taskId = ref<string | undefined>(undefined)
 provide('taskId', taskId)
+const temporaryFileId = ref<string | undefined>(undefined)
+provide('temporaryFileId', temporaryFileId)
 
-const onValidateComplete = (taskIdValue: string) => {
-  taskId.value = taskIdValue
+const onValidateComplete = (data: BulkProcessingStatus) => {
+  taskId.value = data.taskId
+  temporaryFileId.value = data.tempFileId
   currentStep.value = 'validate'
 }
 

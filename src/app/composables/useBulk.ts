@@ -3,12 +3,9 @@
  */
 import { UBadge, UIcon } from '#components'
 
-import type { FetchError } from 'ofetch'
 import type { BadgeProps, TableColumn } from '@nuxt/ui'
 
-const toast = useToast()
-
-const useBulk = <T extends UploadResult | ValidationResult>() => {
+const useBulk = <T extends EachResult>() => {
   const currentStep = ref<'upload' | 'validate' | 'result'>('upload')
 
   const { t: $t } = useI18n()
@@ -46,13 +43,11 @@ const useBulk = <T extends UploadResult | ValidationResult>() => {
   const pageSize = ref(query.value.l)
   const pageNumber = ref(query.value.p)
   const sortOrder = ref(query.value.d)
-  const makePageInfo = (result: Ref<ResultSummary | undefined>) => {
-    return computed(() => {
-      const start = result.value?.offset ?? 1
-      const total = result.value?.total ?? 0
-      const end = Math.min(start + pageSize.value!, total)
-      return `${start} - ${end} / ${total}`
-    })
+  const makePageInfo = (result: Ref<ExecuteResults | ValidationResults | undefined>) => {
+    const start = result.value?.offset ?? 1
+    const total = result.value?.total ?? 0
+    const end = Math.min(start + pageSize.value!, total)
+    return `${start} - ${end} / ${total}`
   }
 
   const makeStatusFilters = () => {
@@ -159,6 +154,7 @@ const useBulk = <T extends UploadResult | ValidationResult>() => {
     sortOrder,
     columns,
     makePageInfo,
+    makeIndicators,
     updateQuery,
     makeStatusFilters,
   }
@@ -174,209 +170,74 @@ const useUserUpload = () => {
   }
 }
 
-const useValidation = ({ taskId, selectedRepository }: { taskId: Ref<string | undefined>
+type IndicatorColor = 'success' | 'info' | 'error' | 'warning'
+interface Indicator {
+  title: string
+  icon: string
+  number: number
+  color: IndicatorColor
+  key: string
+}
+
+const makeIndicators = (summary: ValidationResults | ExecuteResults | undefined): Indicator[] => [
+  {
+    title: $t('bulk.status.create'),
+    icon: 'i-lucide-plus-circle',
+    number: summary?.summary.create ?? 0,
+    color: 'success',
+    key: 'create',
+  },
+  {
+    title: $t('bulk.status.update'),
+    icon: 'i-lucide-pencil',
+    number: summary?.summary.update ?? 0,
+    color: 'info',
+    key: 'update',
+  },
+  {
+    title: $t('bulk.status.delete'),
+    icon: 'i-lucide-trash-2',
+    number: summary?.summary.delete ?? 0,
+    color: 'error',
+    key: 'delete',
+  },
+  {
+    title: $t('bulk.status.skip'),
+    icon: 'i-lucide-minus-circle',
+    number: summary?.summary.skip ?? 0,
+    color: 'warning',
+    key: 'skip',
+  },
+  {
+    title: $t('bulk.status.error'),
+    icon: 'i-lucide-circle-x',
+    number: summary?.summary.error ?? 0,
+    color: 'error',
+    key: 'error',
+  },
+]
+
+const useValidation = ({ taskId }: { taskId: Ref<string | undefined>
   selectedRepository: Ref<string | undefined> }) => {
   const { query } = useBulk()
-  const validationResults = ref<ValidationResult[]>([])
-  const missingUsers = ref<MissingUser[]>([])
 
   const selectedMissingUsers = useState<Record<string, boolean>>(
     `selection-missing-users:${taskId}`, () => ({}),
   )
-  const fetchValidationResults = (url: string) => {
-    return useFetch<ResultSummary>(url, {
-      method: 'GET',
-      query,
-      lazy: true,
-      server: false,
-      onResponseError({ response }) {
-        switch (response.status) {
-          case 400: { {
-            toast.add({
-              title: $t('bulk.status.error'),
-              description: $t('bulk.validation.fetch_failed'),
-              color: 'error',
-              icon: 'i-lucide-circle-x',
-            }) }
-          break
-          }
-          default:{
-            handleFetchError({ response })
-            break
-          }
-        }
-      },
-    })
-  }
   const selectedCount = computed(() => {
     return Object.values(selectedMissingUsers.value).filter(value => value === true).length
   })
   const toggleSelection = (userId: string) => {
     selectedMissingUsers.value[userId] = !selectedMissingUsers.value[userId]
   }
-  const temporaryFileId = ref<string | undefined>(undefined)
-  const summary = ref({
-    create: 0, update: 0, delete: 0, skip: 0, error: 0,
-  })
-
-  const { handleFetchError } = useErrorHandling()
-  const executeBulkUpdate = async (url: string) => {
-    if (!taskId || !selectedRepository.value) {
-      throw new Error('Missing required data')
-    }
-    try {
-      const results = await $fetch<BulkProcessingStatus>(url, {
-        method: 'POST',
-        body: {
-          tempFileId: temporaryFileId.value,
-          repositoryId: selectedRepository.value,
-          deleteUsers:
-          Object.keys(selectedMissingUsers.value).filter(key => selectedMissingUsers.value[key]),
-        } as ExcuteRequest,
-      })
-      return results
-    }
-    catch (error) {
-      handleFetchError({ response: (error as FetchError).response! })
-      return { taskId: undefined, historyId: undefined }
-    }
-  }
-
-  const useBulkIndicators = computed<BulkIndicator[]>(() => [
-    {
-      title: $t('bulk.status.create'),
-      icon: 'i-lucide-plus-circle',
-      number: summary.value.create ?? 0,
-      color: 'success',
-      key: 'create',
-    },
-    {
-      title: $t('bulk.status.update'),
-      icon: 'i-lucide-pencil',
-      number: summary.value.update ?? 0,
-      color: 'info',
-      key: 'update',
-    },
-    {
-      title: $t('bulk.status.delete'),
-      icon: 'i-lucide-trash-2',
-      number: summary.value.delete ?? 0,
-      color: 'error',
-      key: 'delete',
-    },
-    {
-      title: $t('bulk.status.skip'),
-      icon: 'i-lucide-minus-circle',
-      number: summary.value.skip ?? 0,
-      color: 'warning',
-      key: 'skip',
-    },
-    {
-      title: $t('bulk.status.error'),
-      icon: 'i-lucide-circle-x',
-      number: summary.value.error ?? 0,
-      color: 'error',
-      key: 'error',
-    },
-  ])
 
   return {
-    useBulkIndicators,
     query,
-    validationResults,
-    missingUsers,
     selectedMissingUsers,
     selectedCount,
-    summary,
     taskId,
-    temporaryFileId,
-    fetchValidationResults,
-    executeBulkUpdate,
     toggleSelection,
   }
 }
 
-const useExecuteUpload = () => {
-  const { query } = useBulk()
-  const uploadResult = ref<ResultSummary | undefined>(undefined)
-  const { handleFetchError } = useErrorHandling()
-  const fetchUploadResult = async (url: string) => {
-    const { data, execute } = await useFetch<ResultSummary>(url, {
-      method: 'GET',
-      query,
-      lazy: true,
-      server: false,
-      onResponseError({ response }) {
-        switch (response.status) {
-          case 400: {
-            toast.add({
-              title: $t('bulk.status.error'),
-              description: $t('bulk.execute.result_failed'),
-              color: 'error',
-              icon: 'i-lucide-circle-x',
-            })
-            break
-          }
-          default: {
-            handleFetchError({ response })
-            break
-          }
-        }
-      },
-    })
-    return { uploadResult: data, execute }
-  }
-
-  const resultSummary = computed(() => ({
-    create: uploadResult.value!.summary.create,
-    update: uploadResult.value!.summary.update,
-    delete: uploadResult.value!.summary.delete,
-    skip: uploadResult.value!.summary.skip,
-    error: uploadResult.value!.summary.error,
-  }))
-
-  const useBulkIndicators = computed<BulkIndicator[]>(() => [
-    {
-      title: $t('bulk.status.create'),
-      icon: 'i-lucide-plus-circle',
-      number: resultSummary.value.create ?? 0,
-      color: 'success',
-      key: 'create',
-    },
-    {
-      title: $t('bulk.status.update'),
-      icon: 'i-lucide-pencil',
-      number: resultSummary.value.update ?? 0,
-      color: 'info',
-      key: 'update',
-    },
-    {
-      title: $t('bulk.status.delete'),
-      icon: 'i-lucide-trash-2',
-      number: resultSummary.value.delete ?? 0,
-      color: 'error',
-      key: 'delete',
-    },
-    {
-      title: $t('bulk.status.skip'),
-      icon: 'i-lucide-minus-circle',
-      number: resultSummary.value.skip ?? 0,
-      color: 'warning',
-      key: 'skip',
-    },
-    {
-      title: $t('bulk.status.error'),
-      icon: 'i-lucide-circle-x',
-      number: resultSummary.value.error ?? 0,
-      color: 'error',
-      key: 'error',
-    },
-  ])
-  return {
-    uploadResult,
-    useBulkIndicators,
-    fetchUploadResult,
-    resultSummary,
-  }
-}
-export { useBulk, useUserUpload, useValidation, useExecuteUpload }
+export { useBulk, useUserUpload, useValidation }

@@ -9,6 +9,7 @@ interface DownloadHistoryData {
   parentId: string | undefined
   filePath: string
   fileId: string
+  fileExists: boolean
   repositoryCount: number
   groupCount: number
   userCount: number
@@ -56,13 +57,6 @@ interface HistoryQuery {
   i?: string[]
 }
 
-interface DownloadGroupItem {
-  parent: DownloadHistoryData
-  children: DownloadHistoryData[]
-  hasMoreChildren: boolean
-  childrenLimit: number
-}
-
 interface TableConfig {
   enableExpand?: boolean
   showStatus?: boolean
@@ -89,8 +83,8 @@ interface PublicStatusUpdateRequest {
   public: boolean
 }
 
-type ActionRow = DownloadGroupItem | UploadHistoryData
+type ActionRow = DownloadHistoryData | UploadHistoryData
 
 export type { DownloadHistoryData, UploadHistoryData, DownloadApiModel, UploadApiModel,
   HistoryQuery, TableConfig, FilterOptionsResponse, SelectOption, StatusConfig,
-  PublicStatusUpdateRequest, ActionRow, DownloadGroupItem }
+  PublicStatusUpdateRequest, ActionRow }

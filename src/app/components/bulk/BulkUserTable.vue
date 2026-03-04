@@ -1,6 +1,6 @@
-<script setup lang="ts" generic="T extends UploadResult | ValidationResult">
+<script setup lang="ts">
 defineProps<{
-  data: T[]
+  data: EachResult[]
   totalCount: number
   title?: string
   pageInfo?: string
@@ -44,7 +44,14 @@ const filterSelects = makeStatusFilters()
     :data="data"
     :columns="columns"
     sticky
-  />
+  >
+    <template #empty>
+      <UEmpty
+        icon="i-lucide-search-x"
+        :title="$t('bulk.no-results')"
+      />
+    </template>
+  </UTable>
 
   <div class="flex items-center">
     <div class="flex items-center gap-4 flex-1">

@@ -5,6 +5,7 @@
 """Services for managing bulk."""
 
 import csv
+import io
 import re
 import typing as t
 
@@ -24,14 +25,14 @@ from pydantic import ValidationError
 
 from server.clients import bulks
 from server.config import config
-from server.const import ValidationEntity
+from server.const import USER_ROLES, ValidationEntity
 from server.entities.bulk import (
-    CheckResult,
-    HistorySummary,
+    EachResult,
+    ExecuteResults,
     RepositoryMember,
     ResultSummary,
     UserAggregated,
-    ValidateSummary,
+    ValidateResults,
 )
 from server.entities.bulk_request import BulkOperation
 from server.entities.map_error import MapError
@@ -39,19 +40,24 @@ from server.entities.map_group import MapGroup
 from server.entities.map_user import EPPN, Email, Group, MapUser
 from server.entities.patch_request import RemoveOperation
 from server.entities.summaries import GroupSummary
-from server.entities.user_detail import UserDetail
+from server.entities.user_detail import RepositoryRole, UserDetail
 from server.exc import (
+    FileNotFound,
     FileValidationError,
+    InvalidExportError,
     OAuthTokenError,
     RecordNotFound,
     ResourceInvalid,
-    ResourceNotFound,
     UnexpectedResponseError,
+)
+from server.services.utils.permissions import (
+    get_permitted_repository_ids,
+    is_current_user_system_admin,
 )
 
 from . import groups, history_table, users, utils
 from .token import get_access_token, get_client_secret
-from .utils import session_required
+from .utils import detect_affiliations, session_required
 
 
 @shared_task()
@@ -76,8 +82,12 @@ def validate_upload_data(
 
     data, new_data = build_user_from_file(file_path)
 
-    updata_users: list[UserDetail] = build_user_detail_from_dict(data).root
-    create_users: list[UserDetail] = build_user_detail_from_dict_by_name(new_data).root
+    updata_users: list[UserDetail] = build_user_detail_from_dict(
+        data, repository_id
+    ).root
+    create_users: list[UserDetail] = build_user_detail_from_dict_by_name(
+        new_data, repository_id
+    ).root
     updata_users_id = {u.id for u in updata_users if u.id is not None}
     missing_users = _get_missing_users(repository_member, updata_users_id)
     repo_user_by_id = _get_repo_user_by_id(repository_member, updata_users_id)
@@ -86,7 +96,7 @@ def validate_upload_data(
         updata_users, create_users, repository_member, repo_user_by_id
     )
 
-    results = ValidateSummary(
+    results = ValidateResults(
         results=check_results, summary=summary, missing_user=missing_users
     )
     return history_table.create_upload(
@@ -132,42 +142,51 @@ def build_user_from_file(
             - The second dictionary contains new user data keyed by user name.
 
     Raises:
-        ResourceNotFound: If the file does not exist.
+        FileValidationError: If the file does not exist.
     """
     try:
         gen = _read_file(file_path)
-    except (ResourceInvalid, ResourceNotFound) as e:
+    except (FileValidationError, FileNotFound) as e:
         current_app.logger.error(e)
-        raise ResourceNotFound(str(e)) from e
+        raise FileValidationError(str(e)) from e
     it = next(gen)
-    header = [("" if h is None else str(h).strip()) for h in next(it)]
-    _ = next(it)
-    id_idx = header.index("id")
-    idx_of = {name: i for i, name in enumerate(header)}
 
     data = defaultdict(lambda: defaultdict(list))
     new_data = defaultdict(lambda: defaultdict(list))
-    for row in it:
-        if row is None:
-            continue
-        r = list(row)
 
-        rid = r[id_idx]
-        if not rid:
+    idx_of = {}
+    id_idx = None
+    user_name_idx = None
+    header_row_index = 1
+
+    for i, row in enumerate(it):
+        if i == header_row_index + 1 or row is None:
+            continue
+
+        if i == 0:
+            _ = (str(h).strip() if h is not None else "" for h in row)
+
+        if i == header_row_index:
+            header = [str(h).strip() if h is not None else "" for h in row]
+            idx_of = {name: idx for idx, name in enumerate(header)}
+            id_idx = idx_of.get("id")
             user_name_idx = idx_of.get("user_name")
-            if user_name_idx is None:
-                continue
-            user_name_value = r[user_name_idx]
-            bucket = new_data[user_name_value]
-            for col, j in idx_of.items():
-                if col != "user_name":
-                    bucket[col].append(r[j])
             continue
 
-        bucket = data[rid]
+        r = list(row)
+        rid = r[id_idx] if id_idx is not None else None
+
+        if rid:
+            bucket = data[rid]
+            exclude = {"id"}
+        else:
+            user_name_value = r[user_name_idx] if user_name_idx else None
+            bucket = new_data[user_name_value]
+            exclude = {"user_name"}
         for col, j in idx_of.items():
-            if col != "id":
+            if col not in exclude:
                 bucket[col].append(r[j])
+
     return dict(data), dict(new_data)
 
 
@@ -179,13 +198,13 @@ def _read_file(file_path: str) -> t.Generator:
 
 
     Raises:
-        ResourceNotFound: If the file does not exist.
-        ResourceInvalid : If the format is unsupported or parsing fails.
+        FileNotFound: If the file does not exist.
+        FileValidationError : If the format is unsupported or parsing fails.
     """
     path = Path(file_path)
     if not path.exists():
         error = f"{path}: File not found."
-        raise ResourceNotFound(error)
+        raise FileNotFound(error)
 
     iterator = None
     suffix = path.suffix.lower()
@@ -201,13 +220,13 @@ def _read_file(file_path: str) -> t.Generator:
             iterator = ws.iter_rows(values_only=True)
     if iterator is None:
         error = f"{path.suffix}: Unsupported file format."
-        raise ResourceInvalid(error)
+        raise FileValidationError(error)
 
     yield iterator
 
 
 def build_user_detail_from_dict(
-    data: dict[str, dict[str, list[str]]],
+    data: dict[str, dict[str, list[str]]], repository_id: str
 ) -> UserAggregated:
     """Build UserAggregated from a dictionary of user data.
 
@@ -215,6 +234,7 @@ def build_user_detail_from_dict(
         data (dict[str, dict[str, list[str]]]):
             A dictionary where the key is the user ID and the value is another
             dictionary containing user attributes.
+        repository_id (str): The ID of the repository to which the users belong.
 
     Returns:
         UserAggregated:
@@ -237,6 +257,11 @@ def build_user_detail_from_dict(
             if preferred_language_list is not None and len(preferred_language_list) > 0
             else ""
         )
+        str_role = columns.get("role")
+        role = str_role[0] if str_role and len(str_role) > 0 else None
+        repository_roles: list[RepositoryRole] = [
+            RepositoryRole(id=repository_id, user_role=_resolve_non_sysadmin_role(role))
+        ]
 
         eppns: set[str] = set(columns.get("edu_person_principal_names[]") or [])
         emails: set[str] = set(columns.get("emails[]") or [])
@@ -263,6 +288,7 @@ def build_user_detail_from_dict(
                 user_name=user_name,
                 emails=emails,
                 preferred_language=preferred_language,
+                repository_roles=repository_roles,
                 groups=groups,
             )
         )
@@ -271,7 +297,7 @@ def build_user_detail_from_dict(
 
 
 def build_user_detail_from_dict_by_name(
-    data: dict[str, dict[str, list[str]]],
+    data: dict[str, dict[str, list[str]]], repository_id: str
 ) -> UserAggregated:
     """Build UserAggregated from a dictionary of user data.
 
@@ -279,6 +305,7 @@ def build_user_detail_from_dict_by_name(
         data (dict[str, dict[str, list[str]]]):
             A dictionary where the key is the user name and the value is another
             dictionary containing user attributes.
+        repository_id (str): The ID of the repository to which the users belong.
 
     Returns:
         UserAggregated:
@@ -303,6 +330,11 @@ def build_user_detail_from_dict_by_name(
 
         gid_list: list[str] = list(columns.get("groups[].id") or [])
         gname_list: list[str] = list(columns.get("groups[].name") or [])
+        str_role = columns.get("role")
+        role = str_role[0] if str_role and len(str_role) > 0 else None
+        repository_roles: list[RepositoryRole] = [
+            RepositoryRole(id=repository_id, user_role=_resolve_non_sysadmin_role(role))
+        ]
         groups: list[GroupSummary] = []
         seen = set()
         for gid, gname in zip_longest(gid_list, gname_list, fillvalue=None):
@@ -323,11 +355,26 @@ def build_user_detail_from_dict_by_name(
                 user_name=user_name,
                 emails=emails,
                 preferred_language=preferred_language,
+                repository_roles=repository_roles,
                 groups=groups,
             )
         )
 
     return UserAggregated(root=users)
+
+
+def _resolve_non_sysadmin_role(role: str | None) -> USER_ROLES | None:
+    if role is None:
+        return None
+
+    value_to_member = {m.value: m for m in USER_ROLES}
+
+    member = value_to_member.get(role)
+
+    if member is None or member is USER_ROLES.SYSTEM_ADMIN:
+        return None
+
+    return member
 
 
 def _get_missing_users(
@@ -363,13 +410,13 @@ def _build_check_results(
     create_users: list[UserDetail],
     repository_member: RepositoryMember,
     repo_user_by_id: dict[str, UserDetail],
-) -> tuple[list[CheckResult], HistorySummary]:
+) -> tuple[list[EachResult], ResultSummary]:
     count_create = 0
     count_update = 0
     count_delete = 0
     count_skip = 0
     count_error = 0
-    check_results: list[CheckResult] = []
+    check_results: list[EachResult] = []
     for u in create_users:
         code = None
         user_group_ids = {g.id for g in u.groups} if u.groups else set()
@@ -377,7 +424,7 @@ def _build_check_results(
         if not user_group_ids.issubset(repository_member.groups):
             code = "Group ID does not exist"
             check_results.append(
-                CheckResult(
+                EachResult(
                     id=u.id,
                     eppn=u.eppns or [],
                     user_name=u.user_name,
@@ -393,7 +440,7 @@ def _build_check_results(
         if not _check_value(u):
             code = "Invalid user data"
             check_results.append(
-                CheckResult(
+                EachResult(
                     id=u.id,
                     eppn=u.eppns or [],
                     user_name=u.user_name,
@@ -407,7 +454,7 @@ def _build_check_results(
             continue
 
         check_results.append(
-            CheckResult(
+            EachResult(
                 id=u.id,
                 eppn=u.eppns or [],
                 user_name=u.user_name,
@@ -436,7 +483,7 @@ def _build_check_results(
             count_skip += 1
         code = _check_immutable_attributes(repo_user, u)
         check_results.append(
-            CheckResult(
+            EachResult(
                 id=u.id,
                 eppn=repo_user.eppns or [],
                 user_name=repo_user.user_name,
@@ -446,7 +493,7 @@ def _build_check_results(
                 code=code,
             )
         )
-    summary = HistorySummary(
+    summary = ResultSummary(
         create=count_create,
         update=count_update,
         delete=count_delete,
@@ -467,7 +514,7 @@ def _check_value(user: UserDetail) -> bool:
     """
     if not user.id:
         return False
-    if not re.compile(r"^[A-Za-z0-9]{1,50}$").fullmatch(user.id):
+    if not re.compile(r"^[A-Za-z0-9._-]{1,50}$").fullmatch(user.id):
         return False
     return len(user.user_name) <= ValidationEntity.USER_NAME_MAX_LENGTH
 
@@ -484,22 +531,20 @@ def _check_immutable_attributes(
     Returns:
         str | None: The name of the immutable attribute if found, None otherwise.
     """
+    if original.user_name != update_user.user_name:
+        return "user_name is immutable"
     if original.emails != update_user.emails:
-        return "emails"
+        return "emails are immutable"
     if original.eppns != update_user.eppns:
-        return "eppns"
+        return "eppns are immutable"
     if original.preferred_language != update_user.preferred_language:
-        return "preferred_language"
-    if original.last_modified != update_user.last_modified:
-        return "last_modified"
-    if original.created != update_user.created:
-        return "created"
+        return "preferred_language is immutable"
     return None
 
 
 def get_validate_result(
     history_id: UUID, status_filter: list[str], offset: int, size: int
-) -> ValidateSummary:
+) -> ValidateResults:
     """Get the validation result summary for the specified upload history ID.
 
     Args:
@@ -514,11 +559,11 @@ def get_validate_result(
     results = history_table.get_paginated_upload_results(
         history_id, offset, size, status_filter
     )
-    check_results = [CheckResult.model_validate(it) for it in results]
+    check_results = [EachResult.model_validate(it) for it in results]
 
     summary = history_table.get_upload_results(history_id, "summary")
     missing_user = history_table.get_upload_results(history_id, "missingUser")
-    return ValidateSummary.model_validate({
+    return ValidateResults.model_validate({
         "results": check_results,
         "summary": summary,
         "missingUser": missing_user or [],
@@ -529,36 +574,37 @@ def get_validate_result(
 
 @shared_task()
 def update_users(
-    history_id: UUID, temp_file_id: UUID, delete_users: list[str] | None
+    history_id: UUID, temp_file_id: UUID, remove_users: list[str] | None
 ) -> UUID:
     """Perform bulk update of users based on the validation results.
 
     Args:
         history_id (UUID): The ID of the upload history.
         temp_file_id (UUID): The ID of the temporary file.
-        delete_users (list[str] | None): The list of user IDs to be deleted.
+        remove_users (list[str] | None):
+          The list of user IDs to be removed by repository.
 
     Returns:
         UUID: The ID of the upload history record.
 
     Raises:
-        ResourceNotFound: If the upload history does not exist.
+        FileNotFound: If the upload history does not exist.
         requests.RequestException: If there is an error communicating with mAP Core API.
         ValidationError: If there is an error parsing the response from mAP Core API.
         OAuthTokenError: If there is an issue with the access token.
         UnexpectedResponseError: If there is an unexpected response from mAP Core API.
-        ResourceInvalid: If there is an invalid resource error from mAP Core API.
         FileValidationError: If there are errors in the validation results.
+        ResourceInvalid: If there is a resource invalid error from mAP Core API.
     """
     upload_data = history_table.get_upload_by_id(history_id)
     if not upload_data:
         error = f"History not found: {history_id}"
         current_app.logger.error(error)
-        raise ResourceNotFound(error)
+        raise FileNotFound(error)
 
     # file content must contain at least one repository.
     repository_id = upload_data.file.file_content["repositories"][0]["id"]
-    check_results: list[CheckResult] = upload_data.results.get("results", [])
+    check_results: list[EachResult] = upload_data.results.get("results", [])
 
     summary = upload_data.results.get("summary", {})
     if summary.get("error", 1) > 0:
@@ -567,7 +613,7 @@ def update_users(
         raise FileValidationError(error)
 
     bulk_ops, count_delete = _build_bulk_operations_from_check_results(
-        repository_id, check_results, delete_users
+        repository_id, check_results, remove_users
     )
     summary.update({"delete": count_delete})
 
@@ -636,25 +682,25 @@ def save_file(temp_file_id: UUID) -> UUID:
         UUID: The ID of the saved permanent file.
 
     Raises:
-        ResourceNotFound: If the temporary file does not exist.
-        ResourceInvalid: If the file format is invalid.
+        FileNotFound: If the temporary file does not exist.
+        FileValidationError: If the file format is invalid.
     """
     try:
         files = history_table.get_file_by_id(temp_file_id)
         repository_id = files.file_content["repositories"][0]["id"]
     except (KeyError, AttributeError) as e:
         current_app.logger.error("Failed to retrieve temporary file: %s", temp_file_id)
-        raise ResourceNotFound(str(e)) from e
+        raise FileNotFound(str(e)) from e
 
     file_path = Path(files.file_path)
     if file_path.parent != Path(config.STORAGE.local.temporary):
         return files.id
     if not file_path.exists():
         error_msg = f"File not found: {file_path}"
-        raise ResourceNotFound(error_msg)
+        raise FileNotFound(error_msg)
     if file_path.suffix not in {".csv", ".tsv", ".xlsx"}:
         error = "not supported file format."
-        raise ResourceInvalid(error)
+        raise FileValidationError(error)
 
     target_dir = Path(config.STORAGE.local.storage) / datetime.now(UTC).strftime(
         "%Y/%m"
@@ -668,7 +714,7 @@ def save_file(temp_file_id: UUID) -> UUID:
     )
 
 
-def build_map_user_from_check_result(user: CheckResult) -> MapUser:
+def build_map_user_from_check_result(user: EachResult) -> MapUser:
     """Build MapUser from CheckResult.
 
     Args:
@@ -718,7 +764,7 @@ def build_remove_user_path(user: UserDetail, repository_id: str) -> BulkOperatio
 
 
 def _build_bulk_operations_from_check_results(
-    repository_id: str, check_results: list[CheckResult], delete_users: list[str] | None
+    repository_id: str, check_results: list[EachResult], remove_users: list[str] | None
 ) -> tuple[list[BulkOperation], int]:
     repository_member = get_repository_member(repository_id)
 
@@ -761,7 +807,7 @@ def _build_bulk_operations_from_check_results(
     ])
 
     delete_user_list = users.search(
-        utils.make_criteria_object("users", i=delete_users), raw=True
+        utils.make_criteria_object("users", i=remove_users), raw=True
     ).resources
 
     group_user_ops = {}
@@ -776,7 +822,7 @@ def _build_bulk_operations_from_check_results(
                 "remove"
             ].add(user.id)
         check_results.append(
-            CheckResult(
+            EachResult(
                 id=user.id,
                 eppn=user.eppns or [],
                 user_name=user.user_name,
@@ -824,7 +870,7 @@ def _build_groups_update_bulk_operations(
 
 def get_upload_result(
     history_id: UUID, status_filter: list[str], offset: int, size: int
-) -> ResultSummary:
+) -> ExecuteResults:
     """Get the bulk operation result summary with filtering and pagination.
 
     Args:
@@ -834,7 +880,7 @@ def get_upload_result(
         offset (int): The offset for pagination.
 
     Returns:
-        ResultSummary: The summary of the bulk operation result.
+        ExecuteResults: The summary of the bulk operation result.
 
     Raises:
         RecordNotFound: If the upload history with the given ID does not exist.
@@ -861,7 +907,7 @@ def get_upload_result(
         "offset": offset,
         "pageSize": size,
     }
-    return ResultSummary.model_validate(payload)
+    return ExecuteResults.model_validate(payload)
 
 
 @shared_task()
@@ -879,3 +925,113 @@ def delete_temporary_file(temp_id: str) -> None:
     if Path(file_path).exists():
         Path(file_path).unlink()
     history_table.delete_file_by_id(temp_file_id)
+
+
+def chack_permission_to_operation(history_id: UUID, operator_id: str) -> bool:
+    """Check if the user has permission to perform bulk operation.
+
+    Args:
+        history_id (UUID): The ID of the upload history.
+        operator_id (str): The ID of the operator.
+
+    Returns:
+        bool: True if the user has permission, False otherwise.
+
+    Raises:
+        RecordNotFound: If the upload history with the given ID does not exist.
+    """
+    upload = history_table.get_upload_by_id(history_id)
+    if not upload:
+        error = f"upload history not found: {history_id}"
+        current_app.logger.error(error)
+        raise RecordNotFound(error)
+    return upload.operator_id == operator_id
+
+
+def chack_permission_to_view(history_id: UUID) -> bool:
+    """Check if the user has permission to view the specified upload history.
+
+    Args:
+        history_id (UUID): The ID of the upload history.
+
+    Returns:
+        bool: True if the user has permission, False otherwise.
+
+    Raises:
+        RecordNotFound: If the upload history with the given ID does not exist.
+    """
+    if is_current_user_system_admin():
+        return True
+    upload = history_table.get_upload_by_id(history_id)
+    if not upload:
+        error = f"upload history not found: {history_id}"
+        current_app.logger.error(error)
+        raise RecordNotFound(error)
+    repository_id = upload.file.file_content["repositories"][0]["id"]
+    return repository_id not in get_permitted_repository_ids() and upload.public
+
+
+def make_export_file(user_ids: list[str]) -> t.BinaryIO:
+    """Generate a file containing user details for the specified user IDs.
+
+    Args:
+        user_ids (list[str]): A list of user IDs to include in the export file.
+
+    Returns:
+        BinaryIO: A binary file-like object containing the exported user details.
+
+    Raises:
+        InvalidExportError: if not have permission to export the user.
+    """
+    output = io.StringIO()
+    writer = csv.writer(output)
+    header = [
+        "id",
+        "user_name",
+        "groups[].id",
+        "groups[].name",
+        "role",
+        "edu_person_principal_names[]",
+        "preferred_language",
+        "emails[]",
+    ]
+    writer.writerow(header)
+    users_list = users.search(
+        utils.make_criteria_object("users", i=user_ids), raw=True
+    ).resources
+    permitted_repository_ids = get_permitted_repository_ids()
+
+    for map_user in users_list:
+        roles, groups = detect_affiliations([g.value for g in map_user.groups or []])
+        if any(role.role == USER_ROLES.SYSTEM_ADMIN for role in roles):
+            error = f"User '{map_user.id}' is a system admin and cannot be exported."
+            raise InvalidExportError(error)
+        if not is_current_user_system_admin() and not any(
+            group.repository_id in permitted_repository_ids for group in groups
+        ):
+            error = f"the current user does not have permission to access user '{map_user.id}'."  # noqa: E501
+            raise InvalidExportError(error)
+
+        group_ids = [g.group_id for g in groups] or [""]
+        roles_list = [r.role.value for r in roles] or [""]
+        eppns = [eppn.value for eppn in map_user.edu_person_principal_names or []]
+        emails = [email.value for email in map_user.emails or []]
+
+        max_len = max(len(group_ids), len(roles_list), len(eppns), len(emails))
+
+        for i in range(max_len):
+            row = [
+                map_user.id,
+                map_user.user_name,
+                group_ids[i] if i < len(group_ids) else group_ids[len(group_ids) - 1],
+                "",  # group name is not exported. it can't be get from mAP Core API search user endpoint  # noqa: E501
+                roles_list[i]
+                if i < len(roles_list)
+                else roles_list[len(roles_list) - 1],
+                eppns[i] if i < len(eppns) else eppns[len(eppns) - 1],
+                map_user.preferred_language or "",
+                emails[i] if i < len(emails) else emails[len(emails) - 1],
+            ]
+            writer.writerow(row)
+
+    return io.BytesIO(output.getvalue().encode("utf-8"))

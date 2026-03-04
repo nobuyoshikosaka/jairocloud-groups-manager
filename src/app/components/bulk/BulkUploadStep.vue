@@ -2,7 +2,7 @@
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
 const emit = defineEmits<{
-  next: [taskId: string]
+  next: [data: BulkProcessingStatus]
 }>()
 
 const { isProcessing } = useUserUpload()
@@ -62,13 +62,32 @@ const handleNext = async (event: FormSubmitEvent<Schema>) => {
     method: 'POST',
     body: formData,
     onResponseError({ response }) {
-      handleFetchError({ response })
+      switch (response.status) {
+        case 403: {
+          showError({
+            status: 403,
+            statusText: 'Forbidden',
+            message: $t('error-page.forbidden.bulk-edit'),
+          })
+          break }
+        case 404: {
+          showError({
+            status: 404,
+            statusText: 'Not Found',
+            message: $t('error-page.not-found.repository'),
+          })
+          break
+        }
+        default: {
+          handleFetchError({ response })
+        }
+      }
     },
     server: false,
   })
 
-  if (data.value?.taskId) {
-    emit('next', data.value.taskId)
+  if (data.value) {
+    emit('next', data.value)
   }
 }
 

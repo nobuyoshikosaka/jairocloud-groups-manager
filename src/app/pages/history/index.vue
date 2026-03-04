@@ -2,9 +2,11 @@
 import type { TabsItem } from '@nuxt/ui'
 
 const {
-  loading, query, makePageInfo, updateQuery, loadChildren, togglePublicStatus,
+  query, makePageInfo, updateQuery,
   tab, uploadColumns, downloadColumns, isFileAvailable,
 } = useHistory()
+
+const childData = ref<DownloadApiModel>()
 
 const tabItems = computed<TabsItem[]>(() => [
   { label: $t('history.tab.download'), icon: 'i-lucide-download', slot: 'download',
@@ -13,7 +15,7 @@ const tabItems = computed<TabsItem[]>(() => [
 ])
 
 const { handleFetchError } = useErrorHandling()
-const { data } = useFetch<DownloadApiModel | UploadApiModel>(`/api/history/${tab.value}`, {
+const { data, execute } = useFetch<DownloadApiModel | UploadApiModel>(`/api/history/${tab.value}`, {
   method: 'GET',
   query,
   onResponseError: async ({ response }) => {
@@ -30,6 +32,7 @@ const activeTab = computed<'download' | 'upload'>({
   },
   set(tab) {
     updateQuery({ tab: tab })
+    execute()
   },
 })
 
@@ -37,37 +40,30 @@ const toggleSort = () => {
   updateQuery({ d: query.value.d === 'asc' ? 'desc' : 'asc' })
 }
 
-const handleLoadMoreChildren = async (parentId: string) => {
-  await loadChildren(parentId)
-}
-
-const handleAction = async (action: string, row: ActionRow) => {
-  const isDownload = 'parent' in row
-  const data = isDownload ? row.parent : row
-
-  switch (action) {
-    case 'toggle-public': {
-      const result = await togglePublicStatus(
-        data.id,
-        data.public,
-      )
-      if (result !== undefined) {
-        data.public = result
+const handleLoadMoreChildren = async (row: DownloadHistoryData) => {
+  const { data } = await useFetch<DownloadApiModel>('/api/history/download', {
+    method: 'GET',
+    query: {
+      i: [row.id],
+    },
+    onResponseError({ response }) {
+      switch (response.status) {
+        case 400: {
+          showError({
+            status: 400,
+            statusText: 'Bad Request',
+            message: $t('error-page.failed.load-more'),
+          })
+          break
+        }
+        default:{
+          handleFetchError({ response })
+          break
+        }
       }
-      break
-    }
-    case 'redownload': {
-      if (data.fileId) {
-        const url = `/api/history/files/${data.fileId}`
-        window.open(url, '_blank')
-      }
-      break
-    }
-    case 'show-detail': {
-      navigateTo(`/bulk/${data.id}`)
-      break
-    }
-  }
+    },
+  })
+  childData.value = data.value
 }
 </script>
 
@@ -88,19 +84,16 @@ const handleAction = async (action: string, row: ActionRow) => {
       <div class="container mx-auto px-4">
         <HistoryFilter target="download" />
 
-        <div v-if="loading" class="text-center text-sm text-muted">
-          {{ $t('common.loading') }}
-        </div>
-        <div v-else>
+        <div>
           <HistoryTable
             key="download-table" :data="(data?.resources ?? []) as DownloadHistoryData[]"
             :total="data?.total ?? 0"
             :table-config="{ enableExpand: true, showStatus: false }"
             :file-availability-check="isFileAvailable"
             :page-info="pageInfo" :offset="offset"
+            :child-data="childData?.resources ?? []"
             :columns="downloadColumns"
             @sort-change="toggleSort"
-            @action="handleAction"
             @load-more-children="handleLoadMoreChildren"
           />
         </div>
@@ -111,18 +104,13 @@ const handleAction = async (action: string, row: ActionRow) => {
       <div class="container mx-auto px-4">
         <HistoryFilter target="upload" />
 
-        <div v-if="loading" class="text-center text-sm text-muted">
-          {{ $t('common.loading') }}
-        </div>
-        <div v-else>
+        <div>
           <HistoryTable
             key="upload-table" :data="(data?.resources ?? []) as UploadHistoryData[]"
             :total="data?.total ?? 0"
             :table-config="{ enableExpand: false, showStatus: true }"
-            :file-availability-check="isFileAvailable"
             :page-info="pageInfo" :offset="offset"
             :columns="uploadColumns"
-            @action="handleAction"
             @sort-change="toggleSort"
           />
         </div>

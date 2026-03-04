@@ -21,7 +21,8 @@
     },
     "execute": {
       "failed": "User update failed",
-      "result_failed": "Failed to get execution results"
+      "result_failed": "Failed to get execution results",
+      "timeout": "Bulk update process timed out"
     },
     "file-format-error": "The file format is not supported. \nChoose TSV, CSV, or Excel file.",
     "file-required": "Please select file",
@@ -36,6 +37,7 @@
       "select": "Please select the user to delete."
     },
     "missing_user": "User not included in file",
+    "no-results": "data not found",
     "operator": "Execution user",
     "repository-required": "Please select a repository",
     "select-repository": "Please select a repository",
@@ -67,9 +69,11 @@
     "validation": {
       "error": "Invalid data detected",
       "error-detail": "Please correct the file and upload it again.",
+      "failed": "File validation failed",
       "fetch_failed": "Failed to obtain verification results",
       "fix_error": "Please fix the error",
-      "results": "data preview"
+      "results": "data preview",
+      "timeout": "File validation timed out"
     },
     "view-all": "Show all"
   },
@@ -104,7 +108,13 @@
     }
   },
   "error-page": {
+    "failed": {
+      "bulk-validation": "File validation failed",
+      "load-more": "Failed to retrieve download history again"
+    },
     "forbidden": {
+      "bulk-edit": "You do not have permission to work with users of this repository.",
+      "bulk-result": "You do not have permission to view upload history.",
       "group-access": "You do not have permission to access this group.",
       "group-create": "You do not have permission to create groups in the selected repository.",
       "group-delete": "You do not have permission to delete this group.",
@@ -118,6 +128,8 @@
       "user-edit": "You do not have permission to change this user's information."
     },
     "not-found": {
+      "bulk-result": "No matching upload history was found.",
+      "bulk-validation": "File verification results not found",
       "group": "No such group found.",
       "repository": "No such repository found.",
       "user": "No such user found."
@@ -236,6 +248,7 @@
     "failed": "failure",
     "failed-count": "Number of failures",
     "file": "file",
+    "file_not_available": "File download failed",
     "filter": {
       "options_not_found": "Failed to get filter",
       "title": "filter"
@@ -249,7 +262,7 @@
     "progress": "Processing",
     "public": "Make it public",
     "re-download": "re-download",
-    "re-download-count": "Re-DL",
+    "re-download-count": "Re-DL: {count} times",
     "reset": "reset",
     "show-detail": "Show details",
     "status": "status",
@@ -273,6 +286,7 @@
     "table-title": "History list",
     "target": "Download target | Upload target",
     "title": "History",
+    "toggle_public_status_failed": "Failed to update publishing status",
     "unavailable": "Expired",
     "upload": {
       "date": "Upload date and time"

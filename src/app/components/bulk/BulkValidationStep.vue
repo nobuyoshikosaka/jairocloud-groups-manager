@@ -1,44 +1,50 @@
 <script setup lang="ts">
 import { UCheckbox, UIcon } from '#components'
 
-const emit = defineEmits<{
-  next: [ExcuteResponse]
-  prev: []
-}>()
-
+const properties = defineProps<{ onPrevious?: () => void
+  onNext?: (data: ExcuteResponse) => void }>()
 const toast = useToast()
 
 const taskId = inject<Ref<string | undefined>>('taskId', ref(undefined))
+const temporaryFileId = inject<Ref<string | undefined>>('temporaryFileId', ref(undefined))
 const selectedRepository = inject<Ref<string | undefined>>('selectedRepository', ref(undefined))
 const {
-  validationResults,
-  missingUsers,
+  query,
   selectedMissingUsers,
   selectedCount,
-  summary,
-  executeBulkUpdate,
   toggleSelection,
-  useBulkIndicators,
-  fetchValidationResults,
 } = useValidation({ taskId, selectedRepository })
 
-const { makePageInfo } = useBulk()
+const { makePageInfo, makeIndicators } = useBulk()
 const { polling: { interval, maxAttempts } } = useAppConfig()
-const isProcessing = ref<boolean>(false)
 const { handleFetchError } = useErrorHandling()
-const { data: status, execute }
+const { data: status, execute: getValidateStatus }
   = await useFetch<BulkProcessingStatus>(`/api/bulk/validate/status/${taskId.value}`,
     {
       method: 'GET',
       lazy: true,
       server: false,
-      onResponseError({ response }) { handleFetchError({ response }) },
-    },
-  )
+      onResponseError({ response }) {
+        switch (response.status) {
+          case 404: {
+            showError({
+              status: 404,
+              statusText: 'Not Found',
+              message: $t('error-page.not-found.bulk-validation'),
+            })
+            break
+          }
+          default:{
+            handleFetchError({ response })
+            break
+          }
+        }
+      },
+    })
 
 const pollValidationStatus = async () => {
   for (let index = 0; index < maxAttempts; index++) {
-    await execute()
+    await getValidateStatus()
     const st = (status.value?.status)
     if (st === 'SUCCESS') return
     if (st === 'FAILURE') {
@@ -60,63 +66,128 @@ const pollValidationStatus = async () => {
     icon: 'i-lucide-circle-x',
   })
 }
-const data = ref()
-const pageInfo = ref()
+
+const { data: validationResults, execute: getValidateResult }
+  = await useFetch<ValidationResults>(`/api/bulk/validate/result/${taskId.value}`, {
+    method: 'GET',
+    query,
+    lazy: true,
+    server: false,
+    onResponseError({ response }) {
+      switch (response.status) {
+        case 400: {
+          showError({
+            status: 400,
+            statusText: 'Bad Request',
+            message: $t('error-page.failed.bulk-validation'),
+          })
+          break
+        }
+        case 403: {
+          showError({
+            status: 403,
+            statusText: 'Forbidden',
+            message: $t('error-page.forbidden.bulk-edit'),
+          })
+          break
+        }
+        case 404: {
+          showError({
+            status: 404,
+            statusText: 'Not Found',
+            message: $t('error-page.not-found.bulk-validation'),
+          })
+          break
+        }
+        default:{
+          handleFetchError({ response })
+          break
+        }
+      }
+    },
+  })
+
 onMounted(async () => {
   await pollValidationStatus()
-  data.value = await fetchValidationResults(`/api/bulk/validate/result/${taskId.value}`)
-  pageInfo.value = makePageInfo(data)
+  getValidateResult()
 })
 
-const offset = computed(() => (data.value?.offset ?? 1))
-const canProceed = computed(() => summary.value.error === 0)
+const offset = computed(() => (validationResults.value?.offset ?? 1))
+const canProceed = computed(() => validationResults.value?.summary.error === 0)
+const totalCount = computed(() => validationResults.value?.total)
+const indicators = makeIndicators(validationResults.value)
+const pageInfo = computed(() => makePageInfo(validationResults))
 
 const handleNext = async () => {
   if (!canProceed.value) return
 
-  isProcessing.value = true
-
+  if (!taskId || !selectedRepository.value) {
+    throw new Error('Missing required data')
+  }
   try {
-    const { taskId, historyId } = await executeBulkUpdate(`/api/bulk/execute`)
-    if (historyId) {
-      emit('next', { taskId, historyId })
+    const { taskId, historyId } = await $fetch<BulkProcessingStatus>(`/api/bulk/execute`, {
+      method: 'POST',
+      body: {
+        tempFileId: temporaryFileId.value,
+        repositoryId: selectedRepository.value,
+        deleteUsers:
+          Object.keys(selectedMissingUsers.value).filter(key => selectedMissingUsers.value[key]),
+      } as ExcuteRequest,
+      onResponseError({ response }) {
+        switch (response.status) {
+          case 400: {
+            toast.add({
+              title: $t('bulk.status.error'),
+              description: $t('bulk.execute.failed'),
+              color: 'error',
+              icon: 'i-lucide-circle-x',
+            })
+            break
+          }
+          case 403: {
+            showError({
+              status: 403,
+              statusText: 'Forbidden',
+              message: $t('error-page.forbidden.bulk-edit'),
+            })
+            break
+          }
+          default:{
+            handleFetchError({ response })
+            break
+          }
+        }
+      },
+    })
+    if (historyId && taskId) {
+      properties.onNext?.({ taskId, historyId })
     }
   }
   catch {
-    useToast().add({
-      title: $t('bulk.status.error'),
-      description: $t('bulk.execute.failed'),
-      color: 'error',
-      icon: 'i-lucide-circle-x',
-    })
-  }
-  finally {
-    isProcessing.value = false
+    // Already handled in onResponseError
   }
 }
 
 const handlePrevious = () => {
-  emit('prev')
+  properties.onPrevious?.()
 }
 
 const selectAllMissingUsers = () => {
   selectedMissingUsers.value = Object.fromEntries(
-    missingUsers.value.map(user => [user.id, true]),
+    validationResults.value?.missingUsers.map(user => [user.id, true]) ?? [],
   )
 }
 
 const deselectAllMissingUsers = () => {
   selectedMissingUsers.value = {}
 }
-
-const totalCount = computed(() => data.value.total)
-const indicators = useBulkIndicators
 </script>
 
 <template>
   <div class="space-y-6">
     <UAlert
-      v-if="summary.error > 0" color="error" icon="i-lucide-alert-circle"
+      v-if="validationResults?.summary && validationResults.summary.error > 0"
+      color="error" icon="i-lucide-alert-circle"
       :as="$t('bulk.validation.error')" :description="$t('bulk.validation.error-detail')"
     />
 
@@ -132,16 +203,16 @@ const indicators = useBulkIndicators
     </div>
 
     <BulkUserTable
-      :data="validationResults" :total-count="totalCount"
+      :data="validationResults?.results ?? []" :total-count="totalCount ?? 0"
       :page-info="pageInfo" :offset="offset"
       :title="$t('bulk.validation.results')"
     />
 
-    <div v-if="missingUsers.length > 0" variant="outline">
+    <div v-if="validationResults?.missingUsers.length ?? 0 > 0" variant="outline">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <h3 class="font-semibold">
-            {{ $t('bulk.missing_user') }} ({{ missingUsers.length }})
+            {{ $t('bulk.missing_user') }} ({{ validationResults?.missingUsers.length ?? 0 }})
           </h3>
         </div>
         <div class="flex items-center gap-2">
@@ -170,7 +241,8 @@ const indicators = useBulkIndicators
 
       <div class="space-y-2">
         <div
-          v-for="user in missingUsers" :key="user.id" class="flex items-center gap-3 p-3
+          v-for="user in validationResults?.missingUsers" :key="user.id"
+          class="flex items-center gap-3 p-3
             rounded-lg border cursor-pointer hover:bg-elevated/50 transition-colors"
           :class="selectedMissingUsers[user.id]
             ? 'border-error bg-error/5' : 'border-default'"
@@ -200,12 +272,11 @@ const indicators = useBulkIndicators
     <div class="flex justify-between">
       <UButton
         :label="$t('button.back')" color="neutral" variant="outline" icon="i-lucide-arrow-left"
-        :disabled="isProcessing" @click="handlePrevious"
+        loading-auto @click="handlePrevious"
       />
       <UButton
         :label="$t('bulk.upload.execute')" icon="i-lucide-arrow-right" trailing
-        :loading="isProcessing"
-        :disabled="!canProceed || isProcessing" @click="handleNext"
+        loading-auto :disabled="!canProceed" @click="handleNext"
       >
         <template v-if="!canProceed" #trailing>
           <UTooltip :text="$t('bulk.validation.fix_error')">

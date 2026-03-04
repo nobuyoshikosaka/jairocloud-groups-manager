@@ -14,7 +14,6 @@ const {
   updateQuery,
   isFiltered,
   makeHistoryFilters,
-  loading,
 } = useHistoryFilter()
 
 const { handleFetchError } = useErrorHandling()
@@ -68,10 +67,6 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
         dateRange.end = undefined
       }"
     />
-  </div>
-
-  <div v-if="loading" class="text-sm text-muted mb-2">
-    {{ $t('common.loading') }}
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">

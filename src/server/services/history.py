@@ -7,6 +7,7 @@
 import typing as t
 
 from datetime import date, datetime, time, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from flask import current_app
 from sqlalchemy import cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import aliased
 
 from server.const import DEFAULT_SEARCH_COUNT
 from server.db.history import DownloadHistory, Files, UploadHistory
@@ -183,9 +185,11 @@ def get_download_history_data(
     count_stmt = select(func.count()).select_from(base_stmt.subquery())
     total = db.session.execute(count_stmt).scalar_one()
 
+    child = aliased(DownloadHistory)
     subq = (
-        select(func.count(DownloadHistory.id))
-        .where(DownloadHistory.parent_id == DownloadHistory.id)
+        select(func.count(child.id))
+        .where(child.parent_id == DownloadHistory.id)
+        .correlate(DownloadHistory)
         .scalar_subquery()
     )
     stmt = base_stmt.add_columns(subq)
@@ -211,6 +215,7 @@ def get_download_history_data(
             "group_count": len(file.file_content.get("groups", [])),
             "user_count": len(file.file_content.get("users", [])),
             "children_count": children_count,
+            "file_exists": Path(file.file_path).exists(),
         }
         for history, file, children_count in t.cast(
             "t.Sequence[tuple[DownloadHistory, Files, int]]", rows
@@ -219,7 +224,7 @@ def get_download_history_data(
     return SearchResult[DownloadHistoryData].model_validate(
         {
             "total": total,
-            "pageSize": page_size,
+            "page_size": page_size,
             "offset": offset,
             "resources": data,
         },
