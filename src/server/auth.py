@@ -79,7 +79,7 @@ def load_user(eppn: str) -> LoginUser | None:
         eppn (str): The unique identifier for the user.
 
     Returns:
-        LoginUser | None: The loaded user object if found, otherwise None.
+        LoginUser: The loaded user object if found, otherwise None.
     """
     if not eppn:
         return None
@@ -101,7 +101,7 @@ def get_user_from_store(session_id: str) -> LoginUser | None:
         session_id (str): The unique identifier for the user's session.
 
     Returns:
-        LoginUser | None: The user object if found, otherwise None.
+        LoginUser: The user object if found, otherwise None.
     """
     key = build_account_store_key(session_id)
     raw = account_store.hgetall(key)
@@ -120,9 +120,9 @@ def build_account_store_key(session_id: str) -> str:
     """Build the account_store key.
 
     Args:
-        session_id(str):Logged-in user's session ID
+        session_id (str): Logged-in user's session ID
 
     Returns:
-        str:Session information key for account_store
+        str: Session information key for account_store
     """
-    return f"{config.REDIS.key_prefix}_login_{session_id}"
+    return f"{config.REDIS.key_prefix}login-{session_id}"

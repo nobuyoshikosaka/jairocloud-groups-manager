@@ -79,7 +79,7 @@ def cache_resource[T: t.Callable](
             ).hexdigest()
 
             prefix = config.REDIS.key_prefix
-            cache_key = f"{prefix}:{import_name}:{identifier}:{args_hash}"
+            cache_key = f"{prefix}{import_name}-{identifier}-{args_hash}"
 
             try:
                 cached_data: str | None = app_cache.get(cache_key)  # pyright: ignore[reportAssignmentType]
@@ -138,7 +138,7 @@ def clear_cache(func: t.Callable, *identifier: str) -> None:
 
     try:
         for cid in identifier:
-            match = f"{prefix}:{import_name}:{cid}:*"
+            match = f"{prefix}{import_name}-{cid}-*"
 
             cursor: str | int = "0"  # start with "0", exit with int 0
             while cursor != 0:

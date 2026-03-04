@@ -37,6 +37,8 @@ def test_cache_resource_with_callable(app, mocker: MockerFixture) -> None:
     assert decorated(10).value == ex_num
     assert decorated(10).value == ex_num
     assert call_count["count"] == 1
+    assert hasattr(decorated, "_import_name")
+    assert hasattr(decorated, "clear_cache")
 
 
 def test_cache_resource_func_raises(app, mocker: MockerFixture) -> None:
