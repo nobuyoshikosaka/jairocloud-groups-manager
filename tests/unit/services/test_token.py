@@ -86,9 +86,8 @@ def test_prepare_issuing_url(app: Flask, mocker: MockerFixture, test_config) -> 
         return_value=ClientCredentials(client_id="cid", client_secret="s"),
     )
 
-    with app.app_context():
-        redirect_uri = app.url_for("api.callback.auth_code", _external=True)
-        url = token.prepare_issuing_url()
+    redirect_uri = app.url_for("api.callback.auth_code", _external=True)
+    url = token.prepare_issuing_url()
 
     expected_redirect = urlparse.quote(redirect_uri, safe="")
     expected_state = urlparse.quote(test_config.SP.entity_id, safe="")
@@ -152,13 +151,12 @@ def test_prepare_issuing_url_save_client_credentials_called(app: Flask, mocker: 
 
 def test__create_issuing_url(app: Flask):
     """Test that _create_issuing_url generates a valid issuing URL with correct parameters."""
-    with app.app_context():
-        url = token._create_issuing_url(client_id="cid", redirect_uri="http://localhost/cb", entity_id="eid")  # noqa: SLF001
+    url = token._create_issuing_url(client_id="cid", redirect_uri="http://localhost/cb", entity_id="eid")  # noqa: SLF001
 
-        assert isinstance(url, str)
-        assert "client_id=cid" in url
-        assert "redirect_uri=http%3A%2F%2Flocalhost%2Fcb" in url
-        assert "state=eid" in url
+    assert isinstance(url, str)
+    assert "client_id=cid" in url
+    assert "redirect_uri=http%3A%2F%2Flocalhost%2Fcb" in url
+    assert "state=eid" in url
 
 
 def test_issue_access_token_success(mocker: MockerFixture) -> None:
