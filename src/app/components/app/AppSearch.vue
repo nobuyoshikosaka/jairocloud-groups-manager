@@ -3,33 +3,12 @@ import type { CommandPaletteGroup } from '@nuxt/ui'
 
 const toast = useToast()
 
-const { searchTerm, previousSearchTerm, query, makeResultGroups } = useGlobalSearch()
+const { header: { globalSearch } } = useAppConfig()
+const { searchTerm, previousSearchTerm, makeResultGroups } = useGlobalSearch()
 const { handleFetchError } = useErrorHandling()
-const {
-  data: result, status, execute, clear,
-} = await useFetch<GlobalSearchResults>('/api/search', {
-  method: 'GET',
-  query: query,
-  onResponseError({ response }) {
-    switch (response.status) {
-      case 400: {
-        toast.add({
-          title: $t('toast.error.failed-search.title'),
-          description: $t('toast.error.invalid-search-query.description'),
-          color: 'error',
-        })
-        break
-      }
-      default: {
-        handleFetchError({ response })
-      }
-    }
-  },
-  server: false,
-  lazy: true,
-  immediate: false,
-  watch: false,
-})
+
+const result = ref<GlobalSearchResults | undefined>(undefined)
+const status = ref<'idle' | 'pending' | 'success' | 'error'>('idle')
 
 const groups = computed<CommandPaletteGroup[]>(() => {
   if (status.value !== 'success' || !result.value) return []
@@ -47,13 +26,41 @@ const onSelect = () => {
 const onClose = () => {
   searchTerm.value = ''
   previousSearchTerm.value = ''
-  clear()
+  result.value = undefined
+  status.value = 'idle'
 }
 
 const executeSearch = async () => {
   if (!searchTerm.value) return
   previousSearchTerm.value = searchTerm.value
-  await execute()
+  status.value = 'pending'
+
+  // Use $fetch instead of useFetch to avoid stale query params when component remounts via v-if.
+  try {
+    result.value = await $fetch<GlobalSearchResults>('/api/search', {
+      method: 'GET',
+      query: { q: searchTerm.value, limit: globalSearch.limit },
+      onResponseError({ response }) {
+        switch (response.status) {
+          case 400: {
+            toast.add({
+              title: $t('toast.error.failed-search.title'),
+              description: $t('toast.error.invalid-search-query.description'),
+              color: 'error',
+            })
+            break
+          }
+          default: {
+            handleFetchError({ response })
+          }
+        }
+      },
+    })
+    status.value = 'success'
+  }
+  catch {
+    status.value = 'error'
+  }
 }
 const handleKeydown = async (event: KeyboardEvent) => {
   if (!isOpen.value) return
