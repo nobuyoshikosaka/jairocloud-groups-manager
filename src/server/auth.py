@@ -4,11 +4,12 @@
 
 """helper for api decorator."""
 
+import traceback
 import typing as t
 
 from datetime import UTC, datetime
 
-from flask import current_app, session
+from flask import session
 from flask_login import LoginManager, current_user
 
 from server.config import config
@@ -39,8 +40,7 @@ def is_user_logged_in(current_user: LocalProxy) -> t.TypeGuard[LoginUser]:
     try:
         return t.cast("CurrentUser", current_user).is_authenticated
     except AttributeError:
-        warning = "Working outside of login context."
-        current_app.logger.warning(warning)
+        traceback.print_exc()
         return False
 
 
