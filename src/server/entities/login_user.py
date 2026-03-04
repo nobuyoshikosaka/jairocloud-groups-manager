@@ -54,3 +54,12 @@ class LoginUser(BaseModel, UserMixin):
     @override
     def get_id(self) -> str:
         return self.eppn
+
+    @property
+    def permitted_repositories(self) -> set[str]:
+        """Get the list of repository IDs the user has permission to operate on."""
+        from server.services.utils.permissions import (  # noqa: PLC0415
+            get_permitted_repository_ids,
+        )
+
+        return get_permitted_repository_ids()
