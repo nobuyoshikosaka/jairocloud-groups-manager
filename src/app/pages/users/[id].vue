@@ -7,7 +7,9 @@ const toast = useToast()
 const userId = computed(() => route.params.id as string)
 const mode = computed<'view' | 'edit'>(() => 'view')
 
+const { currentUser, logout } = useAuth()
 const { defaultData, defaultForm, state } = useUserForm()
+const isSelf = computed(() => currentUser.value?.id === userId.value)
 
 const { handleFetchError } = useErrorHandling()
 const { data: user, refresh } = useFetch<UserDetail>(
@@ -48,8 +50,8 @@ watch(user, (newUser: UserDetail) => {
   const lastModified = newUser.lastModified ? new Date(newUser.lastModified) : undefined
   Object.assign(state, {
     id: newUser.id,
-    emails: newUser.emails?.length ? newUser.emails : defaultForm.emails,
-    eppns: newUser.eppns?.length ? newUser.eppns : defaultForm.eppns,
+    emails: newUser.emails?.length ? [...newUser.emails] : [...defaultForm.emails],
+    eppns: newUser.eppns?.length ? [...newUser.eppns] : [...defaultForm.eppns],
     userName: newUser.userName || defaultForm.userName,
     preferredLanguage: newUser.preferredLanguage || defaultForm.preferredLanguage,
     isSystemAdmin: newUser.isSystemAdmin || defaultForm.isSystemAdmin,
@@ -59,10 +61,10 @@ watch(user, (newUser: UserDetail) => {
           label: role.serviceName,
           userRole: camelCase(role.userRole!),
         }))
-      : defaultForm.repositoryRoles,
+      : structuredClone(defaultForm.repositoryRoles),
     groups: newUser.groups?.length
       ? newUser.groups?.map(group => ({ value: group.id, label: group.displayName }))
-      : defaultForm.groups,
+      : structuredClone(defaultForm.groups),
     created: created ? datetimeFormatter.format(created) : defaultForm.created,
     lastModified: lastModified ? datetimeFormatter.format(lastModified) : defaultForm.lastModified,
   } as UserForm)
@@ -129,6 +131,9 @@ const onSubmit = async (data: UserUpdateForm) => {
       icon: 'i-lucide-circle-check',
     })
     await navigateTo('/users')
+    if (isSelf.value) {
+      await logout()
+    }
   }
   catch {
     // Already handled in onResponseError

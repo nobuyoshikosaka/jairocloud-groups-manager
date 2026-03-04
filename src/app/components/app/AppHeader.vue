@@ -38,7 +38,7 @@ const { navigation: items, submenu } = useMenu()
           :label="currentUser?.userName"
           icon="i-lucide-user-circle" color="neutral" variant="subtle"
         />
-        <template #content>
+        <template #content="{ close }">
           <div class="text-xl font-semibold text-highlighted">
             {{ currentUser?.userName }}
           </div>
@@ -53,7 +53,7 @@ const { navigation: items, submenu } = useMenu()
             :label="item.label" :to="item.to" :icon="item.icon" :target="item.target"
             :color="item.color" variant="ghost"
             class="w-full justify-start" block
-            @click="item.onClick"
+            @click="(event) => { [item.onClick].flat().forEach(fn => fn?.(event)); close(); }"
           />
         </template>
       </UPopover>

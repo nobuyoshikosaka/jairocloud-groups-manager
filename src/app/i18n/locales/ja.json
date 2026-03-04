@@ -532,6 +532,7 @@
     "preferred-language-ja": "日本語",
     "privileged": "特権",
     "roles-title": "ロール",
+    "self-editing-warning": "自身の所属やロールを変更した場合、再ログインが必要です。",
     "title": "ユーザー詳細",
     "userName-description": "ユーザーの表示名です。実際のユーザーのアカウント名とは連動しません。",
     "username": "ユーザー名",

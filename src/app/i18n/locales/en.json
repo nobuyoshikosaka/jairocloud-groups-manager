@@ -561,6 +561,7 @@
     "preferred-language-ja": "Japanese",
     "privileged": "Privileged",
     "roles-title": "Roles",
+    "self-editing-warning": "If you change your affiliation or role, you will need to login again.",
     "title": "User Details",
     "userName-description": "Display name for this user. It is not linked to the actual user's account name.",
     "username": "Username",

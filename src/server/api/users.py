@@ -4,11 +4,15 @@
 
 """API endpoints for user-related operations."""
 
+import inspect
+import typing as t
+
 from flask import Blueprint, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 from flask_pydantic import validate
 
 from server.const import USER_ROLES
+from server.entities.login_user import LoginUser
 from server.entities.search_request import FilterOption, SearchResult
 from server.entities.user_detail import UserDetail
 from server.exc import (
@@ -24,6 +28,7 @@ from server.services.utils import (
     search_users_options,
 )
 
+from .auth import logout
 from .helpers import roles_required
 from .schemas import ErrorResponse, UsersQuery
 
@@ -141,6 +146,7 @@ def id_put(user_id: str, body: UserDetail) -> tuple[UserDetail | ErrorResponse, 
     if not has_permission(body):
         return ErrorResponse(code="", message="not has permission"), 403
 
+    is_self = t.cast("LoginUser", current_user).map_id == user_id
     body.id = user_id
     try:
         updated = users.update(body)
@@ -149,6 +155,8 @@ def id_put(user_id: str, body: UserDetail) -> tuple[UserDetail | ErrorResponse, 
     except* (ResourceInvalid, RequestConflict) as e:
         error = ErrorResponse(code="", message=str(e)), 409
     else:
+        if is_self:
+            inspect.unwrap(logout)()
         return updated, 200
 
     return error
