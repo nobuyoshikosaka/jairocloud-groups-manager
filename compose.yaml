@@ -12,12 +12,6 @@ services:
       - "5050:5050"
     develop:
       watch:
-        - action: sync
-          path: .
-          target: /code
-          include:
-            - src/server
-            - certs
         - action: sync+restart
           path: .
           target: /code
@@ -29,6 +23,13 @@ services:
           path: uv.lock
         - action: rebuild
           path: Dockerfile
+    volumes:
+      - type: bind
+        source: ${LOCAL_WORKSPACE_FOLDER}/src/
+        target: /code/src
+      - /code/src/app
+    networks:
+      - default
 
   worker:
     restart: "always"
@@ -37,7 +38,7 @@ services:
       target: dev
     image: jc-groups-manager-dev
     container_name: worker
-    command: celery -A server.celery worker
+    command: celery -A server.celery_app worker
     depends_on:
       - redis
       - rabbitmq
@@ -56,6 +57,8 @@ services:
           path: uv.lock
         - action: rebuild
           path: Dockerfile
+    networks:
+      - default
 
   app:
     build:
@@ -86,15 +89,17 @@ services:
           path: Dockerfile.vite
     volumes:
       - type: bind
-        source: ./.nuxt
+        source: ${LOCAL_WORKSPACE_FOLDER}/.nuxt
         target: /code/.nuxt
+    networks:
+      - default
 
   nginx:
     build:
       context: .
       dockerfile: nginx/Dockerfile
-      target: prod
-    image: jc-groups-manager-nginx
+      target: dev
+    image: jc-groups-manager-nginx-dev
     container_name: nginx
     ports:
       - "80:80"
@@ -102,6 +107,8 @@ services:
     depends_on:
       - web
       - app
+    networks:
+      - default
 
   postgres:
     restart: "always"
@@ -114,12 +121,16 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - default
 
   redis:
     restart: "always"
     image: redis:7.4.1
     ports:
       - "6379:6379"
+    networks:
+      - default
 
   rabbitmq:
     restart: "always"
@@ -129,3 +140,8 @@ services:
 
 volumes:
   pgdata:
+
+networks:
+  default:
+    external: true
+    name: jairocloud-groups-manager_default

@@ -9,7 +9,28 @@ A web client for JAIRO Cloud repository administrators to manage groups in the G
 ## Development Setup
 With DevContainer, your development environment is ready in no time!
 
-1. Install [Visual Studio Code](https://code.visualstudio.com/) and [Docker](https://www.docker.com/).
+1. Install [Visual Studio Code](https://code.visualstudio.com/) and [Docker](https://www.docker.com/) with [Docker Compose](https://docs.docker.com/compose/).
 2. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) for Visual Studio Code.
 3. Open this repository in Visual Studio Code.
 4. When prompted, click "Reopen in Container" to start the DevContainer.
+
+
+**Manual Setup**
+
+1. Install [Python 3.14+](https://www.python.org/downloads/) and [Node.js 24+](https://nodejs.org/en/download/).
+2. Install dependencies:
+    ```bash
+    uv sync && uv pip install -e .
+    pnpm install -r
+    ```
+3. Create docker network:
+    ```bash
+    docker network create jairocloud-groups-manager_default
+    ```
+4. Start the development server:
+    ```bash
+    LOCAL_WORKSPACE_FOLDER=$(pwd) docker compose up --watch
+    ```
+
+> [!TIP]
+> When the Vite dev server fails to start due to permission problems, create a `.nuxt` directory on the host machine or run `pnpm postinstall`, then try again.

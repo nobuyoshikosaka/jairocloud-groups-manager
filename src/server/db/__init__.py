@@ -4,4 +4,4 @@
 
 """Database module for the server application."""
 
-from .utils import db  # noqa: F401
+from .utils import db

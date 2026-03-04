@@ -1,3 +1,19 @@
 extend = "../pyproject.toml"
 
 line-length = 120
+
+[lint]
+ignore = [
+  "ANN",
+  "S101",
+  "S105",
+  "S106",
+  "CPY001",
+  "TC006",
+  "ARG001",
+  "D",
+  "PLC2701",
+]
+
+[lint.isort]
+known-first-party = ["server", "tests"]

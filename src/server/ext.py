@@ -6,14 +6,26 @@
 
 import typing as t
 
-from .api.router import create_blueprints
+from pathlib import Path
+
+from sqlalchemy_utils import database_exists
+
+from .api.router import create_api_blueprint
+from .auth import login_manager
+from .cli.base import register_cli_commands
 from .config import RuntimeConfig, setup_config
 from .const import DEFAULT_CONFIG_PATH
+from .datastore import setup_datastore
 from .db.base import db
 from .db.utils import load_models
+from .exc import ConfigurationError
+from .logger import setup_logger
+from .messages import W
+
 
 if t.TYPE_CHECKING:
     from flask import Flask
+    from redis import Redis
 
 
 class JAIROCloudGroupsManager:
@@ -30,8 +42,8 @@ class JAIROCloudGroupsManager:
                 instance or path to the configuration file.
 
         """
-        self.app = app
-        self.config = config or DEFAULT_CONFIG_PATH
+        self._config = config or DEFAULT_CONFIG_PATH
+        self.datastore: dict[str, Redis] = {}
 
         if app is not None:
             self.init_app(app)
@@ -43,11 +55,19 @@ class JAIROCloudGroupsManager:
             app (Flask): The Flask application instance.
 
         """
-        self.app = app
         self.init_config(app)
-        self.init_db_app(app)
+        setup_logger(app, self.config)
 
-        create_blueprints(app)
+        self.init_db_app(app)
+        login_manager.init_app(app)
+
+        self.datastore = setup_datastore(app, self.config)
+        app.register_blueprint(create_api_blueprint(), url_prefix="/api")
+        register_cli_commands(app)
+        self.init_storage()
+
+        if app.debug or app.config.get("ENV") == "development":
+            self.dev_contrib(app)
 
         app.extensions["jairocloud-groups-manager"] = self
 
@@ -58,9 +78,9 @@ class JAIROCloudGroupsManager:
             app (Flask): The Flask application instance.
 
         """
-        self.config = setup_config(self.config)
+        self._config = setup_config(self._config)
 
-        app.config.from_object(self.config)
+        app.config.from_mapping(self.config.for_flask)
         app.config.from_prefixed_env()
 
     def init_db_app(self, app: Flask) -> None:  # noqa: PLR6301
@@ -72,5 +92,44 @@ class JAIROCloudGroupsManager:
             app (Flask): The Flask application instance.
 
         """
+        db_uri = app.config["SQLALCHEMY_DATABASE_URI"]
+        if not database_exists(db_uri):
+            app.logger.warning(W.DATABASE_NOT_EXIST)
+
         db.init_app(app)
         load_models()
+
+    def init_storage(self) -> None:
+        """Initialize the storage for this extension."""
+        if self.config.STORAGE.type == "local":
+            temp_dir = Path(self.config.STORAGE.local.temporary)
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            storage_dir = Path(self.config.STORAGE.local.storage)
+            storage_dir.mkdir(parents=True, exist_ok=True)
+
+    def dev_contrib(self, app: Flask) -> None:
+        """Provide development contribution utilities."""
+        with app.app_context():
+            from contrib import developers, messages  # noqa: PLC0415
+
+            messages.generate_type_stub()
+            app.register_blueprint(
+                developers.create_developer_blueprint(self.config),
+                url_prefix="/api/dev",
+            )
+
+    @property
+    def config(self) -> RuntimeConfig:
+        """Runtime configuration instance.
+
+        Returns:
+            RuntimeConfig: The runtime configuration instance.
+
+        Raises:
+            ConfigurationError: If the configuration has not been initialized.
+        """
+        if isinstance(self._config, str):
+            error = "Configuration has not been initialized."
+            raise ConfigurationError(error)
+
+        return self._config

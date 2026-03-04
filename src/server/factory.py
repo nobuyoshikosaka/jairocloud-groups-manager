@@ -6,10 +6,17 @@
 
 import typing as t
 
+from uuid import uuid7
+
+import flask_login
+
 from celery import Celery, Task
 from flask import Flask
+from flask_login import current_user
 
+from .auth import get_user_from_store, is_user_logged_in
 from .ext import JAIROCloudGroupsManager
+
 
 if t.TYPE_CHECKING:
     from .config import RuntimeConfig
@@ -17,12 +24,8 @@ if t.TYPE_CHECKING:
 
 @t.overload
 def create_app(import_name: str) -> Flask: ...
-
-
 @t.overload
 def create_app(import_name: str, *, config_path: str) -> Flask: ...
-
-
 @t.overload
 def create_app(import_name: str, *, config: RuntimeConfig) -> Flask: ...
 
@@ -63,12 +66,31 @@ def celery_init_app(app: Flask) -> Celery:
     class FlaskTask(Task):
         """Task with Flask application context."""
 
+        # ruff : noqa: ANN001 ANN002 ANN003 ANN204 ANN202
         @t.override
         def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return self.run(*args, **kwargs)
+            ploxy = flask_login.current_user
+            session_id = kwargs.pop("session_id", None)
 
-    celery_app = Celery(app.name, task_cls=FlaskTask)
+            with app.app_context():
+                if session_id and (user := get_user_from_store(session_id)):
+                    flask_login.current_user = user
+                result = self.run(*args, **kwargs)
+
+            flask_login.current_user = ploxy
+            return result
+
+        @t.override
+        def apply_async(  # pyright: ignore[reportIncompatibleMethodOverride]
+            self, args, kwargs=None, session_required=None, task_id=None, **options
+        ):
+            task_id = task_id or str(uuid7())
+            if session_required and is_user_logged_in(current_user):
+                kwargs = kwargs or {}
+                kwargs.setdefault("session_id", current_user.session_id)
+            return super().apply_async(args, kwargs, task_id=task_id, **options)
+
+    celery_app: Celery = Celery(app.name, task_cls=FlaskTask)
     celery_app.config_from_object(app.config["CELERY"])
     celery_app.set_default()
     app.extensions["celery"] = celery_app

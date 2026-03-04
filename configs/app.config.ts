@@ -7,6 +7,90 @@
  */
 const serverName = 'localhost' as string
 
+/**
+ * Base URL of this application \
+ * [Mandatory]
+ */
+const baseURL = `https://${serverName}` as string
+
+const header = {
+  /**
+   * Path to the logo image file \
+   * Example: "/logo.png" \
+   * [Mandatory]
+   */
+  serviceLogo: '/logo.png' as string,
+
+  /**
+   * Alt name for the logo image file \
+   * [Mandatory]
+   */
+  serviceAltName: 'JAIRO Cloud Groups Manager' as string,
+
+  /**
+   * URL or path to the user manual page \
+   * If set to an empty string, the link to the user manual will not be displayed. \
+   * [Optional, can be left empty]
+   */
+  userManualURL: '' as string,
+
+  /**
+   * Configuration for global search in the header
+   */
+  globalSearch: {
+    /**
+     * Maximum number of search results to be returned for each category in the global search. \
+     * [Mandatory]
+     */
+    limit: 5,
+  },
+}
+
+const table = {
+  /**
+   * Options for page size selection in tables
+   */
+  pageSize: {
+    repositories: [20, 50, 100] as [number, ...number[]],
+    groups: [20, 50, 100] as [number, ...number[]],
+    users: [20, 50, 100] as [number, ...number[]],
+    history: [20, 50, 100] as [number, ...number[]],
+    bulks: [20, 50, 100] as [number, ...number[]],
+  },
+}
+
+const repositories = {
+  /**
+   * Maximum length of the URL ID entered in the repository creation form \
+   * (excluding “https://”, the “jc_” prefix assigned to the ID, and additional padding) \
+   * If you change this setting, you must also change setting `repositories.max_url_length`
+   * in `server.config.toml` accordingly to keep them consistent.
+   * [Mandatory]
+   */
+  maxUrlLength: 50 - 'jc_'.length - '_ro_radm'.length - 2,
+}
+
+const groups = {
+  /**
+   * Maximum length of the URL ID entered in the group creation form \
+   * (excluding the “jc_” prefix assigned to the ID and additional padding) \
+   * [Mandatory]
+   */
+  maxIdLength: 50 - 'jc_'.length - '_gr_'.length,
+}
+
+const polling = {
+  /**
+   * Interval time (in milliseconds) for polling requests to check the status of task\
+   */
+  interval: 2000,
+
+  /**
+   * Maximum number of attempts for polling requests to check the status of task\
+   */
+  maxAttempts: 100,
+}
+
 const wayf = {
   /**
    * URL of the WAYF to use \
@@ -26,21 +110,21 @@ const wayf = {
    * Examples: "https://econf.switch.ch/shibboleth", "https://dokeos.unige.ch/shibboleth" \
    * [Mandatory]
    */
-  spEntityID: 'https://localhost/shibboleth-sp' as string,
+  spEntityID: `${baseURL}/shibboleth-sp` as string,
 
   /**
    * Shibboleth Service Provider handler URL \
    * Examples: "https://point.switch.ch/Shibboleth.sso", "https://rr.aai.switch.ch/aaitest/Shibboleth.sso" \
    * [Mandatory, if wayf_use_discovery_service = false]
    */
-  spHandlerURL: 'https://localhost/Shibboleth.sso' as string,
+  spHandlerURL: `${baseURL}/Shibboleth.sso` as string,
 
   /**
    * URL on this resource that the user shall be returned to after authentication \
    * Examples: "https://econf.switch.ch/aai/home", "https://olat.uzh.ch/my/courses" \
    * [Mandatory]
    */
-  returnURL: `https://${serverName}/` as string,
+  returnURL: `${baseURL}/secure` as string,
 
   /**
    * Most used Identity Providers will be shown as top category in the drop down \
@@ -91,4 +175,21 @@ const wayf = {
   ] as { name: string, entityID: string }[],
 }
 
-export default { serverName, wayf }
+export default {
+  /** Server hostname of this application */
+  serverName,
+  /** Base URL of this application */
+  baseURL,
+  /** Header configuration */
+  header,
+  /** Table configuration */
+  table,
+  /** Repository configuration */
+  repositories,
+  /** Group configuration */
+  groups,
+  /** Polling configuration */
+  polling,
+  /** WAYF (Embedded DS) configuration */
+  wayf,
+}

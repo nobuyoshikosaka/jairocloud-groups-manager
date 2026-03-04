@@ -3,9 +3,17 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
-    '@nuxt/content',
+    '@pinia/nuxt',
+    '@nuxtjs/i18n',
     '@nuxt/test-utils',
+    '@vueuse/nuxt',
   ],
+  ssr: false,
+
+  imports: {
+    dirs: ['~/types'],
+    scan: true,
+  },
 
   devtools: {
     enabled: true,
@@ -15,15 +23,25 @@ export default defineNuxtConfig({
 
   srcDir: 'src/app/',
 
-  routeRules: {
-    '/': { prerender: true },
-  },
-
-  compatibilityDate: '2025-01-15',
+  compatibilityDate: '2026-01-10',
 
   eslint: {
     config: {
       stylistic: true,
     },
+  },
+
+  i18n: {
+    locales: [
+      { code: 'en', iso: 'es-US', file: 'en.json', name: 'English' },
+      { code: 'ja', iso: 'ja-JP', file: 'ja.json', name: '日本語' },
+    ],
+    defaultLocale: 'ja',
+    strategy: 'no_prefix',
+    detectBrowserLanguage: {
+      fallbackLocale: 'ja',
+    },
+    langDir: 'locales',
+    restructureDir: 'src/app/i18n',
   },
 })
