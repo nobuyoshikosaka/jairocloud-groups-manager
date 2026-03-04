@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Collections } from '@nuxt/content'
 
-const categories: (Exclude<keyof Collections, 'index'>)[] = ['detailed', 'api', 'db']
+const categories: (Exclude<keyof Collections, 'index'>)[] = ['detailed', 'api',
+  'db', 'manual']
 const features = await Promise.all(
   categories.map(category =>
     useAsyncData(`feature-${category}`, () => {

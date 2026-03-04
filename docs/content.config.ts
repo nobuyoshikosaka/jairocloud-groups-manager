@@ -31,5 +31,13 @@ export default defineContentConfig({
         icon: z.string().optional(),
       }),
     }),
+    manual: defineCollection({
+      type: 'page',
+      source: '05.manual/**/*',
+      schema: z.object({
+        headline: z.string().optional(),
+        icon: z.string().optional(),
+      }),
+    }),
   },
 })
