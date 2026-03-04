@@ -81,7 +81,7 @@ export function useMenu() {
       {
         id: 'profile',
         label: $t('submenu.profile'),
-        to: '/profile',
+        to: `/users/${currentUser.value?.id}`,
         icon: 'i-lucide-user',
         color: 'neutral',
       },

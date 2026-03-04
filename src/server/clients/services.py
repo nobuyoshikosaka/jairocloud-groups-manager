@@ -10,15 +10,17 @@ from http import HTTPStatus
 
 import requests
 
+from flask_login import current_user
 from pydantic import TypeAdapter
 
+from server.auth import is_user_logged_in
 from server.config import config
 from server.const import MAP_SERVICES_ENDPOINT
 from server.entities.map_error import MapError
 from server.entities.map_service import MapService
 from server.entities.patch_request import PatchOperation, PatchRequestPayload
 from server.entities.search_request import SearchRequestParameter, SearchResponse
-from server.signals import repository_deleted, repository_updated
+from server.signals import repository_created, repository_deleted, repository_updated
 
 from .decoraters import cache_resource
 from .utils import compute_signature, get_time_stamp
@@ -36,6 +38,16 @@ adapter_search: TypeAdapter[ServicesSearchResponse] = TypeAdapter(
 )
 
 
+def _search_cache_identifier(*args, **kwargs) -> str:  # noqa: ANN002, ANN003, ARG001
+    if not is_user_logged_in(current_user):
+        return "anonymous"
+    if current_user.is_system_admin:
+        return "system_admin"
+    permitted = sorted(current_user.permitted_repositories)
+    return ",".join(permitted)
+
+
+@cache_resource(identifier_generator=_search_cache_identifier)
 def search(
     query: SearchRequestParameter,
     /,
@@ -438,3 +450,19 @@ def handle_repository_updated_by_id(_sender: object, service_id: str, **kwargs) 
         **kwargs: Other keyword arguments passed with the signal.
     """
     get_by_id.clear_cache(service_id)  # pyright: ignore[reportFunctionMemberAccess]
+
+
+@repository_created.connect
+@repository_updated.connect
+@repository_deleted.connect
+def handle_reset_search_cache(
+    _sender: object,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
+    """Handle users signals to clear cache of the search results.
+
+    Args:
+        sender: The sender of the signal.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    search.clear_cache(_search_cache_identifier())  # pyright: ignore[reportFunctionMemberAccess]

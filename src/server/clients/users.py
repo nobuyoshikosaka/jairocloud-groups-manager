@@ -10,15 +10,17 @@ from http import HTTPStatus
 
 import requests
 
+from flask_login import current_user
 from pydantic import TypeAdapter
 
+from server.auth import is_user_logged_in
 from server.config import config
 from server.const import MAP_EXIST_EPPN_ENDPOINT, MAP_USERS_ENDPOINT
 from server.entities.map_error import MapError
 from server.entities.map_user import MapUser
 from server.entities.patch_request import PatchOperation, PatchRequestPayload
 from server.entities.search_request import SearchRequestParameter, SearchResponse
-from server.signals import user_deleted, user_updated
+from server.signals import user_created, user_deleted, user_updated
 
 from .decoraters import cache_resource
 from .utils import compute_signature, get_time_stamp
@@ -34,6 +36,16 @@ type UsersSearchResponse = SearchResponse[MapUser] | MapError
 adapter_search: TypeAdapter[UsersSearchResponse] = TypeAdapter(UsersSearchResponse)
 
 
+def _search_cache_identifier(*args, **kwargs) -> str:  # noqa: ANN002, ANN003, ARG001
+    if not is_user_logged_in(current_user):
+        return "anonymous"
+    if current_user.is_system_admin:
+        return "system_admin"
+    permitted = sorted(current_user.permitted_repositories)
+    return ",".join(permitted)
+
+
+@cache_resource(identifier_generator=_search_cache_identifier)
 def search(
     query: SearchRequestParameter,
     /,
@@ -474,3 +486,19 @@ def handle_user_updated_by_id(
     """
     if user_id:
         get_by_id.clear_cache(user_id)  # pyright: ignore[reportFunctionMemberAccess]
+
+
+@user_created.connect
+@user_updated.connect
+@user_deleted.connect
+def handle_reset_search_cache(
+    _sender: object,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
+    """Handle users signals to clear cache of the search results.
+
+    Args:
+        sender: The sender of the signal.
+        **kwargs: Other keyword arguments passed with the signal.
+    """
+    search.clear_cache(_search_cache_identifier())  # pyright: ignore[reportFunctionMemberAccess]

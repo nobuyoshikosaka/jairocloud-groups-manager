@@ -8,11 +8,14 @@
 
 import hashlib
 import inspect
+import traceback
 import typing as t
 
 from functools import wraps
 
+from flask import current_app
 from pydantic import BaseModel, TypeAdapter
+from redis.exceptions import RedisError
 
 from server.config import config
 from server.datastore import app_cache
@@ -23,17 +26,25 @@ from server.entities.map_error import MapError
 def cache_resource[T: ModelReturner](f: T) -> T: ...
 @t.overload
 def cache_resource[T: ModelReturner](
-    *, timeout: int | None = None
+    *,
+    identifier_generator: t.Callable[..., str] | None = None,
+    timeout: int | None = None,
 ) -> t.Callable[[T], T]: ...
 
 
 def cache_resource[T: t.Callable](
-    f: T | None = None, *, timeout: int | None = None
+    f: T | None = None,
+    *,
+    identifier_generator: t.Callable[..., str] | None = None,
+    timeout: int | None = None,
 ) -> T | t.Callable:
     """Cache the response of the API client function using Redis.
 
     Args:
         f (Callable | None): The function to decorate.
+        identifier_generator (Callable[..., str]):
+            Function to generate a unique identifier string to cache key.
+            If not provided, the first argument of the decorated function will be used.
         timeout (int):
             Timeout for the cache entry in seconds, overrides the default from config.
 
@@ -53,6 +64,8 @@ def cache_resource[T: t.Callable](
             if not args:
                 return func(*args, **kwargs)
             identifier = str(args[0])
+            if identifier_generator:
+                identifier = identifier_generator(*args, **kwargs)
 
             relevant_kwargs = {
                 k: v
@@ -60,7 +73,7 @@ def cache_resource[T: t.Callable](
                 if k not in {"access_token", "client_secret"}
             }
 
-            hash_input = f"{args[1:]}-{sorted(str(relevant_kwargs.items()))}"
+            hash_input = f"{args}-{sorted(relevant_kwargs.items())!s}"
             args_hash = hashlib.md5(
                 hash_input.encode(), usedforsecurity=False
             ).hexdigest()
@@ -68,7 +81,15 @@ def cache_resource[T: t.Callable](
             prefix = config.REDIS.key_prefix
             cache_key = f"{prefix}:{import_name}:{identifier}:{args_hash}"
 
-            cached_data: str | None = app_cache.get(cache_key)  # pyright: ignore[reportAssignmentType]
+            try:
+                cached_data: str | None = app_cache.get(cache_key)  # pyright: ignore[reportAssignmentType]
+            except RedisError:
+                current_app.logger.warning(
+                    "Failed to retrieve cache for key: %s", cache_key
+                )
+                traceback.print_exc()
+                cached_data = None
+
             if cached_data and return_type:
                 adapter = TypeAdapter(return_type)
                 return adapter.validate_json(cached_data)
@@ -80,12 +101,16 @@ def cache_resource[T: t.Callable](
             if isinstance(result, MapError) or timeout is None:
                 timeout = 3
 
-            app_cache.setex(cache_key, timeout, result.model_dump_json())
+            try:
+                app_cache.setex(cache_key, timeout, result.model_dump_json())
+            except RedisError:
+                current_app.logger.warning("Failed to set cache for key: %s", cache_key)
+                traceback.print_exc()
             return result
 
         wrapper._import_name = import_name  # pyright: ignore[reportAttributeAccessIssue]
-        wrapper.clear_cache = lambda *resource_id: clear_cache(  # pyright: ignore[reportAttributeAccessIssue]
-            wrapper, *resource_id
+        wrapper.clear_cache = lambda *identifier: clear_cache(  # pyright: ignore[reportAttributeAccessIssue]
+            wrapper, *identifier
         )
         return wrapper
 
@@ -95,12 +120,12 @@ def cache_resource[T: t.Callable](
     return decorator
 
 
-def clear_cache(func: t.Callable, *resource_id: str) -> None:
+def clear_cache(func: t.Callable, *identifier: str) -> None:
     """Delete cached responses for the given function and resource id.
 
     Args:
         func (Callable): The decorated function whose cache to delete.
-        resource_id (str): The resource id to delete cache for.
+        identifier (str): The identifier(s) to delete cache for.
 
     Raises:
         ValueError: If the function is not decorated with @response_cache.
@@ -111,18 +136,27 @@ def clear_cache(func: t.Callable, *resource_id: str) -> None:
         error = "Function is not decorated with @response_cache."
         raise ValueError(error)
 
-    for rid in resource_id:
-        match = f"{prefix}:{import_name}:{rid}:*"
+    try:
+        for cid in identifier:
+            match = f"{prefix}:{import_name}:{cid}:*"
 
-        cursor: str | int = "0"
-        while cursor != 0:
-            cursor, keys = app_cache.scan(  # pyright: ignore[reportGeneralTypeIssues]
-                cursor=int(cursor),
-                match=match,
-                count=100,
-            )
-            if keys:
+            cursor: str | int = "0"  # start with "0", exit with int 0
+            while cursor != 0:
+                cursor, keys = app_cache.scan(  # pyright: ignore[reportGeneralTypeIssues]
+                    cursor=int(cursor),
+                    match=match,
+                    count=100,
+                )
+                if not keys:
+                    continue
                 app_cache.delete(*keys)
+    except RedisError:
+        current_app.logger.warning(
+            "Failed to clear cache for function: %s, identifier: %s",
+            import_name,
+            identifier,
+        )
+        traceback.print_exc()
 
 
 class ModelReturner(t.Protocol):

@@ -72,8 +72,9 @@ const {
 })
 setupGroupScroll(groupSelect)
 
-type MultipleField<T> = { [K in keyof T]: T[K] extends string[] ? K : never }[keyof T]
+const form = useTemplateRef('form')
 
+type MultipleField<T> = { [K in keyof T]: T[K] extends string[] ? K : never }[keyof T]
 const addField = (name: MultipleField<UserForm | UserCreateForm>) => {
   state.value[name].push('')
 }
@@ -90,6 +91,10 @@ const removeRepositoryRole = (index: number) => {
   if (state.value.repositoryRoles.length > 1) {
     state.value.repositoryRoles.splice(index, 1)
   }
+  else {
+    state.value.repositoryRoles[index] = { value: undefined, label: undefined, userRole: undefined }
+  }
+  form.value?.validate({ silent: false })
 }
 
 const addGroup = () => {
@@ -102,9 +107,9 @@ const removeGroup = (index: number) => {
   else {
     state.value.groups[index] = { value: undefined, label: undefined }
   }
+  form.value?.validate({ silent: false })
 }
 
-const form = useTemplateRef('form')
 const onError = (event: FormErrorEvent) => {
   handleFormError(event)
   emit('error', event)
@@ -113,6 +118,10 @@ const onCancel = () => {
   form.value?.clear()
   emit('cancel')
 }
+
+const isSelf = computed(() =>
+  properties.mode === 'new' ? false : currentUser.value?.id === stateAsEdit.value.id,
+)
 </script>
 
 <template>
@@ -288,6 +297,12 @@ const onCancel = () => {
         : $t('user.details-affiliation-section')
       }}
     </h3>
+    <UAlert
+      v-if="isSelf"
+      :title="$t('user.self-editing-warning')"
+      icon="i-lucide-triangle-alert"
+      variant="soft" color="warning" :ui="{ root: 'mb-4' }"
+    />
 
     <UFormField
       v-if="currentUser?.isSystemAdmin"
@@ -351,7 +366,7 @@ const onCancel = () => {
 
         <UButton
           icon="i-lucide-x" variant="ghost" color="neutral" size="sm"
-          :ui="{ base: 'p-0' }" :disabled="state.repositoryRoles.length <= 1"
+          :ui="{ base: 'p-0' }"
           @click="() => removeRepositoryRole(index)"
         />
       </div>

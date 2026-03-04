@@ -13,7 +13,12 @@ from functools import cache
 from server.config import config
 from server.const import USER_ROLES
 
+from .resolvers import resolve_repository_id
 from .roles import get_highest_role
+
+
+if t.TYPE_CHECKING:
+    from server.entities.map_group import Service
 
 
 def detect_affiliations(group_ids: list[str]) -> Affiliations:
@@ -82,7 +87,7 @@ def detect_affiliation(group_id: str) -> Affiliation | None:
     # Retrieve the name of the main group that matched (the role type)
     matched_role = match.lastgroup
     if not matched_role:
-        return None
+        return None  # pragma: no cover
 
     # Extract parameters by filtering groupdict keys with the role prefix
     params: dict[str, str] = {}
@@ -140,3 +145,20 @@ def _build_combined_regex() -> re.Pattern[str]:
 
     # Combine all patterns into one large regex using the OR (|) operator
     return re.compile("|".join(combined_parts))
+
+
+def detect_repository(services: list[Service]) -> Service | None:
+    """Detect the affiliated repositor.
+
+    Retrieve the first affiliated repository from the given list of services.
+
+    Args:
+        services (list): List of services to analyze.
+
+    Returns:
+        Service:
+            Detected affiliated repository, otherwise None.
+    """
+    return next(
+        (s for s in services if resolve_repository_id(service_id=s.value)), None
+    )

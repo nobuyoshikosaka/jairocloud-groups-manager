@@ -61,9 +61,7 @@ def test_validate():
     assert user.groups
     assert len(user.groups) == len(json_data["groups"])
     assert user.groups[0].value == json_data["groups"][0]["value"]
-    assert str(user.groups[0].ref) == json_data["groups"][0].pop("$ref")
     assert user.groups[1].value == json_data["groups"][1]["value"]
-    assert str(user.groups[1].ref) == json_data["groups"][1].pop("$ref")
 
     json_user = user.model_dump(mode="json", by_alias=True, exclude={"schemas"})
     json_data.pop("schemas")
@@ -96,9 +94,7 @@ def test_validate_json_data():
     assert user.groups
     assert len(user.groups) == len(json_data["groups"])
     assert user.groups[0].value == json_data["groups"][0]["value"]
-    assert str(user.groups[0].ref) == json_data["groups"][0].pop("$ref")
     assert user.groups[1].value == json_data["groups"][1]["value"]
-    assert str(user.groups[1].ref) == json_data["groups"][1].pop("$ref")
 
     json_user = user.model_dump(mode="json", by_alias=True, exclude_unset=True)
     assert json_user == json_data

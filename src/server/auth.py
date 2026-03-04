@@ -8,7 +8,7 @@ import typing as t
 
 from datetime import UTC, datetime
 
-from flask import session
+from flask import current_app, session
 from flask_login import LoginManager, current_user
 
 from server.config import config
@@ -26,15 +26,22 @@ login_manager = LoginManager()
 
 
 def is_user_logged_in(current_user: LocalProxy) -> t.TypeGuard[LoginUser]:
-    """Guard to check if the current_user is of type LoginUser.
+    """Type guard for current_user.
+
+    If current_user is logged in, then it is LoginUser.
 
     Args:
-        current_user: The current user object.
+        current_user: The current_user object.
 
     Returns:
-        TypeGuard[LoginUser]: True if current_user is LoginUser, else False.
+        bool: If current_user is logged in, then True.
     """
-    return t.cast("CurrentUser", current_user).is_authenticated
+    try:
+        return t.cast("CurrentUser", current_user).is_authenticated
+    except AttributeError:
+        warning = "Working outside of login context."
+        current_app.logger.warning(warning)
+        return False
 
 
 def refresh_session() -> None:

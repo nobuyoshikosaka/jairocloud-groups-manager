@@ -59,7 +59,7 @@ def prepare_service(
         SystemAdminNotFound: If no administrators are provided.
     """
     service = validate_repository_to_map_service(repository)
-    repository_id = resolve_repository_id(service_id=service.id)
+    repository_id = t.cast("str", resolve_repository_id(service_id=service.id))
 
     if not administrators:
         error = "At least one administrator is required to create a repository."

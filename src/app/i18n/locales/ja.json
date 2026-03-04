@@ -198,6 +198,14 @@
     "title": "グループ"
   },
   "header": {
+    "global-search": {
+      "matching": "「{searchTerm}」に一致する{category}",
+      "no-results": "「{searchTerm}」に一致する結果は見つかりませんでした。",
+      "pallet-placeholder": "リポジトリ、グループ、ユーザーを検索...",
+      "placeholder": "横断検索...",
+      "search-empty": "検索ワードを入力してください。",
+      "search-loading": "検索中..."
+    },
     "logoAlt": "ヘッダーロゴ"
   },
   "history": {
@@ -524,6 +532,7 @@
     "preferred-language-ja": "日本語",
     "privileged": "特権",
     "roles-title": "ロール",
+    "self-editing-warning": "自身の所属やロールを変更した場合、再ログインが必要です。",
     "title": "ユーザー詳細",
     "userName-description": "ユーザーの表示名です。実際のユーザーのアカウント名とは連動しません。",
     "username": "ユーザー名",

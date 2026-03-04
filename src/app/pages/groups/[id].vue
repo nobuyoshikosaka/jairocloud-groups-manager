@@ -59,7 +59,7 @@ watch(group, (newGroup: GroupDetail) => {
     description: newGroup.description || defaultForm.description,
     repository: newGroup.repository
       ? { value: newGroup.repository.id, label: newGroup.repository.serviceName }
-      : defaultForm.repository,
+      : structuredClone(defaultForm.repository),
     type: newGroup.type || defaultForm.type,
     public: newGroup.public ?? defaultForm.public,
     memberListVisibility: newGroup.memberListVisibility || defaultForm.memberListVisibility,

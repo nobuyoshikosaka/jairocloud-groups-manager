@@ -1,5 +1,6 @@
 import typing as t
 
+from http import HTTPStatus
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -148,3 +149,54 @@ def test_refresh_oauth_token_json_decode_error(app: Flask, mocker: MockerFixture
 
     with pytest.raises(requests.JSONDecodeError):
         auth.refresh_oauth_token("rft", creds)
+
+
+def test_check_token_validity_success(app: Flask, mocker: MockerFixture) -> None:
+    """Test that check_token_validity returns True when token is valid."""
+    mock_post = mocker.patch("server.clients.auth.requests.post")
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"success": True}
+    mock_resp.raise_for_status.return_value = None
+    mock_post.return_value = mock_resp
+
+    result: bool = auth.check_token_validity("valid_token")
+
+    assert result is True
+
+
+def test_check_token_validity_invalid(app: Flask, mocker: MockerFixture, caplog) -> None:
+    """Test that check_token_validity returns False when token is unauthorized."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = HTTPStatus.UNAUTHORIZED
+    mock_resp.json.return_value = {"error_description": "invalid token"}
+    mock_resp.raise_for_status.return_value = None
+    mock_post = mocker.patch("server.clients.auth.requests.post")
+    mock_post.return_value = mock_resp
+
+    with app.app_context(), caplog.at_level("INFO"):
+        result = auth.check_token_validity("dummy_token")
+
+    assert result is False
+    assert "invalid token" in caplog.text
+
+
+def test_check_token_validity_http_error(app: Flask, mocker: MockerFixture) -> None:
+    """Test that check_token_validity raises HTTPError when requests.post fails."""
+    mocker.patch("server.clients.auth.requests.post", side_effect=requests.HTTPError)
+
+    with pytest.raises(requests.HTTPError):
+        auth.check_token_validity("any_token")
+
+
+def test_check_token_validity_json_decode_error(app: Flask, mocker: MockerFixture) -> None:
+    """Test that check_token_validity raises JSONDecodeError when response is invalid JSON."""
+    mock_post = mocker.patch("server.clients.auth.requests.post")
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.side_effect = requests.JSONDecodeError("msg", "doc", 0)
+    mock_resp.raise_for_status.return_value = None
+    mock_post.return_value = mock_resp
+
+    with pytest.raises(requests.JSONDecodeError):
+        auth.check_token_validity("any_token")

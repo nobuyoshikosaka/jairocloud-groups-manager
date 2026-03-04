@@ -42,6 +42,7 @@ from .utils import (
     build_patch_operations,
     build_search_query,
     build_update_member_operations,
+    detect_repository,
     prepare_group,
 )
 
@@ -90,6 +91,7 @@ def search(
         "public",
         "member_list_visibility",
         "members",
+        "services",
     }
     try:
         query = build_search_query(criteria)
@@ -136,11 +138,13 @@ def search(
         GroupSummary(
             id=t.cast("str", group.id),
             display_name=group.display_name,
+            repository_name=repository.display,
             public=group.public,
             member_list_visibility=group.member_list_visibility,
             users_count=len(group.members) if group.members else 0,
         )
         for group in results.resources
+        if (repository := detect_repository(group.services or []))
     ]
 
     return SearchResult[GroupSummary](

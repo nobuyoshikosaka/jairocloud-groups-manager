@@ -33,6 +33,17 @@ const header = {
    * [Optional, can be left empty]
    */
   userManualURL: '' as string,
+
+  /**
+   * Configuration for global search in the header
+   */
+  globalSearch: {
+    /**
+     * Maximum number of search results to be returned for each category in the global search. \
+     * [Mandatory]
+     */
+    limit: 5,
+  },
 }
 
 const table = {
