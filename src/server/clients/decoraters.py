@@ -8,11 +8,14 @@
 
 import hashlib
 import inspect
+import traceback
 import typing as t
 
 from functools import wraps
 
+from flask import current_app
 from pydantic import BaseModel, TypeAdapter
+from redis.exceptions import RedisError
 
 from server.config import config
 from server.datastore import app_cache
@@ -68,7 +71,15 @@ def cache_resource[T: t.Callable](
             prefix = config.REDIS.key_prefix
             cache_key = f"{prefix}:{import_name}:{identifier}:{args_hash}"
 
-            cached_data: str | None = app_cache.get(cache_key)  # pyright: ignore[reportAssignmentType]
+            try:
+                cached_data: str | None = app_cache.get(cache_key)  # pyright: ignore[reportAssignmentType]
+            except RedisError:
+                current_app.logger.warning(
+                    "Failed to retrieve cache for key: %s", cache_key
+                )
+                traceback.print_exc()
+                cached_data = None
+
             if cached_data and return_type:
                 adapter = TypeAdapter(return_type)
                 return adapter.validate_json(cached_data)
@@ -80,7 +91,11 @@ def cache_resource[T: t.Callable](
             if isinstance(result, MapError) or timeout is None:
                 timeout = 3
 
-            app_cache.setex(cache_key, timeout, result.model_dump_json())
+            try:
+                app_cache.setex(cache_key, timeout, result.model_dump_json())
+            except RedisError:
+                current_app.logger.warning("Failed to set cache for key: %s", cache_key)
+                traceback.print_exc()
             return result
 
         wrapper._import_name = import_name  # pyright: ignore[reportAttributeAccessIssue]
@@ -111,18 +126,27 @@ def clear_cache(func: t.Callable, *resource_id: str) -> None:
         error = "Function is not decorated with @response_cache."
         raise ValueError(error)
 
-    for rid in resource_id:
-        match = f"{prefix}:{import_name}:{rid}:*"
+    try:
+        for rid in resource_id:
+            match = f"{prefix}:{import_name}:{rid}:*"
 
-        cursor: str | int = "0"
-        while cursor != 0:
-            cursor, keys = app_cache.scan(  # pyright: ignore[reportGeneralTypeIssues]
-                cursor=int(cursor),
-                match=match,
-                count=100,
-            )
-            if keys:
+            cursor: str | int = "0"  # start with "0", exit with int 0
+            while cursor != 0:
+                cursor, keys = app_cache.scan(  # pyright: ignore[reportGeneralTypeIssues]
+                    cursor=int(cursor),
+                    match=match,
+                    count=100,
+                )
+                if not keys:
+                    continue
                 app_cache.delete(*keys)
+    except RedisError:
+        current_app.logger.warning(
+            "Failed to clear cache for function: %s, resource_id: %s",
+            import_name,
+            resource_id,
+        )
+        traceback.print_exc()
 
 
 class ModelReturner(t.Protocol):
