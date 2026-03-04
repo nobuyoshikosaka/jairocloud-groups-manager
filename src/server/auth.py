@@ -52,16 +52,9 @@ def refresh_session() -> None:
         return
 
     session_id: str = current_user.session_id or session["_id"]
-
     key = build_account_store_key(session_id)
-    login_date_raw = account_store.hget(key, "loginDate")
-    if isinstance(login_date_raw, bytes):
-        login_date_raw = login_date_raw.decode("utf-8")
-    if not isinstance(login_date_raw, str):
-        return
 
-    login_date = datetime.fromisoformat(login_date_raw)
-    time_since_login = datetime.now(UTC) - login_date
+    time_since_login = datetime.now(UTC) - current_user.login_date
     if time_since_login.total_seconds() > config.SESSION.absolute_lifetime:
         account_store.delete(key)
         return
