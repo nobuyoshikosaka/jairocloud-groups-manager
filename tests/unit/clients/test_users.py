@@ -1,4 +1,5 @@
 import hashlib
+import importlib
 import inspect
 import json
 import time
@@ -8,9 +9,13 @@ import pytest
 
 from requests.exceptions import HTTPError
 
+import server.clients.users as users_mod
+
 from server.clients import users
+from server.clients.users import handle_user_updated_by_eppn, handle_user_updated_by_id
 from server.config import config
 from server.const import MAP_EXIST_EPPN_ENDPOINT, MAP_PATCH_SCHEMA, MAP_USERS_ENDPOINT
+from server.entities.login_user import LoginUser
 from server.entities.map_error import MapError
 from server.entities.map_user import MapUser
 from server.entities.patch_request import AddOperation, PatchOperation, PatchRequestPayload, ReplaceOperation
@@ -23,7 +28,7 @@ if t.TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 
-def test_search_success(app: Flask, mocker: MockerFixture) -> None:  # noqa: PLR0914
+def test_search_success(app: Flask, mocker: MockerFixture) -> None:
     """Test that search returns a SearchResponse[MapUser] with correct params."""
     filter_string = 'displayName eq "Test Group"'
     query = SearchRequestParameter(filter=filter_string)
@@ -59,7 +64,9 @@ def test_search_success(app: Flask, mocker: MockerFixture) -> None:  # noqa: PLR
     mock_get.return_value.text = response.model_dump_json()
     mock_get.return_value.status_code = 200
 
-    result = users.search(
+    original_func = inspect.unwrap(users.search)
+
+    result = original_func(
         query,
         access_token=access_token,
         client_secret=client_secret,
@@ -79,7 +86,7 @@ def test_search_success(app: Flask, mocker: MockerFixture) -> None:  # noqa: PLR
     assert result == expected_result
 
 
-def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:  # noqa: PLR0914
+def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:
     """Test that include params are reflected in search and partial response is handled."""
     count_number = 5
     query = SearchRequestParameter(count=count_number)
@@ -115,7 +122,8 @@ def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:  # noqa
     mock_get = mocker.patch("server.clients.users.requests.get")
     mock_get.return_value.text = json.dumps(response_data)
     mock_get.return_value.status_code = 200
-    result = users.search(
+    original_func = inspect.unwrap(users.search)
+    result = original_func(
         query,
         include=include,
         access_token=access_token,
@@ -135,7 +143,7 @@ def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:  # noqa
     assert result == expected_result
 
 
-def test_search_with_exclude(app: Flask, mocker: MockerFixture) -> None:  # noqa: PLR0914
+def test_search_with_exclude(app: Flask, mocker: MockerFixture) -> None:
     """Test that exclude params are reflected in search and excluded fields are missing."""
     filter_string = 'displayName eq "Test Group"'
     query = SearchRequestParameter(filter=filter_string)
@@ -171,7 +179,8 @@ def test_search_with_exclude(app: Flask, mocker: MockerFixture) -> None:  # noqa
     mocker.patch.object(users, "alias_generator", side_effect=lambda x: x)
     mock_get.return_value.text = json.dumps(response_data)
     mock_get.return_value.status_code = 200
-    result = users.search(
+    original_func = inspect.unwrap(users.search)
+    result = original_func(
         query,
         exclude=exclude,
         access_token=access_token,
@@ -204,7 +213,8 @@ def test_search_status_400_returns_maperror(app: Flask, mocker: MockerFixture) -
     mock_get = mocker.patch("server.clients.users.requests.get")
     mock_get.return_value.text = expected_error.model_dump_json()
     mock_get.return_value.status_code = 400
-    result = users.search(query, access_token=access_token, client_secret=client_secret)
+    original_func = inspect.unwrap(users.search)
+    result = original_func(query, access_token=access_token, client_secret=client_secret)
     assert isinstance(result, MapError)
     assert "Not Found" in result.detail
 
@@ -216,11 +226,12 @@ def test_search_http_error(app: Flask, mocker: MockerFixture) -> None:
     mock_get = mocker.patch("server.clients.users.requests.get")
     mock_get.return_value.status_code = 401
     mock_get.return_value.raise_for_status.side_effect = Exception("401 Unauthorized")
+    original_func = inspect.unwrap(users.search)
     with pytest.raises(Exception, match="401 Unauthorized"):
-        users.search(query, access_token="token", client_secret="secret")
+        original_func(query, access_token="token", client_secret="secret")
 
 
-def test_get_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_get_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that a user is returned when a valid user_id is provided."""
     json_data, _ = user_data
 
@@ -260,7 +271,7 @@ def test_get_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> None
     assert result == expected_user
 
 
-def test_get_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_get_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that include params are reflected in attributes_params for get_by_id and partial response is handled."""
     json_data, _ = user_data
 
@@ -310,7 +321,7 @@ def test_get_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) ->
     assert result.emails[0].value == response_data["emails"][0]["value"]
 
 
-def test_get_by_id_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_get_by_id_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that exclude params are reflected in attributes_params for get_by_id and excluded fields are missing."""
     json_data, _ = user_data
 
@@ -435,7 +446,7 @@ def test_get_by_eppn_success(app: Flask, mocker: MockerFixture, user_data) -> No
     assert called_kwargs["timeout"] == expected_timeout
 
 
-def test_get_by_eppn_with_includ(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_get_by_eppn_with_includ(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that include params are reflected in attributes_params for get_by_eppn and partial response is handled."""
     json_data, _ = user_data
 
@@ -485,7 +496,7 @@ def test_get_by_eppn_with_includ(app: Flask, mocker: MockerFixture, user_data) -
     assert called_kwargs["timeout"] == expected_timeout
 
 
-def test_get_by_eppn_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_get_by_eppn_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that exclude params are reflected in attributes_params for get_by_eppn and excluded fields are missing."""
     json_data, _ = user_data
 
@@ -613,7 +624,7 @@ def test_post_success(app: Flask, mocker: MockerFixture, user_data) -> None:
     assert result.groups == expected_user.groups
 
 
-def test_post_with_include(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_post_with_include(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that include/exclude params are reflected in post and partial response is handled."""
     json_data, user = user_data
 
@@ -661,7 +672,7 @@ def test_post_with_include(app: Flask, mocker: MockerFixture, user_data) -> None
     assert result.emails[0].value == response_data["emails"][0]["value"]
 
 
-def test_post_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_post_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that exclude params are reflected in attributes_params for post and excluded fields are missing."""
     json_data, user = user_data
 
@@ -738,7 +749,7 @@ def test_post_http_error(app: Flask, mocker: MockerFixture, user_data) -> None:
         users.post(user, access_token="token", client_secret="secret")
 
 
-def test_put_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_put_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that a user is updated successfully via put_by_id."""
     json_data, user = user_data
 
@@ -753,6 +764,7 @@ def test_put_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> None
     mocker.patch("server.clients.users.get_time_stamp", return_value=str(int(time.time())))
     mocker.patch("server.clients.users.compute_signature", return_value=signature)
     mock_put = mocker.patch("server.clients.users.requests.put")
+    mocker.patch("server.clients.users.search.clear_cache")
     mock_put.return_value.text = json.dumps(json_data)
     mock_put.return_value.status_code = 200
 
@@ -791,7 +803,7 @@ def test_put_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> None
     assert clear_eppn.call_args[0] == expected_emails
 
 
-def test_put_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_put_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that include params are reflected in put_by_id and partial response is handled."""
     json_data, user = user_data
 
@@ -815,6 +827,7 @@ def test_put_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) ->
     mocker.patch("server.clients.users.get_time_stamp", return_value=time_stamp)
     mocker.patch("server.clients.users.compute_signature", return_value=signature)
     mocker.patch.object(users, "alias_generator", side_effect=lambda x: x)
+    mocker.patch("server.clients.users.search.clear_cache")
     mock_put = mocker.patch("server.clients.users.requests.put")
     mock_put.return_value.text = json.dumps(response_data)
     mock_put.return_value.status_code = 200
@@ -841,7 +854,7 @@ def test_put_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) ->
     assert result.emails[0].value == response_data["emails"][0]["value"]
 
 
-def test_put_by_id_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_put_by_id_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that exclude params are reflected in put_by_id and excluded fields are missing."""
     json_data, user = user_data
 
@@ -869,6 +882,7 @@ def test_put_by_id_with_exclude(app: Flask, mocker: MockerFixture, user_data) ->
     mock_put.return_value.status_code = 200
     mocker.patch("server.clients.users.get_by_id.clear_cache")
     mocker.patch("server.clients.users.get_by_eppn.clear_cache")
+    mocker.patch("server.clients.users.search.clear_cache")
 
     original_func = inspect.unwrap(users.put_by_id)
     result: MapUser = original_func(user, exclude=exclude, access_token="token", client_secret="secret")
@@ -938,7 +952,7 @@ def test_put_by_id_does_not_clear_cache_on_error(app: Flask, mocker: MockerFixtu
     clear_eppn.assert_not_called()
 
 
-def test_patch_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_patch_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0915
     """Test that a user is patched successfully via patch_by_id."""
     json_data, _ = user_data
     user_id: str = json_data["id"]
@@ -964,6 +978,7 @@ def test_patch_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> No
     mock_patch = mocker.patch("server.clients.users.requests.patch")
     mock_patch.return_value.text = json.dumps(json_data)
     mock_patch.return_value.status_code = 200
+    mocker.patch("server.clients.users.search.clear_cache")
 
     clear_id = mocker.patch("server.clients.users.get_by_id.clear_cache")
     clear_eppn = mocker.patch("server.clients.users.get_by_eppn.clear_cache")
@@ -1002,7 +1017,7 @@ def test_patch_by_id_success(app: Flask, mocker: MockerFixture, user_data) -> No
     assert clear_eppn.call_args[0] == expected_eppn
 
 
-def test_patch_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_patch_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that include params are reflected in patch_by_id and partial response is handled."""
     json_data, _ = user_data
 
@@ -1038,6 +1053,7 @@ def test_patch_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) 
     mocker.patch.object(users, "alias_generator", side_effect=lambda x: x)
     mock_patch.return_value.text = json.dumps(response_data)
     mock_patch.return_value.status_code = 200
+    mocker.patch("server.clients.users.search.clear_cache")
 
     mocker.patch("server.clients.users.get_by_id.clear_cache")
     mocker.patch("server.clients.users.get_by_eppn.clear_cache")
@@ -1065,7 +1081,7 @@ def test_patch_by_id_with_include(app: Flask, mocker: MockerFixture, user_data) 
     assert result.emails[0].value == response_data["emails"][0]["value"]
 
 
-def test_patch_by_id_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:  # noqa: PLR0914
+def test_patch_by_id_with_exclude(app: Flask, mocker: MockerFixture, user_data) -> None:
     """Test that exclude params are reflected in patch_by_id and excluded fields are missing."""
     json_data, _ = user_data
 
@@ -1105,6 +1121,7 @@ def test_patch_by_id_with_exclude(app: Flask, mocker: MockerFixture, user_data) 
     mock_patch = mocker.patch("server.clients.users.requests.patch")
     mock_patch.return_value.text = json.dumps(response_data)
     mock_patch.return_value.status_code = 200
+    mocker.patch("server.clients.users.search.clear_cache")
 
     original_func = inspect.unwrap(users.patch_by_id)
     result: MapUser = original_func(user_id, operations, exclude=exclude, access_token="token", client_secret="secret")
@@ -1189,3 +1206,89 @@ def user_data() -> tuple[dict[str, t.Any], MapUser]:
     json_data = load_json_data("data/map_user.json")
     user = MapUser.model_validate(json_data)
     return json_data, user
+
+
+def test__get_alias_generator_with_serialization_alias(monkeypatch):
+    """Covers the branch where generator has serialization_alias attribute."""
+
+    class Dummy:
+        def __init__(self):
+            self.serialization_alias = lambda x: f"alias_{x}"
+
+    monkeypatch.setitem(users_mod.MapUser.model_config, "alias_generator", Dummy())
+    importlib.reload(users_mod)
+    result = users_mod.alias_generator
+    assert callable(result)
+    assert result("foo") == "alias_foo"
+
+
+def test__get_alias_generator_with_none(monkeypatch):
+    """Covers the branch where generator is None and falls back to lambda x: x."""
+
+    monkeypatch.setitem(users_mod.MapUser.model_config, "alias_generator", None)
+    importlib.reload(users_mod)
+    result = users_mod.alias_generator
+    assert callable(result)
+    assert result("bar") == "bar"
+
+
+def test_handle_user_updated_by_eppn_clears_cache(mocker):
+    """Covers get_by_eppn.clear_cache(*eppns) branch."""
+
+    mock_clear = mocker.patch("server.clients.users.get_by_eppn.clear_cache")
+    eppns = ["eppn1", "eppn2"]
+    handle_user_updated_by_eppn(_sender=None, eppns=eppns)
+    mock_clear.assert_called_once_with(*eppns)
+
+
+def test_handle_user_updated_by_id_clears_cache(mocker):
+    """Covers get_by_id.clear_cache(user_id) branch."""
+
+    mock_clear = mocker.patch("server.clients.users.get_by_id.clear_cache")
+    user_id = "user123"
+    handle_user_updated_by_id(_sender=None, user_id=user_id)
+    mock_clear.assert_called_once_with(user_id)
+
+
+def test_handle_user_updated_returns_early_on_non_mapuser(mocker):
+    """Covers the early return branch in handle_user_updated when user is not a MapUser instance."""
+    mock_clear_id = mocker.patch("server.clients.users.get_by_id.clear_cache")
+    mock_clear_eppn = mocker.patch("server.clients.users.get_by_eppn.clear_cache")
+    users.handle_user_updated(_sender=None, user=None)
+    mock_clear_id.assert_not_called()
+    mock_clear_eppn.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("is_logged_in", "is_admin", "permitted", "expected"),
+    [
+        (False, False, [], "anonymous"),
+        (True, True, [], "system_admin"),
+        (True, False, ["repo1", "repo2"], "repo1,repo2"),
+        (True, False, [], ""),
+    ],
+    ids=["not_logged_in", "system_admin", "permitted_repos", "empty_permitted"],
+)
+def test_search_cache_identifier(app, mocker, is_logged_in, is_admin, permitted, expected):
+
+    current_user = LoginUser(
+        eppn="dummy",
+        is_member_of="system_admin" if is_admin else "",
+        user_name="dummy",
+        map_id="dummy",
+        session_id="dummy",
+    )
+    mocker.patch.object(
+        type(current_user),
+        "is_system_admin",
+        new=property(lambda _: is_admin),
+    )
+    mocker.patch.object(
+        type(current_user),
+        "permitted_repositories",
+        new=property(lambda _: set(permitted)),
+    )
+    mocker.patch("server.clients.users.current_user", current_user)
+    mocker.patch("server.clients.users.is_user_logged_in", return_value=is_logged_in)
+    result = users_mod._search_cache_identifier()  # noqa: SLF001
+    assert result == expected

@@ -1,4 +1,5 @@
 import hashlib
+import importlib
 import inspect
 import json
 import time
@@ -11,6 +12,7 @@ from requests.exceptions import HTTPError
 from server.clients import groups
 from server.config import config
 from server.const import MAP_GROUPS_ENDPOINT
+from server.entities.login_user import LoginUser
 from server.entities.map_error import MapError
 from server.entities.map_group import MapGroup
 from server.entities.patch_request import PatchRequestPayload, ReplaceOperation
@@ -30,7 +32,7 @@ def group_data() -> tuple[dict[str, t.Any], MapGroup]:
     return json_data, group
 
 
-def test_search_success(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_search_success(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that groups are returned when a valid search request is provided."""
     _, group = group_data
 
@@ -49,8 +51,9 @@ def test_search_success(app: Flask, mocker: MockerFixture, group_data) -> None: 
     mocker.patch.object(groups, "alias_generator", side_effect=lambda x: x)
     mock_get.return_value.text = response.model_dump_json()
     mock_get.return_value.status_code = 200
+    original_func = inspect.unwrap(groups.search)
 
-    result = groups.search(query, access_token=access_token, client_secret=client_secret)
+    result = original_func(query, access_token=access_token, client_secret=client_secret)
 
     mock_get.assert_called_once()
     call_args, called_kwargs = mock_get.call_args
@@ -76,7 +79,7 @@ def test_search_success(app: Flask, mocker: MockerFixture, group_data) -> None: 
     assert result == expected_result
 
 
-def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:  # noqa: PLR0914
+def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:
     """Test that include params are reflected in attributes_params for search and partial response is handled."""
     count_number = 5
     query = SearchRequestParameter(count=count_number)
@@ -101,8 +104,8 @@ def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:  # noqa
     mocker.patch.object(groups, "alias_generator", side_effect=lambda x: x)
     mock_get.return_value.text = json.dumps(response_data)
     mock_get.return_value.status_code = 200
-
-    result = groups.search(query, include=include, access_token=access_token, client_secret=client_secret)
+    original_func = inspect.unwrap(groups.search)
+    result = original_func(query, include=include, access_token=access_token, client_secret=client_secret)
 
     call_args, called_kwargs = mock_get.call_args
     called_params_attributes = called_kwargs["params"].pop("attributes")
@@ -127,7 +130,7 @@ def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:  # noqa
     assert result == expected_result
 
 
-def test_search_with_exclude(app: Flask, mocker: MockerFixture) -> None:  # noqa: PLR0914
+def test_search_with_exclude(app: Flask, mocker: MockerFixture) -> None:
     """Test that exclude params are reflected in attributes_params for search and excluded fields are missing."""
     filter_string = 'displayName eq "Test Group"'
     query = SearchRequestParameter(filter=filter_string)
@@ -152,8 +155,9 @@ def test_search_with_exclude(app: Flask, mocker: MockerFixture) -> None:  # noqa
     mocker.patch.object(groups, "alias_generator", side_effect=lambda x: x)
     mock_get.return_value.text = json.dumps(response_data)
     mock_get.return_value.status_code = 200
+    original_func = inspect.unwrap(groups.search)
 
-    result = groups.search(query, exclude=exclude, access_token=access_token, client_secret=client_secret)
+    result = original_func(query, exclude=exclude, access_token=access_token, client_secret=client_secret)
 
     call_args, called_kwargs = mock_get.call_args
     called_params_attributes = called_kwargs["params"].pop("attributes", None)
@@ -178,7 +182,7 @@ def test_search_with_exclude(app: Flask, mocker: MockerFixture) -> None:  # noqa
     assert result == expected_result
 
 
-def test_search_groups_with_all_params(app: Flask, mocker: MockerFixture) -> None:  # noqa: PLR0914
+def test_search_groups_with_all_params(app: Flask, mocker: MockerFixture) -> None:
     """Tests group search with all parameter types."""
     filter_string = 'displayName eq "Test Group"'
     query = SearchRequestParameter(filter=filter_string)
@@ -205,8 +209,9 @@ def test_search_groups_with_all_params(app: Flask, mocker: MockerFixture) -> Non
     mocker.patch.object(groups, "alias_generator", side_effect=lambda x: x)
     mock_get.return_value.text = json.dumps(response_data)
     mock_get.return_value.status_code = 200
+    original_func = inspect.unwrap(groups.search)
 
-    result = groups.search(
+    result = original_func(
         query, include=include, exclude=exclude, access_token=access_token, client_secret=client_secret
     )
 
@@ -243,8 +248,9 @@ def test_search_status_400_returns_maperror(app: Flask, mocker: MockerFixture, g
     mock_get = mocker.patch("server.clients.groups.requests.get")
     mock_get.return_value.text = MapError.model_validate(error_data).model_dump_json()
     mock_get.return_value.status_code = 400
+    original_func = inspect.unwrap(groups.search)
 
-    result = groups.search(query, access_token=access_token, client_secret=client_secret)
+    result = original_func(query, access_token=access_token, client_secret=client_secret)
     assert isinstance(result, MapError)
 
 
@@ -255,12 +261,13 @@ def test_search_http_error(app: Flask, mocker: MockerFixture) -> None:
     mock_get = mocker.patch("server.clients.groups.requests.get")
     mock_get.return_value.status_code = 401
     mock_get.return_value.raise_for_status.side_effect = Exception("401 Unauthorized")
+    original_func = inspect.unwrap(groups.search)
 
     with pytest.raises(Exception, match="401 Unauthorized"):
-        groups.search(query, access_token="token", client_secret="secret")
+        original_func(query, access_token="token", client_secret="secret")
 
 
-def test_get_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_get_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that a group is returned when a valid group_id is provided."""
     json_data, expected_result = group_data
     group_id = None
@@ -295,7 +302,7 @@ def test_get_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> Non
     assert result == expected_result
 
 
-def test_get_by_id_with_include(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_get_by_id_with_include(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that include params are reflected in attributes_params for get_by_id and partial response is handled."""
     json_data, _ = group_data
     group_id: str = json_data["id"]
@@ -338,7 +345,7 @@ def test_get_by_id_with_include(app: Flask, mocker: MockerFixture, group_data) -
     assert result == expected_result
 
 
-def test_get_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_get_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that exclude params are reflected in attributes_params for get_by_id and excluded fields are missing."""
     json_data, _ = group_data
     group_id = json_data["id"]
@@ -383,7 +390,7 @@ def test_get_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data) -
     assert result == expected_result
 
 
-def test_get_by_id_with_all_params(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_get_by_id_with_all_params(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Tests get_by_id with all parameter types (include/exclude)."""
     json_data, _ = group_data
     group_id = json_data["id"]
@@ -490,7 +497,7 @@ def test_post_success(app: Flask, mocker: MockerFixture, group_data) -> None:
     assert result == expected_result
 
 
-def test_post_with_include(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_post_with_include(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that include params are reflected in post and partial response is handled."""
     json_data, group = group_data
 
@@ -564,7 +571,7 @@ def test_post_with_exclude(app: Flask, mocker: MockerFixture, group_data) -> Non
     assert result == expected_result
 
 
-def test_post_with_all_params(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_post_with_all_params(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Tests post with all parameter types (include/exclude)."""
     json_data, group = group_data
     include = {"display_name", "description"}
@@ -639,13 +646,14 @@ def test_put_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> Non
     expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}/{json_data['id']}"
     expected_headers = {"Authorization": "Bearer token"}
     expected_timeout = config.MAP_CORE.timeout
+    mocker.patch("server.clients.groups.search.clear_cache")
 
     mock_put = mocker.patch("server.clients.groups.requests.put")
     mock_put.return_value.text = json.dumps(json_data)
     mock_put.return_value.status_code = 200
     clear_id = mocker.patch("server.clients.groups.get_by_id.clear_cache")
-
     original_func = inspect.unwrap(groups.put_by_id)
+
     result = original_func(group, access_token="token", client_secret="secret")
 
     mock_put.assert_called_once()
@@ -663,7 +671,7 @@ def test_put_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> Non
     clear_id.assert_called_once_with(group.id)
 
 
-def test_put_by_id_with_include(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_put_by_id_with_include(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that include params are reflected in put_by_id and partial response is handled."""
     json_data, group = group_data
 
@@ -682,6 +690,7 @@ def test_put_by_id_with_include(app: Flask, mocker: MockerFixture, group_data) -
     mocker.patch("server.clients.groups.get_by_id", return_value=group)
     mock_put = mocker.patch("server.clients.groups.requests.put")
     mocker.patch.object(groups, "alias_generator", side_effect=lambda x: x)
+    mocker.patch("server.clients.groups.search.clear_cache")
     mock_put.return_value.text = json.dumps(response_data)
     mock_put.return_value.status_code = 200
     clear_id = mocker.patch("server.clients.groups.get_by_id.clear_cache")
@@ -703,7 +712,7 @@ def test_put_by_id_with_include(app: Flask, mocker: MockerFixture, group_data) -
     clear_id.assert_called_once_with(group.id)
 
 
-def test_put_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_put_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that exclude params are reflected in put_by_id and excluded fields are missing."""
     json_data, group = group_data
 
@@ -720,6 +729,7 @@ def test_put_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data) -
     expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}/{json_data['id']}"
     mocker.patch("server.clients.groups.get_by_id", return_value=group)
     mock_put = mocker.patch("server.clients.groups.requests.put")
+    mocker.patch("server.clients.groups.search.clear_cache")
     mock_put.return_value.text = json.dumps(response_data)
     mock_put.return_value.status_code = 200
     clear_id = mocker.patch("server.clients.groups.get_by_id.clear_cache")
@@ -740,7 +750,7 @@ def test_put_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data) -
     clear_id.assert_called_once_with(group.id)
 
 
-def test_put_by_id_with_all_params(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_put_by_id_with_all_params(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Tests put_by_id with all parameter types (include/exclude)."""
     json_data, group = group_data
     include = {"display_name", "description"}
@@ -758,6 +768,7 @@ def test_put_by_id_with_all_params(app: Flask, mocker: MockerFixture, group_data
 
     mocker.patch("server.clients.groups.get_by_id", return_value=group)
     mock_put = mocker.patch("server.clients.groups.requests.put")
+    mocker.patch("server.clients.groups.search.clear_cache")
     mocker.patch.object(groups, "alias_generator", side_effect=lambda x: x)
     mock_put.return_value.text = json.dumps(response_data)
     mock_put.return_value.status_code = 200
@@ -810,7 +821,7 @@ def test_put_by_id_http_error(app: Flask, mocker: MockerFixture, group_data) -> 
     clear_id.assert_not_called()
 
 
-def test_patch_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_patch_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that a group is patched successfully via patch_by_id."""
     json_data, _ = group_data
 
@@ -826,6 +837,7 @@ def test_patch_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> N
     expected_timeout = config.MAP_CORE.timeout
     expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}/{group_id}"
     mock_patch = mocker.patch("server.clients.groups.requests.patch")
+    mocker.patch("server.clients.groups.search.clear_cache")
     mock_patch.return_value.text = json.dumps(json_data)
     mock_patch.return_value.status_code = 200
 
@@ -848,7 +860,7 @@ def test_patch_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> N
     clear_id.assert_called_once_with(group_id)
 
 
-def test_patch_by_id_with_include(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_patch_by_id_with_include(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that include params are reflected in patch_by_id and partial response is handled."""
     json_data, _ = group_data
 
@@ -867,6 +879,7 @@ def test_patch_by_id_with_include(app: Flask, mocker: MockerFixture, group_data)
     expected_timeout = config.MAP_CORE.timeout
     expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}/{group_id}"
     mock_patch = mocker.patch("server.clients.groups.requests.patch")
+    mocker.patch("server.clients.groups.search.clear_cache")
     mocker.patch.object(groups, "alias_generator", side_effect=lambda x: x)
     mock_patch.return_value.text = json.dumps(response_data)
     mock_patch.return_value.status_code = 200
@@ -891,7 +904,7 @@ def test_patch_by_id_with_include(app: Flask, mocker: MockerFixture, group_data)
     assert result == expected_result
 
 
-def test_patch_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_patch_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Test that exclude params are reflected in patch_by_id and excluded fields are missing."""
     json_data, _ = group_data
 
@@ -910,6 +923,7 @@ def test_patch_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data)
     expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}/{group_id}"
 
     mock_patch = mocker.patch("server.clients.groups.requests.patch")
+    mocker.patch("server.clients.groups.search.clear_cache")
     mocker.patch("server.clients.groups.get_by_id.clear_cache")
     mock_patch.return_value.text = json.dumps(response_data)
     mock_patch.return_value.status_code = 200
@@ -933,7 +947,7 @@ def test_patch_by_id_with_exclude(app: Flask, mocker: MockerFixture, group_data)
     assert result == expected_result
 
 
-def test_patch_by_id_with_all_params(app: Flask, mocker: MockerFixture, group_data) -> None:  # noqa: PLR0914
+def test_patch_by_id_with_all_params(app: Flask, mocker: MockerFixture, group_data) -> None:
     """Tests patch_by_id with all parameter types (include/exclude)."""
     json_data, _ = group_data
     group_id = json_data["id"]
@@ -952,6 +966,7 @@ def test_patch_by_id_with_all_params(app: Flask, mocker: MockerFixture, group_da
     expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}/{group_id}"
 
     mocker.patch("server.clients.groups.get_by_id.clear_cache")
+    mocker.patch("server.clients.groups.search.clear_cache")
     mock_patch = mocker.patch("server.clients.groups.requests.patch")
     mocker.patch.object(groups, "alias_generator", side_effect=lambda x: x)
     mock_patch.return_value.text = json.dumps(response_data)
@@ -1022,6 +1037,7 @@ def test_delete_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> 
     }
     mocker.patch("server.clients.groups.get_time_stamp", return_value=time_stamp)
     mocker.patch("server.clients.groups.compute_signature", return_value=signature)
+    mocker.patch("server.clients.groups.search.clear_cache")
     mock_delete = mocker.patch("server.clients.groups.requests.delete")
     mock_delete.return_value.text = ""
     mock_delete.return_value.status_code = 200
@@ -1072,3 +1088,90 @@ def test_delete_by_id_http_error(app: Flask, mocker: MockerFixture, group_data) 
         groups.delete_by_id(group_id, access_token="token", client_secret="secret")
 
     clear_id.assert_not_called()
+
+
+def test_handle_group_updated_clears_cache(group_data, mocker):
+    """Covers get_by_id.clear_cache(group_id) branch for handle_group_updated_by_id."""
+    _, group = group_data
+
+    group: MapGroup = MapGroup(id="group123", display_name="Test Group")
+    original_func = inspect.unwrap(groups.handle_group_updated)
+    original_func(_sender=None, group_id=group)
+
+
+def test_handle_group_updated_by_id_clears_cache(mocker):
+    """Covers get_by_id.clear_cache(group_id) branch for handle_group_updated_by_id."""
+    mock_clear = mocker.patch("server.clients.groups.get_by_id.clear_cache")
+    group_id = "group123"
+    original_func = inspect.unwrap(groups.handle_group_updated_by_id)
+    original_func(_sender=None, group_id=group_id)
+    mock_clear.assert_called_once_with(group_id)
+
+
+def test_handle_group_updated_by_ids_clears_cache(mocker):
+    """Covers get_by_id.clear_cache(*group_ids) branch for handle_group_updated_by_ids."""
+    mock_clear = mocker.patch("server.clients.groups.get_by_id.clear_cache")
+    group_ids = ["group1", "group2"]
+
+    original_func = inspect.unwrap(groups.handle_group_updated_by_ids)
+    original_func(_sender=None, group_ids=group_ids)
+    mock_clear.assert_called_once_with(*group_ids)
+
+
+def test__get_alias_generator_with_serialization_alias_groups(monkeypatch):
+    """Covers the branch where generator has serialization_alias attribute for groups."""
+
+    class Dummy:
+        def __init__(self):
+            self.serialization_alias = lambda x: f"alias_{x}"
+
+    monkeypatch.setitem(groups.MapGroup.model_config, "alias_generator", Dummy())
+    importlib.reload(groups)
+    result = groups.alias_generator
+    assert callable(result)
+    assert result("foo") == "alias_foo"
+
+
+def test__get_alias_generator_with_none_groups(monkeypatch):
+    """Covers the branch where generator is None and falls back to lambda x: x for groups."""
+
+    monkeypatch.setitem(groups.MapGroup.model_config, "alias_generator", None)
+    importlib.reload(groups)
+    result = groups.alias_generator
+    assert callable(result)
+    assert result("bar") == "bar"
+
+
+@pytest.mark.parametrize(
+    ("is_logged_in", "is_admin", "permitted", "expected"),
+    [
+        (False, False, [], "anonymous"),
+        (True, True, [], "system_admin"),
+        (True, False, ["repo1", "repo2"], "repo1,repo2"),
+        (True, False, [], ""),
+    ],
+    ids=["not_logged_in", "system_admin", "permitted_repos", "empty_permitted"],
+)
+def test_search_cache_identifier_groups(mocker, is_logged_in, is_admin, permitted, expected):
+
+    current_user = LoginUser(
+        eppn="dummy",
+        is_member_of="system_admin" if is_admin else "",
+        user_name="dummy",
+        map_id="dummy",
+        session_id="dummy",
+    )
+    mocker.patch.object(
+        type(current_user),
+        "is_system_admin",
+        new=property(lambda _: is_admin),
+    )
+    mocker.patch.object(
+        type(current_user),
+        "permitted_repositories",
+        new=property(lambda _: set(permitted)),
+    )
+    mocker.patch("server.clients.groups.current_user", current_user)
+    mocker.patch("server.clients.groups.is_user_logged_in", return_value=is_logged_in)
+    result = groups._search_cache_identifier()  # noqa: SLF001
+    assert result == expected
