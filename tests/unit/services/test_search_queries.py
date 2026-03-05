@@ -141,15 +141,15 @@ def test_build_repositories_search_query(
             ),
         ),
         (
-            GroupsQuery(q=None, i=["jc_repo1_groups_test1"], r=None, u=None, s=1, v=1, k=None, d=None, p=None, l=None),
+            GroupsQuery(q=None, i=["jc_repo1_gr_test1"], r=None, u=None, s=1, v=1, k=None, d=None, p=None, l=None),
             False,
             {"repo1"},
             Affiliations(
                 roles=[],
-                groups=[_Group(repository_id="repo1", group_id="jc_repo1_groups_test1", user_defined_id="test1")],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
             SearchRequestParameter(
-                filter='(id eq "jc_repo1_groups_test1") and (public eq false) and (memberListVisibility eq Private)',
+                filter='(id eq "jc_repo1_gr_test1") and (public eq false) and (memberListVisibility eq Private)',
                 start_index=None,
                 count=20,
                 sort_by=None,
@@ -157,17 +157,15 @@ def test_build_repositories_search_query(
             ),
         ),
         (
-            GroupsQuery(
-                q=None, i=["jc_repo1_groups_test1"], r=None, u=None, s=None, v=2, k=None, d=None, p=None, l=None
-            ),
+            GroupsQuery(q=None, i=["jc_repo1_gr_test1"], r=None, u=None, s=None, v=2, k=None, d=None, p=None, l=None),
             True,
             {"repo1"},
             Affiliations(
                 roles=[],
-                groups=[_Group(repository_id="repo1", group_id="jc_repo1_groups_test1", user_defined_id="test1")],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
             SearchRequestParameter(
-                filter='(id eq "jc_repo1_groups_test1") and (memberListVisibility eq Hidden)',
+                filter='(id eq "jc_repo1_gr_test1") and (memberListVisibility eq Hidden)',
                 start_index=None,
                 count=20,
                 sort_by=None,
@@ -180,7 +178,7 @@ def test_build_repositories_search_query(
             {"repo1"},
             Affiliations(
                 roles=[],
-                groups=[_Group(repository_id="repo1", group_id="jc_repo1_groups_test1", user_defined_id="test1")],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
             SearchRequestParameter(
                 filter='id sw "jc_repo1"', start_index=None, count=20, sort_by=None, sort_order=None
@@ -195,7 +193,7 @@ def test_build_repositories_search_query(
         ),
     ],
 )
-def test_build_groups_search_query(  # noqa: PLR0913, PLR0917
+def test_build_groups_search_query(
     app, mocker: MockerFixture, search_query, is_system_admin, permitted, affiliations, expected
 ):
     mocker.patch("server.services.utils.search_queries.is_current_user_system_admin", return_value=is_system_admin)
@@ -211,7 +209,7 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
         "server.services.utils.search_queries.detect_affiliations", return_value=Affiliations(roles=[], groups=[])
     )
     with pytest.raises(InvalidQueryError) as exc:
-        search_queries.build_groups_search_query(GroupsQuery(i=["jc_repo1_groups_test1"]))
+        search_queries.build_groups_search_query(GroupsQuery(i=["jc_repo1_gr_test1"]))
     assert str(exc.value) == "Invalid group filter criteria"
 
 
@@ -221,9 +219,9 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
         (
             UsersQuery(
                 q="test",
-                i=[""],
+                i=["test_user"],
                 r=["repo1"],
-                g=["jc_repo1_groups_test1"],
+                g=["jc_repo1_gr_test1"],
                 a=[0],
                 s=date(2026, 1, 1),
                 e=date(2026, 1, 31),
@@ -235,13 +233,15 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
             set(),
             Affiliations(
                 roles=[],
-                groups=[_Group(repository_id="repo1", group_id="jc_repo1_groups_test1", user_defined_id="test1")],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
             SearchRequestParameter(
                 filter=(
                     '((userName co "test") or (emails.value co "test") or (eduPersonPrincipalNames.value co "test")) '
-                    'and (id eq "") and (groups.value eq "") and (meta.lastModified ge "2025-12-31T15:00:00+00:00") '
-                    'and (meta.lastModified lt "2026-01-31T15:00:00+00:00")'
+                    'and (id eq "test_user") and (groups.value ne "jc_roles_sysadm_test" and '
+                    '(groups.value eq "jc_repo1_gr_test1") and groups.value ne '
+                    '"jc_roles_sysadm_test" and (groups.value eq "")) and (meta.lastModified ge '
+                    '"2025-12-31T15:00:00+00:00") and (meta.lastModified lt "2026-01-31T15:00:00+00:00")'
                 ),
                 start_index=None,
                 count=20,
@@ -254,7 +254,7 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
                 q=None,
                 i=None,
                 r=None,
-                g=["jc_repo1_groups_test1"],
+                g=["jc_repo1_gr_test1"],
                 a=[1],
                 s=None,
                 e=None,
@@ -266,12 +266,13 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
             set(),
             Affiliations(
                 roles=[],
-                groups=[_Group(repository_id="repo1", group_id="jc_repo1_groups_test1", user_defined_id="test1")],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
             SearchRequestParameter(
                 filter=(
-                    '(groups.value eq "jc_repo1_groups_test1") and (groups.value sw "jc_" and '
-                    'groups.value ew "_ro_radm_test")'
+                    '(groups.value ne "jc_roles_sysadm_test" and (groups.value eq "jc_repo1_gr_test1")) and '
+                    '(groups.value ne "jc_roles_sysadm_test" and (groups.value sw "jc_" and '
+                    'groups.value ew "_ro_radm_test"))'
                 ),
                 start_index=None,
                 count=20,
@@ -284,7 +285,7 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
             set(),
             Affiliations(roles=[], groups=[]),
             SearchRequestParameter(
-                filter='groups.value eq "jc_repo1_ro_cadm_test"',
+                filter='groups.value ne "jc_roles_sysadm_test" and (groups.value eq "jc_repo1_ro_cadm_test")',
                 start_index=None,
                 count=20,
                 sort_by=None,
@@ -296,7 +297,7 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
                 q=None,
                 i=None,
                 r=["repo2"],
-                g=["jc_repo1_groups_test1"],
+                g=["jc_repo1_gr_test1"],
                 a=None,
                 s=None,
                 e=None,
@@ -308,7 +309,7 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
             set(),
             Affiliations(
                 roles=[],
-                groups=[_Group(repository_id="repo1", group_id="jc_repo1_groups_test1", user_defined_id="test1")],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
             SearchRequestParameter(
                 filter='groups.value eq ""',
@@ -323,7 +324,11 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
             set(),
             Affiliations(roles=[], groups=[]),
             SearchRequestParameter(
-                filter='groups.value sw "jc_repo1"', start_index=None, count=20, sort_by=None, sort_order=None
+                filter='groups.value ne "jc_roles_sysadm_test" and (groups.value sw "jc_repo1")',
+                start_index=None,
+                count=20,
+                sort_by=None,
+                sort_order=None,
             ),
         ),
         (
@@ -331,7 +336,7 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
                 q=None,
                 i=None,
                 r=None,
-                g=["jc_repo1_groups_test1"],
+                g=["jc_repo1_gr_test1"],
                 a=None,
                 s=None,
                 e=None,
@@ -343,10 +348,10 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
             set(),
             Affiliations(
                 roles=[],
-                groups=[_Group(repository_id="repo1", group_id="jc_repo1_groups_test1", user_defined_id="test1")],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
             SearchRequestParameter(
-                filter='groups.value eq "jc_repo1_groups_test1"',
+                filter='groups.value ne "jc_roles_sysadm_test" and (groups.value eq "jc_repo1_gr_test1")',
                 start_index=None,
                 count=20,
                 sort_by=None,
@@ -424,7 +429,7 @@ def test_build_users_search_query_system_admin(
             {"repo1"},
             Affiliations(roles=[], groups=[]),
             SearchRequestParameter(
-                filter='(groups.value sw "jc_repo1") and (groups.value ne "jc_roles_sysadm_test")',
+                filter='groups.value ne "jc_roles_sysadm_test" and (groups.value sw "jc_repo1")',
                 start_index=None,
                 count=20,
                 sort_by=None,
@@ -436,7 +441,7 @@ def test_build_users_search_query_system_admin(
                 q=None,
                 i=None,
                 r=None,
-                g=["jc_repo1_groups_test1"],
+                g=["jc_repo1_gr_test1"],
                 a=[1],
                 s=None,
                 e=None,
@@ -448,12 +453,12 @@ def test_build_users_search_query_system_admin(
             {"repo1"},
             Affiliations(
                 roles=[],
-                groups=[_Group(repository_id="repo1", group_id="jc_repo1_groups_test1", user_defined_id="test1")],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
             SearchRequestParameter(
                 filter=(
-                    '(groups.value eq "jc_repo1_groups_test1" and groups.value eq "jc_repo1_ro_radm_test") '
-                    'and (groups.value ne "jc_roles_sysadm_test")'
+                    'groups.value ne "jc_roles_sysadm_test" and (groups.value eq "jc_repo1_gr_test1") '
+                    'and groups.value ne "jc_roles_sysadm_test" and (groups.value eq "jc_repo1_ro_radm_test")'
                 ),
                 start_index=None,
                 count=20,
@@ -466,7 +471,7 @@ def test_build_users_search_query_system_admin(
                 q=None,
                 i=None,
                 r=None,
-                g=["jc_repo1_groups_test1"],
+                g=["jc_repo1_gr_test1"],
                 a=None,
                 s=None,
                 e=None,
@@ -478,10 +483,10 @@ def test_build_users_search_query_system_admin(
             {"repo1"},
             Affiliations(
                 roles=[],
-                groups=[_Group(repository_id="repo1", group_id="jc_repo1_groups_test1", user_defined_id="test1")],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
             SearchRequestParameter(
-                filter='(groups.value eq "jc_repo1_groups_test1") and (groups.value ne "jc_roles_sysadm_test")',
+                filter='groups.value ne "jc_roles_sysadm_test" and (groups.value eq "jc_repo1_gr_test1")',
                 start_index=None,
                 count=20,
                 sort_by=None,
@@ -493,7 +498,34 @@ def test_build_users_search_query_system_admin(
             {"repo1"},
             Affiliations(roles=[], groups=[]),
             SearchRequestParameter(
-                filter='(groups.value eq "jc_repo1_ro_radm_test") and (groups.value ne "jc_roles_sysadm_test")',
+                filter='groups.value ne "jc_roles_sysadm_test" and (groups.value eq "jc_repo1_ro_radm_test")',
+                start_index=None,
+                count=20,
+                sort_by=None,
+                sort_order=None,
+            ),
+        ),
+        (
+            UsersQuery(
+                q=None,
+                i=None,
+                r=None,
+                g=["jc_repo1_gr_test1"],
+                a=[0],
+                s=None,
+                e=None,
+                k=None,
+                d=None,
+                p=None,
+                l=None,
+            ),
+            {"repo1"},
+            Affiliations(
+                roles=[],
+                groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
+            ),
+            SearchRequestParameter(
+                filter=('groups.value eq ""'),
                 start_index=None,
                 count=20,
                 sort_by=None,

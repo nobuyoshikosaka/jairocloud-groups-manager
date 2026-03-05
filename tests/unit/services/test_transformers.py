@@ -123,7 +123,7 @@ def test_prepare_service_no_administrators(app, mocker: MockerFixture):
     assert str(exc.value) == "At least one administrator is required to create a repository."
 
 
-def test_prepare_role_groups(app, mocker: MockerFixture):
+def test_prepare_role_groups(app, test_config, mocker: MockerFixture):
     repository_id = "repo1"
     service_id = "jc_repo1_test"
     service_name = "service1"
@@ -136,7 +136,7 @@ def test_prepare_role_groups(app, mocker: MockerFixture):
             public=False,
             member_list_visibility="Private",
             administrators=[GroupAdministrator(value="admin1"), GroupAdministrator(value="admin2")],
-            services=[GroupService(value=service_id)],
+            services=[GroupService(value=test_config.SP.connector_id), GroupService(value=service_id)],
         ),
         MapGroup(
             id="jc_repo1_ro_cadm_test",
@@ -144,7 +144,7 @@ def test_prepare_role_groups(app, mocker: MockerFixture):
             public=False,
             member_list_visibility="Private",
             administrators=[GroupAdministrator(value="admin1"), GroupAdministrator(value="admin2")],
-            services=[GroupService(value=service_id)],
+            services=[GroupService(value=test_config.SP.connector_id), GroupService(value=service_id)],
         ),
         MapGroup(
             id="jc_repo1_ro_cont_test",
@@ -152,7 +152,7 @@ def test_prepare_role_groups(app, mocker: MockerFixture):
             public=False,
             member_list_visibility="Private",
             administrators=[GroupAdministrator(value="admin1"), GroupAdministrator(value="admin2")],
-            services=[GroupService(value=service_id)],
+            services=[GroupService(value=test_config.SP.connector_id), GroupService(value=service_id)],
         ),
         MapGroup(
             id="jc_repo1_ro_user_test",
@@ -160,7 +160,7 @@ def test_prepare_role_groups(app, mocker: MockerFixture):
             public=False,
             member_list_visibility="Private",
             administrators=[GroupAdministrator(value="admin1"), GroupAdministrator(value="admin2")],
-            services=[GroupService(value=service_id)],
+            services=[GroupService(value=test_config.SP.connector_id), GroupService(value=service_id)],
         ),
     ]
     map_group_list = transformers.prepare_role_groups(repository_id, service_name, administrators)
@@ -364,7 +364,7 @@ def test_make_map_service(app, mocker: MockerFixture, repository, expected):
     assert transformers.make_map_service(repository) == expected
 
 
-def test_prepare_group(app, mocker: MockerFixture):
+def test_prepare_group(app, test_config, mocker: MockerFixture):
     detail = GroupDetail(type="group")
     administrators = {"admin1", "admin2"}
     repository_id = "repo1"
@@ -374,7 +374,7 @@ def test_prepare_group(app, mocker: MockerFixture):
         "server.services.utils.transformers.validate_group_to_map_group", return_value=(expected, repository_id)
     )
     expected.administrators = [GroupAdministrator(value=user_id) for user_id in administrators]
-    expected.services = [GroupService(value=service_id)]
+    expected.services = [GroupService(value=test_config.SP.connector_id), GroupService(value=service_id)]
     mocker.patch("server.services.utils.transformers.resolve_service_id", return_value=service_id)
     map_group = transformers.prepare_group(detail, administrators)
     assert_unordered_model_list_equal(map_group.administrators, expected.administrators)
