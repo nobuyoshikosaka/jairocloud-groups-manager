@@ -343,7 +343,6 @@ def _user_groups_filter(criteria: UsersCriteria, path: str) -> str:
         _repository_admin_user_groups_filter(
             criteria, path, permitted, specified_roles
         ),
-        f'{path} ne "{config.GROUPS.id_patterns.system_admin}"',
     ]
     return t.cast("str", _combine_filter_exprs(filter_expr))
 
@@ -451,6 +450,13 @@ def _all_repository_specified_role_filter(path: str, roles: list[USER_ROLES]) ->
         prefix, suffix = id_patterns[role]
         filters.append(f'{path} sw "{prefix}" and {path} ew "{suffix}"')
 
+    if USER_ROLES.SYSTEM_ADMIN not in roles:
+        return (
+            f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+            + " or ".join(filters)
+            + ")"
+        )
+
     return " or ".join(filters)
 
 
@@ -459,7 +465,13 @@ def _all_repository_specified_group_filter(path: str, group_ids: list[str]) -> s
 
     Filter by exact match for group IDs without specifying a repository.
     """
-    return " or ".join([f'{path} eq "{group_id}"' for group_id in group_ids])
+    if path == "id":
+        return " or ".join([f'{path} eq "{group_id}"' for group_id in group_ids])
+    return (
+        f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+        + " or ".join([f'{path} eq "{group_id}"' for group_id in group_ids])
+        + ")"
+    )
 
 
 def _all_repository_specified_role_specified_group_filter(
@@ -481,11 +493,21 @@ def _specified_repository_all_group_filter(path: str, repository_ids: list[str])
     Filter by prefix match for group IDs within specified repositories.
     """
     prefix_patterns = _get_prefix_patterns()
-    return " or ".join([
-        f'{path} sw "{prefix}{repo_id}"'
-        for prefix in prefix_patterns
-        for repo_id in repository_ids
-    ])
+    if path == "id":
+        return " or ".join([
+            f'{path} sw "{prefix}{repo_id}"'
+            for prefix in prefix_patterns
+            for repo_id in repository_ids
+        ])
+    return (
+        f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+        + " or ".join([
+            f'{path} sw "{prefix}{repo_id}"'
+            for prefix in prefix_patterns
+            for repo_id in repository_ids
+        ])
+        + ")"
+    )
 
 
 def _specified_repository_specified_role_filter(
@@ -495,6 +517,9 @@ def _specified_repository_specified_role_filter(
 
     Filter by exact match for role-type group IDs within specified repositories.
     """
+    if not roles:
+        return _empty_filter(path)
+
     filters: list[str] = []
     for role in roles:
         if role == USER_ROLES.SYSTEM_ADMIN:
@@ -507,7 +532,11 @@ def _specified_repository_specified_role_filter(
             for repo_id in repository_ids
         )
 
-    return " or ".join(filters)
+    return (
+        f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+        + " or ".join(filters)
+        + ")"
+    )
 
 
 def _specified_repository_specified_group_filter(
@@ -521,7 +550,13 @@ def _specified_repository_specified_group_filter(
     # filter by repository IDs that the specified group belongs to
     filtered_groups = [aff for aff in groups if aff.repository_id in repository_ids]
     if filtered_groups:
-        return " or ".join([f'{path} eq "{g.group_id}"' for g in filtered_groups])
+        if path == "id":
+            return " or ".join([f'{path} eq "{g.group_id}"' for g in filtered_groups])
+        return (
+            f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+            + " or ".join([f'{path} eq "{g.group_id}"' for g in filtered_groups])
+            + ")"
+        )
 
     return _empty_filter(path)
 

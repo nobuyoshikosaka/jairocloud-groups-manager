@@ -116,6 +116,7 @@ def prepare_role_groups(
                     GroupAdministrator(value=user_id) for user_id in administrators
                 ],
                 services=[
+                    GroupService(value=config.SP.connector_id),
                     GroupService(value=service_id),
                 ],
             )
@@ -278,6 +279,7 @@ def prepare_group(
         GroupAdministrator(value=user_id) for user_id in administrators
     ]
     map_group.services = [
+        GroupService(value=config.SP.connector_id),
         GroupService(value=service_id),
     ]
 
