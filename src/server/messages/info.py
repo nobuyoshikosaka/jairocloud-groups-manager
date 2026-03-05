@@ -68,3 +68,24 @@ RECEIVE_RESPONSE_MESSAGE = LogMessage(
     "I030",
     "Received response from mAP Core API: %(message)s",
 )
+
+
+SUCCESS_CREATE_REPOSITORY = LogMessage(
+    "I100",
+    "Successfully created Service resource for Repository (id: %(service_id)s)",
+)
+
+SUCCESS_CREATE_ROLEGROUPS = LogMessage(
+    "I101",
+    "Successfully created role-type groups for Repository (id: %(service_id)s)",
+)
+
+SUCCESS_UPDATE_REPOSITORY = LogMessage(
+    "I102",
+    "Successfully updated Service resource for Repository (id: %(service_id)s)",
+)
+
+SUCCESS_DELETE_REPOSITORY = LogMessage(
+    "I103",
+    "Successfully deleted Service resource for Repository (id: %(service_id)s)",
+)

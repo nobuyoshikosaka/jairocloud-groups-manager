@@ -20,6 +20,7 @@ from server.exc import (
     OAuthTokenError,
     SystemAdminNotFound,
 )
+from server.messages import E
 
 from .schemas import ErrorResponse
 
@@ -51,7 +52,7 @@ def create_api_blueprint() -> Blueprint:
             dict: Response body.
         """
         traceback.print_exc()
-        return ErrorResponse(code=error.code, message=error.message), 500
+        return ErrorResponse(code=error.code, message=E.UNEXPECTED_SERVER_ERROR), 500
 
     @bp_api.errorhandler(OAuthTokenError)
     @bp_api.errorhandler(CredentialsError)
@@ -69,7 +70,7 @@ def create_api_blueprint() -> Blueprint:
             dict: Response body.
         """
         traceback.print_exc()
-        return ErrorResponse(code=error.code, message=error.message), 503
+        return ErrorResponse(code=error.code, message=E.SERVER_UNAVAILABLE), 503
 
     bp_api.before_request(refresh_session)
 
@@ -81,6 +82,6 @@ def create_api_blueprint() -> Blueprint:
         Returns:
             dict: Response body indicating unauthorized access.
         """
-        return ErrorResponse(code="", message="Login required."), 401
+        return ErrorResponse(message=E.UNAUTHORIZED), 401
 
     return bp_api

@@ -36,6 +36,7 @@ from server.entities.repository_detail import RepositoryDetail
 from server.entities.summaries import GroupSummary, UserSummary
 from server.entities.user_detail import RepositoryRole, UserDetail
 from server.exc import InvalidFormError, SystemAdminNotFound
+from server.messages import E
 
 from .affiliations import detect_affiliation, detect_affiliations
 from .permissions import get_permitted_repository_ids, is_current_user_system_admin
@@ -59,10 +60,10 @@ def prepare_service(
         SystemAdminNotFound: If no administrators are provided.
     """
     service = validate_repository_to_map_service(repository)
-    repository_id = t.cast("str", resolve_repository_id(service_id=service.id))
+    repository_id = t.cast("str", repository.id)
 
     if not administrators:
-        error = "At least one administrator is required to create a repository."
+        error = E.REPOSITORY_REQUIRES_SYSTEM_ADMIN
         raise SystemAdminNotFound(error)
 
     service.administrators = [
@@ -96,7 +97,7 @@ def prepare_role_groups(
     service_id = resolve_service_id(repository_id=repository_id)
 
     if not administrators:
-        error = "At least one administrator is required to create a repository."
+        error = E.REPOSITORY_REQUIRES_SYSTEM_ADMIN
         raise SystemAdminNotFound(error)
 
     role_groups = []
@@ -116,6 +117,7 @@ def prepare_role_groups(
                     GroupAdministrator(value=user_id) for user_id in administrators
                 ],
                 services=[
+                    GroupService(value=config.SP.connector_id),
                     GroupService(value=service_id),
                 ],
             )
@@ -196,11 +198,11 @@ def validate_repository_to_map_service(repository: RepositoryDetail) -> MapServi
     service_url = repository.service_url
 
     if repository.service_name is None:
-        error = "Service name is required to create a repository."
+        error = E.REPOSITORY_REQUIRES_SERVICE_NAME
         raise InvalidFormError(error)
 
     if service_url is None:
-        error = "Service URL is required to create a repository."
+        error = E.REPOSITORY_REQUIRES_SERVICE_URL
         raise InvalidFormError(error)
 
     if repository_id is None:
@@ -208,19 +210,20 @@ def validate_repository_to_map_service(repository: RepositoryDetail) -> MapServi
         repository_id = resolve_repository_id(fqdn=fqdn) if fqdn else None
 
     if repository_id is None:
-        error = "Service URL must contain a valid host."
+        error = E.REPOSITORY_INVALID_SERVICE_URL
         raise InvalidFormError(error)
 
     max_url_length = config.REPOSITORIES.max_url_length
     without_scheme_url = str(service_url).replace(f"{service_url.scheme}://", "")
     if len(without_scheme_url) > max_url_length:
-        error = "Service URL is too long."
+        error = E.REPOSITORY_TOO_LONG_URL % {"max": max_url_length}
         raise InvalidFormError(error)
 
     if not repository.entity_ids:
-        error = "At least one entity ID is required to create a repository."
+        error = E.REPOSITORY_REQUIRES_ENTITY_ID
         raise InvalidFormError(error)
 
+    repository.id = repository_id  # Ensure the repository ID is set for later use.
     repository.service_id = resolve_service_id(repository_id=repository_id)
     return make_map_service(repository)
 
@@ -278,6 +281,7 @@ def prepare_group(
         GroupAdministrator(value=user_id) for user_id in administrators
     ]
     map_group.services = [
+        GroupService(value=config.SP.connector_id),
         GroupService(value=service_id),
     ]
 

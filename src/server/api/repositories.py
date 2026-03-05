@@ -19,6 +19,7 @@ from server.exc import (
     ResourceInvalid,
     ResourceNotFound,
 )
+from server.messages import E
 from server.services import repositories
 from server.services.utils import (
     get_permitted_repository_ids,
@@ -52,7 +53,7 @@ def get(
     try:
         results = repositories.search(query)
     except InvalidQueryError as exc:
-        return ErrorResponse(code="", message=str(exc)), 400
+        return ErrorResponse(message=exc.message), 400
 
     return results, 200
 
@@ -80,9 +81,9 @@ def post(
     try:
         created = repositories.create(body)
     except InvalidFormError as exc:
-        return ErrorResponse(code="", message=str(exc)), 400
+        return ErrorResponse(message=exc.message), 400
     except ResourceInvalid as exc:
-        return ErrorResponse(code="", message=str(exc)), 409
+        return ErrorResponse(message=exc.message), 409
 
     location = url_for(
         "api.repositories.id_get", repository_id=created.id, _external=True
@@ -108,10 +109,14 @@ def id_get(repository_id: str) -> tuple[RepositoryDetail | ErrorResponse, int]:
     """
     result = repositories.get_by_id(repository_id, more_detail=True)
     if result is None:
-        return ErrorResponse(code="", message="repository not found"), 404
+        return ErrorResponse(
+            message=E.REPOSITORY_NOT_FOUND % {"id": repository_id}
+        ), 404
 
     if not has_permission(repository_id):
-        return ErrorResponse(code="", message="not has permission"), 403
+        return ErrorResponse(
+            message=E.REPOSITORY_FORBIDDEN % {"id": repository_id}
+        ), 403
 
     return result, 200
 
@@ -136,17 +141,19 @@ def id_put(
         - If repository not found, status code 404
     """
     if not has_permission(repository_id):
-        return ErrorResponse(code="", message="not has permission"), 403
+        return ErrorResponse(
+            message=E.REPOSITORY_FORBIDDEN % {"id": repository_id}
+        ), 403
 
     body.id = repository_id
     try:
         updated = repositories.update(body)
     except InvalidFormError as exc:
-        return ErrorResponse(code="", message=str(exc)), 400
+        return ErrorResponse(message=exc.message), 400
     except ResourceNotFound as exc:
-        return ErrorResponse(code="", message=str(exc)), 404
+        return ErrorResponse(message=exc.message), 404
     except ResourceInvalid as exc:
-        return ErrorResponse(code="", message=str(exc)), 409
+        return ErrorResponse(message=exc.message), 409
 
     return updated, 200
 
@@ -171,11 +178,11 @@ def id_delete(
     try:
         repositories.delete_by_id(repository_id, query.confirmation)
     except InvalidFormError as exc:
-        return ErrorResponse(code="", message=str(exc)), 400
+        return ErrorResponse(message=exc.message), 400
     except ResourceNotFound as exc:
-        return ErrorResponse(code="", message=str(exc)), 404
+        return ErrorResponse(message=exc.message), 404
     except ResourceInvalid as exc:
-        return ErrorResponse(code="", message=str(exc)), 400
+        return ErrorResponse(message=exc.message), 400
 
     return "", 204
 

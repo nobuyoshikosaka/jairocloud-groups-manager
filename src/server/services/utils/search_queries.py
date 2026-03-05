@@ -25,7 +25,8 @@ from server.entities.map_group import MapGroup
 from server.entities.map_service import MapService
 from server.entities.map_user import MapUser
 from server.entities.search_request import SearchRequestParameter
-from server.exc import InvalidQueryError
+from server.exc import ConfigurationError, InvalidQueryError
+from server.messages import E
 
 from .affiliations import detect_affiliations
 from .permissions import get_permitted_repository_ids, is_current_user_system_admin
@@ -55,7 +56,7 @@ def build_search_query(criteria: Criteria) -> SearchRequestParameter:
         case RepositoriesCriteria():
             query = build_repositories_search_query(criteria)
         case _:
-            error = f"Unsupported criteria type: {type(criteria)}"
+            error = E.UNRECOGNIZED_SEARCH_CRITERIA
             current_app.logger.error(error)
             raise InvalidQueryError(error)
 
@@ -237,7 +238,7 @@ def _group_groups_filter(criteria: GroupsCriteria, id_path: str) -> str:
         case (None, None):
             return _all_repository_all_group_filter(id_path)
         case _:
-            error = "Invalid group filter criteria"
+            error = E.UNRECOGNIZED_SEARCH_CRITERIA
             raise InvalidQueryError(error)  # pragma: no cover
 
 
@@ -378,7 +379,7 @@ def _system_admin_user_groups_filter(  # noqa: PLR0911
         case (None, None, None):
             return _all_repository_all_group_filter(path)
         case _:
-            error = "Invalid group filter criteria"
+            error = E.UNRECOGNIZED_SEARCH_CRITERIA
             raise InvalidQueryError(error)  # pragma: no cover
 
 
@@ -407,7 +408,7 @@ def _repository_admin_user_groups_filter(
         case (None, None):
             return _specified_repository_all_group_filter(path, list(permitted))
         case _:
-            error = "Invalid group filter criteria"
+            error = E.UNRECOGNIZED_SEARCH_CRITERIA
             raise InvalidQueryError(error)  # pragma: no cover
 
 
@@ -563,9 +564,9 @@ def _get_id_prefix() -> str:
     id_pattern = config.REPOSITORIES.id_patterns.sp_connector
     match = re.match(r"(.*)\{repository_id\}(.*)", id_pattern)
     if not match:
-        error = "Invalid user-defined group ID pattern"
+        error = E.INVALID_SERVER_CONFIG
         current_app.logger.error(error)
-        raise InvalidQueryError(error)
+        raise ConfigurationError(error)
 
     return match.group(1)
 
@@ -899,7 +900,7 @@ def make_criteria_object(resource_type: str, **kwargs: t.Any) -> Criteria:  # py
         case "repositories":
             protocol_cls = RepositoriesCriteria
         case _:
-            error = "Invalid group filter criteria"
+            error = E.UNRECOGNIZED_SEARCH_CRITERIA
             raise InvalidQueryError(error)  # pragma: no cover
 
     hints = t.get_type_hints(protocol_cls)

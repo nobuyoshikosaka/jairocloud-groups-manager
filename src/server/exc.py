@@ -10,7 +10,7 @@ from server.messages.base import LogMessage
 class JAIROCloudGroupsManagerError(Exception):
     """Base exception for the server application."""
 
-    def __init__(self, message: str | LogMessage) -> None:
+    def __init__(self, message: str) -> None:
         """Initialize the exception instance.
 
         Args:
@@ -18,18 +18,19 @@ class JAIROCloudGroupsManagerError(Exception):
 
         """
         self.code = None
+        self.message = message
         if isinstance(message, LogMessage):
             self.code = message.code
             message = message.data
         super().__init__(message)
 
-        self.message = message
+        self.string = message
 
     def __str__(self) -> str:
         """Return the string representation of the exception."""
         if self.code:
-            return f"{self.code} | {self.message}"
-        return self.message
+            return f"{self.code} | {self.string}"
+        return self.string
 
 
 class ConfigurationError(JAIROCloudGroupsManagerError):
