@@ -93,6 +93,9 @@ MAP_USERS_ENDPOINT: Final = "/api/v2/Users"
 MAP_EXIST_EPPN_ENDPOINT: Final = "/api/v2/Existeppn"
 """Endpoint to check existence of ePPN in mAP Core API."""
 
+MAP_SELF_ENDPOINT: Final = "/api/v2/Self"
+"""Endpoint for getting access token owner's User resource in mAP Core API."""
+
 MAP_GROUPS_ENDPOINT: Final = "/api/v2/Groups"
 """Endpoint for Group resources in mAP Core API."""
 
@@ -107,6 +110,15 @@ MAP_BULK_ENDPOINT: Final = "api/v2/Bulk"
 
 MAP_NOT_FOUND_PATTERN: Final = r"'(.*)' Not Found"
 """Pattern to identify 'Not Found' errors from mAP Core API."""
+
+MAP_DUPLICATE_ID_PATTERN: Final = r"Duplicate id '(.*)'"
+"""Pattern to identify 'Duplicate ID' errors from mAP Core API."""
+
+MAP_NO_RIGHTS_CREATE_PATTERN: Final = r"You do not have creation right of '(.*)'"
+"""Pattern to identify 'No Creation Rights' errors from mAP Core API."""
+
+MAP_NO_RIGHTS_UPDATE_PATTERN: Final = r"No update rights for '(.*)'"
+"""Pattern to identify 'No Update Rights' errors from mAP Core API."""
 
 
 GROUP_DEFAULT_PUBLIC: Final = False

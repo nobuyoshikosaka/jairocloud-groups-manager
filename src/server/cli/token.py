@@ -12,6 +12,7 @@ from server.messages import E, I
 from server.services.token import (
     check_token_validity,
     get_access_token,
+    get_token_owner,
     prepare_issuing_url,
     refresh_access_token,
 )
@@ -45,3 +46,15 @@ def check() -> None:
 def refresh() -> None:
     """Refresh access token."""
     refresh_access_token()
+
+
+@token.command()
+def whoami() -> None:
+    """Get the user details of the token owner."""
+    owner = get_token_owner()
+    current_app.logger.info(
+        I.SUCCESS_GET_TOKEN_OWNER,
+        {
+            "user": owner.model_dump_json(indent=2, ensure_ascii=False),
+        },
+    )

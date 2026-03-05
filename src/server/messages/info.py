@@ -63,6 +63,11 @@ ACCESS_TOKEN_AVAILABLE = LogMessage(
     "Access token is valid and available.",
 )
 
+SUCCESS_GET_TOKEN_OWNER = LogMessage(
+    "I025",
+    "Successfully get token owner's User resource from mAP Core API. \n%(user)s",
+)
+
 
 RECEIVE_RESPONSE_MESSAGE = LogMessage(
     "I030",

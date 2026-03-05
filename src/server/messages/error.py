@@ -64,6 +64,11 @@ ACCESS_TOKEN_NOT_AVAILABLE = LogMessage(
     "Access token is invalid or expired.",
 )
 
+FAILED_GET_TOKEN_OWNER = LogMessage(
+    "E028",
+    "Failed to get token owner's User resource from mAP Core API.",
+)
+
 
 RECEIVE_RESPONSE_MESSAGE = LogMessage(
     "E030",

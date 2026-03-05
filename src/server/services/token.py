@@ -5,16 +5,20 @@
 """Services for managing OAuth tokens."""
 
 import traceback
+import typing as t
 
 from http import HTTPStatus
 
 import requests
 
 from flask import current_app, url_for
+from pydantic_core import ValidationError
 
 from server.clients import auth
 from server.config import config
 from server.const import MAP_OAUTH_AUTHORIZE_ENDPOINT
+from server.entities.map_error import MapError
+from server.entities.user_detail import UserDetail
 from server.exc import (
     CertificatesError,
     CredentialsError,
@@ -29,6 +33,10 @@ from .service_settings import (
     save_client_credentials,
     save_oauth_token,
 )
+
+
+if t.TYPE_CHECKING:
+    from server.entities.map_user import MapUser
 
 
 def get_access_token() -> str:
@@ -238,3 +246,54 @@ def refresh_access_token() -> str:
     save_oauth_token(new_token)
 
     return new_token.access_token
+
+
+def get_token_owner() -> UserDetail:
+    """Get the owner of the current access token.
+
+    Returns:
+        UserDetail: The user details of the token owner.
+
+    Raises:
+        OAuthTokenError: If the access token is invalid or expired.
+        CredentialsError: If the client credentials are invalid.
+        UnexpectedResponseError: If response from mAP Core API is unexpected.
+    """
+    from server.clients import users  # noqa: PLC0415
+
+    access_token = get_access_token()
+    try:
+        client_secret = get_client_secret()
+        result: MapUser | MapError = users.get_self(
+            access_token=access_token, client_secret=client_secret
+        )
+    except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_GET_TOKEN_OWNER)
+        code = exc.response.status_code
+        if code == HTTPStatus.UNAUTHORIZED:
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
+            raise OAuthTokenError(error) from exc
+
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error) from exc
+
+    except requests.RequestException as exc:
+        current_app.logger.error(E.FAILED_GET_TOKEN_OWNER)
+        error = E.FAILED_COMMUNICATE_API
+        raise UnexpectedResponseError(error) from exc
+
+    except ValidationError as exc:
+        current_app.logger.error(E.FAILED_GET_TOKEN_OWNER)
+        error = E.FAILED_PARSE_RESPONSE
+        raise UnexpectedResponseError(error) from exc
+
+    except OAuthTokenError, CredentialsError:
+        raise
+
+    if isinstance(result, MapError):
+        current_app.logger.error(E.FAILED_GET_TOKEN_OWNER)
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        error = E.FAILED_PARSE_RESPONSE
+        raise UnexpectedResponseError(error)
+
+    return UserDetail.from_map_user(result)
