@@ -17,13 +17,19 @@ class JAIROCloudGroupsManagerError(Exception):
             message (str | LogMessage): The error message.
 
         """
-        self.code = ""
+        self.code = None
         if isinstance(message, LogMessage):
             self.code = message.code
             message = message.data
         super().__init__(message)
 
         self.message = message
+
+    def __str__(self) -> str:
+        """Return the string representation of the exception."""
+        if self.code:
+            return f"{self.code} | {self.message}"
+        return self.message
 
 
 class ConfigurationError(JAIROCloudGroupsManagerError):

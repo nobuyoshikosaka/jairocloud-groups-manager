@@ -4,7 +4,6 @@
 
 """helper for api decorator."""
 
-import traceback
 import typing as t
 
 from datetime import UTC, datetime
@@ -40,7 +39,6 @@ def is_user_logged_in(current_user: LocalProxy) -> t.TypeGuard[LoginUser]:
     try:
         return t.cast("CurrentUser", current_user).is_authenticated
     except AttributeError:
-        traceback.print_exc()
         return False
 
 

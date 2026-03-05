@@ -65,7 +65,7 @@ class OAuthTokenQuery(BaseModel):
 class ErrorResponse(BaseModel):
     """Schema for error responses."""
 
-    code: str
+    code: str | None = None
     """Message code."""
 
     message: str
