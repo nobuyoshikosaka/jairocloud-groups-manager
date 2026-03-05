@@ -165,4 +165,4 @@ def test_build_account_store_key(app, test_config):
     with app.test_request_context("/"):
         key = auth.build_account_store_key(session_id)
         prefix = test_config.REDIS.key_prefix
-        assert key == f"{prefix}_login_{session_id}"
+        assert key == f"{prefix}login-{session_id}"

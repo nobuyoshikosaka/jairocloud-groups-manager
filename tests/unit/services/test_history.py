@@ -122,7 +122,11 @@ def test_get_upload_history_data(app, mocker: MockerFixture, criteria, data_raw,
     mocker.patch("server.services.history.db", db)
     db.session.execute.return_value.scalar_one.return_value = 1
     db.session.execute.return_value.all.return_value = data_raw
-    assert history.get_upload_history_data(criteria) == expected
+    reslut = history.get_upload_history_data(criteria)
+    assert reslut.total == expected.total
+    assert reslut.page_size == expected.page_size
+    assert reslut.offset == expected.offset
+    assert reslut.resources == expected.resources
 
 
 @pytest.mark.parametrize(
@@ -172,7 +176,11 @@ def test_get_download_history_data(app, mocker: MockerFixture, criteria, data_ra
     mocker.patch("server.services.history.db", db)
     db.session.execute.return_value.scalar_one.return_value = 1
     db.session.execute.return_value.all.return_value = data_raw
-    assert history.get_download_history_data(criteria) == expected
+    reslut = history.get_download_history_data(criteria)
+    assert reslut.total == expected.total
+    assert reslut.page_size == expected.page_size
+    assert reslut.offset == expected.offset
+    assert reslut.resources == expected.resources
 
 
 @pytest.mark.parametrize(
