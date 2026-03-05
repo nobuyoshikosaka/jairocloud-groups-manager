@@ -7,9 +7,9 @@ import { camelCase } from 'scule'
 
 import { UButton, UCheckbox, UDropdownMenu, UIcon, ULink, UTooltip } from '#components'
 
-import type { CalendarDate } from '@internationalized/date'
 import type { Row, Table } from '@tanstack/table-core'
 import type { ButtonProps, DropdownMenuItem, TableColumn, TableRow } from '@nuxt/ui'
+import type { DateRange } from 'reka-ui'
 
 const useUsersTable = () => {
   const route = useRoute()
@@ -290,7 +290,6 @@ const useUsersTable = () => {
           'div',
           { class: 'text-right' },
           h(
-          // @ts-expect-error: props type mismatch
             UDropdownMenu,
             {
               'content': { align: 'end' },
@@ -477,7 +476,7 @@ const useUsersTable = () => {
     return { repositoryFilter, roleFilter, groupFilter }
   }
 
-  const dateRange = shallowRef<{ start: CalendarDate | undefined, end: CalendarDate | undefined }>({
+  const dateRange = shallowRef<DateRange>({
     start: startDate.value ? parseDate(startDate.value) : undefined,
     end: endDate.value ? parseDate(endDate.value) : undefined,
   })

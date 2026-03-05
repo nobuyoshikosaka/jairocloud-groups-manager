@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.95",
-    "@nuxt/content": "3.12.0",
+    "@nuxt/content": "^3.12.0",
     "@nuxt/ui": "^4.5.1",
     "@nuxtjs/i18n": "^10.2.3",
     "@pinia/nuxt": "^0.11.3",
