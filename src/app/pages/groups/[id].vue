@@ -176,7 +176,7 @@ const onDelete = async () => {
     :ui="{ root: 'py-2 mb-6', description: 'mt-4' }"
   />
 
-  <div class="max-w-210 m-auto">
+  <div class="max-w-240 m-auto">
     <div class="grid grid-cols-2 gap-4 mb-6">
       <NumberIndicator
         v-for="(indicator, index) in indicators"

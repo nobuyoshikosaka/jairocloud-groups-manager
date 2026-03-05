@@ -70,7 +70,7 @@ const onSubmit = async (data: GroupCreateForm) => {
     :ui="{ root: 'py-2 mb-6', description: 'mt-4' }"
   />
 
-  <div class="max-w-210 m-auto">
+  <div class="max-w-240 m-auto">
     <UCard>
       <template #header>
         <div class="flex items-center justify-between">
