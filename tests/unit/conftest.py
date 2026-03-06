@@ -1,16 +1,24 @@
+import inspect
 import typing as t
 
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 
+from pydantic import HttpUrl
+
 from server import const
 from server.config import RuntimeConfig
+from server.entities.cache import RepositoryCache
+from server.entities.search_request import SearchResult
+from server.entities.summaries import RepositorySummary
 from server.factory import create_app
 
 
 if t.TYPE_CHECKING:
     from flask import Flask
+    from pytest_mock import MockerFixture
 
 
 def is_running_in_docker() -> bool:
@@ -59,7 +67,48 @@ def test_config():
             }
         },
         "POSTGRES": {"db": "jctest", "host": db_host},
+        "LOG": {"level": "DEBUG"},
+        "REDIS": {
+            "single": {
+                "base_url": "redis://redis-single:6379",
+            },
+            "sentinel": {
+                "sentinels": [
+                    {
+                        "host": "",
+                        "port": 26379,
+                    }
+                ]
+            },
+        },
+        "RABBITMQ": {
+            "url": "amqp://guest:guest@rabbitmq:5672//",
+        },
+        "CACHE_GROUPS": {
+            "cache_redis_key": "{prefix}cache",
+            "gakunin_redis_key": "{fqdn}_gakunin_groups",
+            "map_groups_api_endpoint": "https://sample.gakunin.jp/api/groups/",
+            "toml_path": "cache_db_config.toml",
+            "directory_path": "./cache_db/tls",
+            "fqdn_list_file": "fqdn_list.toml",
+        },
     })
+
+
+@pytest.fixture(autouse=True)
+def mock_redis(mocker: MockerFixture):
+    mock_redis = mocker.patch("server.datastore.Redis")
+    mock_redis_instance = mock_redis.from_url.return_value
+    mock_redis_instance.ping.return_value = True
+    return mock_redis_instance
+
+
+@pytest.fixture
+def unwrap():
+    def _unwrap(f: t.Callable) -> t.Callable:
+        return inspect.unwrap(f)
+
+    return _unwrap
 
 
 @pytest.fixture
@@ -75,3 +124,48 @@ def base_app(instance_path, test_config):
 def app(base_app: Flask):
     with base_app.app_context():
         yield base_app
+
+
+@pytest.fixture
+def repository_summaries():
+    def _data(num: int) -> SearchResult[RepositorySummary]:
+        return SearchResult(
+            resources=[
+                RepositorySummary(
+                    id=f"repo_{i}",
+                    display_name=f"Repository {i}",
+                    service_url=HttpUrl(f"https://repo{i}.example.jp"),
+                    sp_connector_id=f"jc_repo_{i}_sp",
+                )
+                for i in range(1, num + 1)
+            ],
+            total=num,
+            page_size=20,
+            offset=1,
+        )
+
+    return _data
+
+
+@pytest.fixture
+def cache_redis_key():
+    def _keys(fqdn_list: list[str]) -> list[bytes]:
+        return [f"{fqdn.replace('-', '_').replace('.', '_')}_gakunin_groups".encode() for fqdn in fqdn_list]
+
+    return _keys
+
+
+@pytest.fixture
+def repository_caches():
+    def _data(repositories: list[RepositorySummary], now: datetime, every_other: bool) -> list[RepositoryCache]:
+        return [
+            RepositoryCache(
+                id=repositories[i].id,
+                name=repositories[i].display_name,  # pyright: ignore[reportArgumentType],
+                url=str(repositories[i].service_url),
+                updated=now if not every_other or i % 2 == 0 else None,
+            )
+            for i in range(len(repositories))
+        ]
+
+    return _data

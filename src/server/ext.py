@@ -7,6 +7,7 @@
 import typing as t
 
 from weko_group_cache_db.config import setup_config as setup_weko_group_cache_db_config
+
 from .api.router import create_api_blueprint
 from .cli.base import register_cli_commands
 from .config import RuntimeConfig, setup_config

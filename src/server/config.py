@@ -105,7 +105,7 @@ class RuntimeConfig(BaseSettings):
             if self.REDIS.cache_type == "RedisCache"
             else 0,
             "REDIS_DB_INDEX": self.REDIS.database.group_cache,
-            "REDIS_SENINEL_MASTER: ": self.REDIS.sentinel.master_name
+            "REDIS_SENTINEL_MASTER": self.REDIS.sentinel.master_name
             if self.REDIS.cache_type == "RedisSentinelCache"
             else "",
             "SENTINELS": self.REDIS.sentinel.sentinels

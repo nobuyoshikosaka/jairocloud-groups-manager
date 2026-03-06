@@ -10,16 +10,16 @@ from datetime import datetime
 
 from celery import shared_task
 from weko_group_cache_db.groups import fetch_all, fetch_one
-from weko_group_cache_db.signal import update_count_signal, update_result_signal
+from weko_group_cache_db.signals import update_count_signal, update_result_signal
 
 from server.api.schemas import CacheOperation, CacheQuery
 from server.config import config
 from server.datastore import app_cache, group_cache
+from server.entities.cache import RepositoryCache
 from server.entities.search_request import SearchResult
 
 
 if t.TYPE_CHECKING:
-    from server.entities.cache import RepositoryCache
     from server.entities.summaries import RepositorySummary
 
 
@@ -55,8 +55,7 @@ def get_repository_cache(
 
     # filter by cache existence
     if query.f:
-        exist_cache_repository_list = []
-        non_exist_cache_repository_list = []
+        target_repositories = []
         start_index = (query.p - 1) * query.l if query.p and query.l else 0
         end_index = start_index + query.l if query.l else len(repositories.resources)
 
@@ -76,7 +75,8 @@ def get_repository_cache(
                     url=str(repository.service_url),
                     updated=datetime.fromisoformat(repository_updated),  # pyright: ignore[reportArgumentType]
                 )
-                exist_cache_repository_list.append(repo_cache)
+                if "cache" in query.f:
+                    target_repositories.append(repo_cache)
             else:
                 repo_cache = RepositoryCache(
                     id=repository.id,
@@ -84,19 +84,11 @@ def get_repository_cache(
                     url=str(repository.service_url),
                     updated=None,
                 )
-                non_exist_cache_repository_list.append(repo_cache)
-        if query.f == "cache":
-            target_repositories = exist_cache_repository_list[start_index:end_index]
-            return SearchResult(
-                resources=target_repositories,
-                total=len(exist_cache_repository_list),
-                page_size=query.l or len(target_repositories),
-                offset=start_index + 1,
-            )
-        target_repositories = non_exist_cache_repository_list[start_index:end_index]
+                if "no_cache" in query.f:
+                    target_repositories.append(repo_cache)
         return SearchResult(
-            resources=target_repositories,
-            total=len(non_exist_cache_repository_list),
+            resources=target_repositories[start_index:end_index],
+            total=len(target_repositories),
             page_size=query.l or len(target_repositories),
             offset=start_index + 1,
         )
@@ -222,12 +214,7 @@ def update_one_task(fqdn_list: list[str]) -> None:
     )
     one_task_init_data = {"total": len(fqdn_list), "done": 0, "current": ""}
     app_cache.hset(cache_key, mapping=one_task_init_data)
-    for fqdn in fqdn_list:
-        try:
-            done_str = app_cache.hget(cache_key, "done")
-            done = int(done_str) if done_str is not None else 0  # pyright: ignore[reportArgumentType]
-        except TypeError:
-            done = 0
+    for i, fqdn in enumerate(fqdn_list):
         if config.CACHE_GROUPS.toml_path:
             fetch_one(fqdn, toml_path=config.CACHE_GROUPS.toml_path)
         else:
@@ -237,7 +224,7 @@ def update_one_task(fqdn_list: list[str]) -> None:
                 fqdn_list_file=config.CACHE_GROUPS.fqdn_list_file,
             )
         task_result = {
-            "done": done + 1,
+            "done": i + 1,
             "current": fqdn,
         }
         app_cache.hset(cache_key, mapping=task_result)

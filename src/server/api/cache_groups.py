@@ -4,6 +4,7 @@
 """API router for cache group endpoints."""
 
 from ast import literal_eval
+from datetime import datetime
 
 from flask import Blueprint
 from flask_login import login_required
@@ -112,7 +113,9 @@ def get_task_status() -> TaskDetail:
                     id=repository.id,
                     name=repository.display_name,  # pyright: ignore[reportArgumentType]
                     url=str(repository.service_url),
-                    updated=result.get("updated"),
+                    updated=datetime.strptime(  # noqa: DTZ007
+                        result.get("updated"), "%Y-%m-%dT%H:%M:%SZ"
+                    ),
                 ),
             )
     if total > 0 and total == done:

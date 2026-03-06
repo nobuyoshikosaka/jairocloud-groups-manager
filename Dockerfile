@@ -16,6 +16,9 @@ ENV VIRTUAL_ENV="/code/.venv"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 WORKDIR /code
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN pip install -U pip && pip install uv
 
 RUN groupadd -g ${GID} ${GROUPNAME} && \
