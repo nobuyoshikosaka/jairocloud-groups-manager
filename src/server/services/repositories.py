@@ -93,8 +93,8 @@ def search(
     """
     default_include = {"id", "service_name", "service_url", "entity_ids"}
 
+    query = build_search_query(criteria)
     try:
-        query = build_search_query(criteria)
         access_token = get_access_token()
         client_secret = get_client_secret()
         results: ServicesSearchResponse = services.search(
@@ -104,7 +104,7 @@ def search(
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
-        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES)
+        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES, {"filter": query.filter})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
             error = E.ACCESS_TOKEN_NOT_AVAILABLE
@@ -114,20 +114,20 @@ def search(
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES)
+        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES, {"filter": query.filter})
         error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES)
+        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES, {"filter": query.filter})
         error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
-    except InvalidQueryError, OAuthTokenError, CredentialsError:
+    except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(results, MapError):
-        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES)
+        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES, {"filter": query.filter})
         current_app.logger.error(
             E.RECEIVE_RESPONSE_MESSAGE, {"message": results.detail}
         )
@@ -303,8 +303,8 @@ def create(repository: RepositoryDetail) -> RepositoryDetail:
             E.FAILED_CREATE_REPOSITORY, {"id": repository.service_id}
         )
         current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
-        if re.search(MAP_DUPLICATE_ID_PATTERN, result.detail):
-            error = E.DUPLICATE_REPOSITORY
+        if m := re.search(MAP_DUPLICATE_ID_PATTERN, result.detail):
+            error = E.REPOSITORY_DUPLICATE_ID % {"id": m.group(1)}
             raise ResourceInvalid(error)
         if re.search(MAP_NO_RIGHTS_CREATE_PATTERN, result.detail):
             error = E.NO_RIGHTS_CREATE_REPOSITORY
@@ -393,8 +393,8 @@ def update(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
     if isinstance(result, MapError):
         current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
         current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
-        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-            error = E.REPOSITORY_NOT_FOUND % {"id": service_id}
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.REPOSITORY_NOT_FOUND % {"id": m.group(1)}
             raise ResourceNotFound(error)
         if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail):
             error = E.NO_RIGHTS_UPDATE_REPOSITORY % {"id": service_id}
@@ -477,8 +477,8 @@ def update_put(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
     if isinstance(result, MapError):
         current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
         current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
-        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-            error = E.REPOSITORY_NOT_FOUND % {"id": service_id}
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.REPOSITORY_NOT_FOUND % {"id": m.group(1)}
             raise ResourceNotFound(error)
         if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail):
             error = E.NO_RIGHTS_UPDATE_REPOSITORY % {"id": service_id}
@@ -549,8 +549,8 @@ def delete_by_id(repository_id: str, service_name: str) -> None:
         raise
 
     if result:
-        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-            error = E.REPOSITORY_NOT_FOUND % {"id": service_id}
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.REPOSITORY_NOT_FOUND % {"id": m.group(1)}
             raise ResourceNotFound(error)
 
         error = E.RECEIVE_UNEXPECTED_RESPONSE

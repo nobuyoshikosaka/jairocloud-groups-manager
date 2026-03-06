@@ -115,7 +115,7 @@ UNRECOGNIZED_SEARCH_CRITERIA = LogMessage(
 
 FAILED_SEARCH_REPOSITORIES = LogMessage(
     "E100",
-    "Failed to search Service resources for Repositories.",
+    "Failed to search Service resources for Repositories (filter: %(filter)s).",
 )
 
 REPOSITORY_FORBIDDEN = LogMessage(
@@ -133,7 +133,7 @@ FAILED_CREATE_REPOSITORY = LogMessage(
     "Failed to create Service for Repository (id: %(id)s).",
 )
 
-DUPLICATE_REPOSITORY = LogMessage(
+REPOSITORY_DUPLICATE_ID = LogMessage(
     "E111",
     "A Service resource for Repository (id: %(id)s) already exists.",
 )
