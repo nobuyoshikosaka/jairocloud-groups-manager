@@ -636,7 +636,7 @@ class _Options(t.NamedTuple):
     sort_order: t.Literal["ascending", "descending"] | None
 
 
-def _curculate_options(
+def _curculate_options(  # noqa: C901
     criteria: Criteria, path_generator: t.Callable[[str], str]
 ) -> _Options:
     """Calculate search options from criteria.
@@ -676,21 +676,21 @@ def _curculate_options(
 
     match (criteria.p, criteria.l):
         case (int() as p, int() as l) if p > 0 and l > 0:
-            # both page number and page size are valid
-            page_count = l
-            start_index = (p - 1) * page_count + 1
-        case (int() as p, 0 | None) if p > 0:
-            # only page number is valid
+            # positive p and positive l; calculate pagination params.
+            page_count, start_index = l, (p - 1) * l + 1
+        case (int() as p, None) if p > 0:
+            # positive p and unspecified l; using default page size.
             page_count = MAP_DEFAULT_SEARCH_COUNT
-            start_index = (p - 1) * page_count + 1
-        case (_, 0 | None):
-            # page size is zero or not specified
-            page_count = MAP_DEFAULT_SEARCH_COUNT
-            start_index = None
+            start_index = (p - 1) * MAP_DEFAULT_SEARCH_COUNT + 1
+        case (_, int() as l) if l >= 0:
+            # invalid p and non-negative l; only use page size.
+            page_count, start_index = l, None
+        case (_, None):
+            # invalid p and unspecified l; applying only the default page size.
+            page_count, start_index = MAP_DEFAULT_SEARCH_COUNT, None
         case _:
-            # specified negative or zero page number
-            page_count = None
-            start_index = None
+            # negative l; ignore pagination parames. search all results.
+            page_count, start_index = None, None
 
     return _Options(
         start_index=start_index,
