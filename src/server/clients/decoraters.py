@@ -15,11 +15,13 @@ from functools import wraps
 
 from flask import current_app
 from pydantic import BaseModel, TypeAdapter
+from pydantic_core import ValidationError
 from redis.exceptions import RedisError
 
 from server.config import config
 from server.datastore import app_cache
 from server.entities.map_error import MapError
+from server.messages import I, W
 
 
 @t.overload
@@ -52,7 +54,7 @@ def cache_resource[T: ModelReturner](  # noqa: C901
         Callable: Decorated function with caching.
     """
 
-    def decorator(func: ModelReturner):
+    def decorator(func: ModelReturner):  # noqa: C901
 
         hints = t.get_type_hints(func)
         return_type: type[BaseModel] | None = hints.get("return")
@@ -88,18 +90,29 @@ def cache_resource[T: ModelReturner](  # noqa: C901
             prefix = config.REDIS.key_prefix
             cache_key = f"{prefix}{import_name}-{identifier}-{args_hash}"
 
+            result = None
             try:
                 cached_data: str | None = app_cache.get(cache_key)  # pyright: ignore[reportAssignmentType]
+                if cached_data and return_type:
+                    adapter = TypeAdapter(return_type)
+                    result = adapter.validate_json(cached_data)
             except RedisError:
                 current_app.logger.warning(
-                    "Failed to retrieve cache for key: %s", cache_key
+                    W.FAILED_GET_CACHE, {"func": import_name, "id": identifier}
                 )
                 traceback.print_exc()
                 cached_data = None
+            except ValidationError:
+                current_app.logger.warning(
+                    W.FAILED_PARSE_CACHE, {"func": import_name, "id": identifier}
+                )
+                traceback.print_exc()
 
-            if cached_data and return_type:
-                adapter = TypeAdapter(return_type)
-                return adapter.validate_json(cached_data)
+            if result:
+                current_app.logger.info(
+                    I.RESOURCE_CACHE_HIT, {"func": import_name, "id": identifier}
+                )
+                return result
 
             result = func(*args, **kwargs)
 
@@ -112,8 +125,14 @@ def cache_resource[T: ModelReturner](  # noqa: C901
                     result.model_dump_json(exclude_none=True),
                     ex=ttl if ttl > 0 else None,
                 )
+                current_app.logger.info(
+                    I.RESOURCE_CACHE_CREATED,
+                    {"func": import_name, "id": identifier},
+                )
             except RedisError:
-                current_app.logger.warning("Failed to set cache for key: %s", cache_key)
+                current_app.logger.warning(
+                    W.FAILED_SET_CACHE, {"func": import_name, "id": identifier}
+                )
                 traceback.print_exc()
             return result
 
@@ -159,11 +178,12 @@ def clear_cache(func: ModelReturner, *identifier: str) -> None:
                 if not keys:
                     continue
                 app_cache.delete(*keys)
+        current_app.logger.info(
+            I.RESOURCE_CACHE_DELETED, {"func": import_name, "id": identifier}
+        )
     except RedisError:
         current_app.logger.warning(
-            "Failed to clear cache for function: %s, identifier: %s",
-            import_name,
-            identifier,
+            W.FAILED_DELETE_CACHE, {"func": import_name, "id": identifier}
         )
         traceback.print_exc()
 

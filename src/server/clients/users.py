@@ -38,9 +38,9 @@ adapter_search: TypeAdapter[UsersSearchResponse] = TypeAdapter(UsersSearchRespon
 
 def _search_cache_identifier(*args, **kwargs) -> str:  # noqa: ANN002, ANN003, ARG001
     if not is_user_logged_in(current_user):
-        return "anonymous"
+        return "by_anonymous"
     if current_user.is_system_admin:
-        return "system_admin"
+        return "by_system_admin"
     permitted = sorted(current_user.permitted_repositories)
     return ",".join(permitted)
 
@@ -91,6 +91,10 @@ def search(
         by_alias=True,
     )
 
+    from contrib import dump
+
+    dump(auth_params | attributes_params | query_params, "users_search_query")
+
     response = requests.get(
         f"{config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}",
         params=auth_params | attributes_params | query_params,
@@ -99,6 +103,8 @@ def search(
         },
         timeout=config.MAP_CORE.timeout,
     )
+
+    dump(response.text, "users_search_response")
 
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()
@@ -275,7 +281,8 @@ def post(
         timeout=config.MAP_CORE.timeout,
     )
 
-    if response.status_code > HTTPStatus.BAD_REQUEST:
+    status_code = response.status_code
+    if status_code not in {HTTPStatus.BAD_REQUEST, HTTPStatus.CONFLICT}:
         response.raise_for_status()
 
     return adapter.validate_json(response.text)

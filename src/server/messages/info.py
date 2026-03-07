@@ -75,6 +75,20 @@ RECEIVE_RESPONSE_MESSAGE = LogMessage(
 )
 
 
+RESOURCE_CACHE_CREATED = LogMessage(
+    "I070", "Cache created for resource (func %(func)s, id: %(id)s)."
+)
+
+RESOURCE_CACHE_HIT = LogMessage(
+    "I071",
+    "Cache hit for resource (func %(func)s, id: %(id)s).",
+)
+
+RESOURCE_CACHE_DELETED = LogMessage(
+    "I072",
+    "Cache deleted for resource (func %(func)s, id: %(id)s).",
+)
+
 SUCCESS_CREATE_REPOSITORY = LogMessage(
     "I110",
     "Successfully created Service resource for Repository (id: %(id)s)",

@@ -82,7 +82,7 @@ def connection(
     try:
         store.ping()
     except RedisConnectionError as exc:
-        error = W.FAILD_CONNECT_REDIS % {"error": str(exc)}
+        error = W.FAILED_CONNECT_REDIS % {"error": str(exc)}
         app.logger.warning(error)
 
     return store
