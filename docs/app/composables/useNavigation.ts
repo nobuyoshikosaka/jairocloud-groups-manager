@@ -49,7 +49,7 @@ export const useNavigation = async () => {
       return enrichAndFilterPages(pages)
     },
     {
-      watch: [collection, systemAdminVisible],
+      watch: [collection, () => route.query.systemAdmin],
     },
   )
 
