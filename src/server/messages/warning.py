@@ -17,3 +17,9 @@ FAILD_CONNECT_REDIS = LogMessage(
     "W010",
     "Failed to connect to Redis. Application may not function correctly: %(error)s",
 )
+
+
+ACCESS_TOKEN_NOT_AVAILABLE = LogMessage(
+    "W020",
+    "Access token is invalid or expired.",
+)

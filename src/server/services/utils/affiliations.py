@@ -87,7 +87,7 @@ def detect_affiliation(group_id: str) -> Affiliation | None:
     # Retrieve the name of the main group that matched (the role type)
     matched_role = match.lastgroup
     if not matched_role:
-        return None
+        return None  # pragma: no cover
 
     # Extract parameters by filtering groupdict keys with the role prefix
     params: dict[str, str] = {}

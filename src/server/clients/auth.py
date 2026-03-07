@@ -19,6 +19,7 @@ from server.const import (
     MAP_OAUTH_TOKEN_ENDPOINT,
 )
 from server.entities.auth import ClientCredentials, OAuthToken
+from server.messages import I
 
 
 if t.TYPE_CHECKING:
@@ -101,7 +102,7 @@ def check_token_validity(access_token: str) -> bool:
 
     if response.status_code == HTTPStatus.UNAUTHORIZED:
         description = response.json().get("error_description")
-        current_app.logger.info(description)
+        current_app.logger.info(I.RECEIVE_RESPONSE_MESSAGE, {"message": description})
         return False
 
     response.raise_for_status()

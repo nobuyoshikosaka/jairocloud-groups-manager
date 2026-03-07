@@ -8,7 +8,7 @@ import typing as t
 
 from datetime import UTC, datetime
 
-from flask import current_app, session
+from flask import session
 from flask_login import LoginManager, current_user
 
 from server.config import config
@@ -39,8 +39,6 @@ def is_user_logged_in(current_user: LocalProxy) -> t.TypeGuard[LoginUser]:
     try:
         return t.cast("CurrentUser", current_user).is_authenticated
     except AttributeError:
-        warning = "Working outside of login context."
-        current_app.logger.warning(warning)
         return False
 
 
@@ -52,16 +50,9 @@ def refresh_session() -> None:
         return
 
     session_id: str = current_user.session_id or session["_id"]
-
     key = build_account_store_key(session_id)
-    login_date_raw = account_store.hget(key, "loginDate")
-    if isinstance(login_date_raw, bytes):
-        login_date_raw = login_date_raw.decode("utf-8")
-    if not isinstance(login_date_raw, str):
-        return
 
-    login_date = datetime.fromisoformat(login_date_raw)
-    time_since_login = datetime.now(UTC) - login_date
+    time_since_login = datetime.now(UTC) - current_user.login_date
     if time_since_login.total_seconds() > config.SESSION.absolute_lifetime:
         account_store.delete(key)
         return
@@ -79,7 +70,7 @@ def load_user(eppn: str) -> LoginUser | None:
         eppn (str): The unique identifier for the user.
 
     Returns:
-        LoginUser | None: The loaded user object if found, otherwise None.
+        LoginUser: The loaded user object if found, otherwise None.
     """
     if not eppn:
         return None
@@ -101,7 +92,7 @@ def get_user_from_store(session_id: str) -> LoginUser | None:
         session_id (str): The unique identifier for the user's session.
 
     Returns:
-        LoginUser | None: The user object if found, otherwise None.
+        LoginUser: The user object if found, otherwise None.
     """
     key = build_account_store_key(session_id)
     raw = account_store.hgetall(key)
@@ -120,9 +111,9 @@ def build_account_store_key(session_id: str) -> str:
     """Build the account_store key.
 
     Args:
-        session_id(str):Logged-in user's session ID
+        session_id (str): Logged-in user's session ID
 
     Returns:
-        str:Session information key for account_store
+        str: Session information key for account_store
     """
-    return f"{config.REDIS.key_prefix}_login_{session_id}"
+    return f"{config.REDIS.key_prefix}login-{session_id}"

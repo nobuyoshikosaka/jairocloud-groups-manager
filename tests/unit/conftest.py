@@ -45,6 +45,7 @@ def test_config():
             "entity_id": "https://test/shibboleth-sp",
             "crt": "/test/server.crt",
             "key": "/test/server.key",
+            "connecter_id": "test_connecter_id",
         },
         "MAP_CORE": {
             "base_url": "https://mapcore.test.jp",

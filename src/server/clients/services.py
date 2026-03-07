@@ -223,7 +223,8 @@ def post(
         timeout=config.MAP_CORE.timeout,
     )
 
-    if response.status_code > HTTPStatus.BAD_REQUEST:
+    status_code = response.status_code
+    if status_code not in {HTTPStatus.BAD_REQUEST, HTTPStatus.CONFLICT}:
         response.raise_for_status()
 
     return adapter.validate_json(response.text)
@@ -288,7 +289,8 @@ def put_by_id(
         timeout=config.MAP_CORE.timeout,
     )
 
-    if response.status_code > HTTPStatus.BAD_REQUEST:
+    status_code = response.status_code
+    if status_code not in {HTTPStatus.BAD_REQUEST, HTTPStatus.CONFLICT}:
         response.raise_for_status()
 
     resource = adapter.validate_json(response.text)
@@ -402,8 +404,11 @@ def delete_by_id(
         timeout=config.MAP_CORE.timeout,
     )
 
-    if response.status_code > HTTPStatus.BAD_REQUEST:
-        response.raise_for_status()
+    if response.ok:
+        repository_deleted.send(None, service_id=service_id)
+        return None
+
+    response.raise_for_status()
 
     if not response.text:
         repository_updated.send(None, service=MapService(id=service_id))
@@ -428,7 +433,11 @@ del _get_alias_generator
 
 @repository_updated.connect
 @repository_deleted.connect
-def handle_repository_updated(_sender: object, service: MapService, **kwargs) -> None:  # noqa: ANN003, ARG001
+def handle_repository_updated(
+    _sender: object,
+    service: MapService | None = None,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
     """Handle repository updated signal to clear cache for the updated service.
 
     Args:
@@ -436,12 +445,17 @@ def handle_repository_updated(_sender: object, service: MapService, **kwargs) ->
         service (MapService): The updated Service resource.
         **kwargs: Other keyword arguments passed with the signal.
     """
-    get_by_id.clear_cache(service.id)  # pyright: ignore[reportFunctionMemberAccess]
+    if service and service.id:
+        get_by_id.clear_cache(service.id)  # pyright: ignore[reportFunctionMemberAccess]
 
 
 @repository_updated.connect
 @repository_deleted.connect
-def handle_repository_updated_by_id(_sender: object, service_id: str, **kwargs) -> None:  # noqa: ANN003, ARG001
+def handle_repository_updated_by_id(
+    _sender: object,
+    service_id: str | None = None,
+    **kwargs,  # noqa: ANN003, ARG001
+) -> None:
     """Handle repository updated signal to clear cache for the updated service by ID.
 
     Args:
@@ -449,7 +463,8 @@ def handle_repository_updated_by_id(_sender: object, service_id: str, **kwargs) 
         service_id (str): The ID of the updated Service resource.
         **kwargs: Other keyword arguments passed with the signal.
     """
-    get_by_id.clear_cache(service_id)  # pyright: ignore[reportFunctionMemberAccess]
+    if service_id:
+        get_by_id.clear_cache(service_id)  # pyright: ignore[reportFunctionMemberAccess]
 
 
 @repository_created.connect

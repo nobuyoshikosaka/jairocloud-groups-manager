@@ -190,6 +190,7 @@ const onDelete = async (event: FormSubmitEvent<typeof deleteFormState>) => {
   catch {
     // Already handled in onResponseError
   }
+  deleteFormState.serviceName = undefined
 }
 </script>
 
@@ -200,12 +201,13 @@ const onDelete = async (event: FormSubmitEvent<typeof deleteFormState>) => {
     :ui="{ root: 'py-2 mb-6', description: 'mt-4' }"
   />
 
-  <div class="max-w-210 m-auto">
+  <div class="max-w-240 m-auto">
     <div class="grid grid-cols-2 gap-4 mb-6">
       <NumberIndicator
         v-for="(indicator, index) in indicators"
         :key="index" :title="indicator.title" :to="indicator.to"
         :number="indicator.count" :color="indicator.color" :icon="indicator.icon"
+        :ui="{ container: 'lg:px-18 md:px-12' }"
       />
     </div>
 

@@ -4,7 +4,7 @@
 
 """Providers of decorators for client functions."""
 
-# ruff: noqa: ANN001 ANN002 ANN003 ANN202 SLF001 D102
+# ruff: noqa: ANN002, ANN003, ANN202, SLF001, D102
 
 import hashlib
 import inspect
@@ -32,7 +32,7 @@ def cache_resource[T: ModelReturner](
 ) -> t.Callable[[T], T]: ...
 
 
-def cache_resource[T: t.Callable](
+def cache_resource[T: ModelReturner](  # noqa: C901
     f: T | None = None,
     *,
     identifier_generator: t.Callable[..., str] | None = None,
@@ -52,7 +52,7 @@ def cache_resource[T: t.Callable](
         Callable: Decorated function with caching.
     """
 
-    def decorator(func):
+    def decorator(func: ModelReturner):
 
         hints = t.get_type_hints(func)
         return_type: type[BaseModel] | None = hints.get("return")
@@ -61,6 +61,13 @@ def cache_resource[T: t.Callable](
 
         @wraps(func)
         def wrapper(*args, **kwargs):
+            nonlocal timeout
+            ttl = timeout or config.REDIS.cache_timeout
+
+            if not ttl:
+                # specifed 0, do not cache
+                return func(*args, **kwargs)
+
             if not args:
                 return func(*args, **kwargs)
             identifier = str(args[0])
@@ -79,7 +86,7 @@ def cache_resource[T: t.Callable](
             ).hexdigest()
 
             prefix = config.REDIS.key_prefix
-            cache_key = f"{prefix}:{import_name}:{identifier}:{args_hash}"
+            cache_key = f"{prefix}{import_name}-{identifier}-{args_hash}"
 
             try:
                 cached_data: str | None = app_cache.get(cache_key)  # pyright: ignore[reportAssignmentType]
@@ -96,13 +103,15 @@ def cache_resource[T: t.Callable](
 
             result = func(*args, **kwargs)
 
-            nonlocal timeout
-            timeout = timeout or config.REDIS.cache_timeout
-            if isinstance(result, MapError) or timeout is None:
-                timeout = 3
+            if isinstance(result, MapError):
+                ttl = int(ttl / 100)
 
             try:
-                app_cache.setex(cache_key, timeout, result.model_dump_json())
+                app_cache.set(
+                    cache_key,
+                    result.model_dump_json(exclude_none=True),
+                    ex=ttl if ttl > 0 else None,
+                )
             except RedisError:
                 current_app.logger.warning("Failed to set cache for key: %s", cache_key)
                 traceback.print_exc()
@@ -120,7 +129,7 @@ def cache_resource[T: t.Callable](
     return decorator
 
 
-def clear_cache(func: t.Callable, *identifier: str) -> None:
+def clear_cache(func: ModelReturner, *identifier: str) -> None:
     """Delete cached responses for the given function and resource id.
 
     Args:
@@ -138,7 +147,7 @@ def clear_cache(func: t.Callable, *identifier: str) -> None:
 
     try:
         for cid in identifier:
-            match = f"{prefix}:{import_name}:{cid}:*"
+            match = f"{prefix}{import_name}-{cid}-*"
 
             cursor: str | int = "0"  # start with "0", exit with int 0
             while cursor != 0:

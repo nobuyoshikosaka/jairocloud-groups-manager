@@ -38,17 +38,59 @@ TABLE_DROPPED = LogMessage(
 )
 
 
-REQUEST_FOR_AUTH_CODE = LogMessage(
+SUCCESS_ISSUE_CREDENTIALS = LogMessage(
     "I020",
+    "Successfully issued client credentials for the mAP Core API.",
+)
+
+REQUEST_FOR_AUTH_CODE = LogMessage(
+    "I021",
     "Please authenticate at the following URL to issue an access token: %(url)s",
 )
 
 SUCCESS_ISSUE_TOKEN = LogMessage(
-    "I021",
+    "I022",
     "Successfully issued access token for the mAP Core API.",
 )
 
 SUCCESS_REFRESH_TOKEN = LogMessage(
-    "I022",
+    "I023",
     "Successfully refreshed access token for the mAP Core API.",
+)
+
+ACCESS_TOKEN_AVAILABLE = LogMessage(
+    "I024",
+    "Access token is valid and available.",
+)
+
+SUCCESS_GET_TOKEN_OWNER = LogMessage(
+    "I025",
+    "Successfully get token owner's User resource from mAP Core API. \n%(user)s",
+)
+
+
+RECEIVE_RESPONSE_MESSAGE = LogMessage(
+    "I030",
+    "Received response from mAP Core API: %(message)s",
+)
+
+
+SUCCESS_CREATE_REPOSITORY = LogMessage(
+    "I100",
+    "Successfully created Service resource for Repository (id: %(service_id)s)",
+)
+
+SUCCESS_CREATE_ROLEGROUPS = LogMessage(
+    "I101",
+    "Successfully created role-type groups for Repository (id: %(service_id)s)",
+)
+
+SUCCESS_UPDATE_REPOSITORY = LogMessage(
+    "I102",
+    "Successfully updated Service resource for Repository (id: %(service_id)s)",
+)
+
+SUCCESS_DELETE_REPOSITORY = LogMessage(
+    "I103",
+    "Successfully deleted Service resource for Repository (id: %(service_id)s)",
 )

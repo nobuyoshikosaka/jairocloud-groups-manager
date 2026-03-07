@@ -3,8 +3,8 @@ import { getLocalTimeZone, parseDate } from '@internationalized/date'
 import { UBadge, UButton, UDropdownMenu } from '#components'
 
 import type { Row } from '@tanstack/table-core'
-import type { CalendarDate } from '@internationalized/date'
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
+import type { DateRange } from 'reka-ui'
 
 const useHistory = () => {
   const toast = useToast()
@@ -84,7 +84,7 @@ const useHistory = () => {
         h(
           'div',
           { class: 'text-right' },
-          h( // @ts-expect-error: props type mismatch
+          h(
             UDropdownMenu,
             {
               'content': { align: 'end' },
@@ -201,7 +201,7 @@ const useHistory = () => {
         return h(
           'div',
           { class: 'text-right' },
-          h( // @ts-expect-error: props type mismatch
+          h(
             UDropdownMenu,
             {
               'content': { align: 'end' },
@@ -504,7 +504,7 @@ const useHistoryFilter = () => {
       operatorFilter,
     }
   }
-  const dateRange = shallowRef<{ start: CalendarDate | undefined, end: CalendarDate | undefined }>({
+  const dateRange = shallowRef<DateRange>({
     start: startDate.value ? parseDate(startDate.value) : undefined,
     end: endDate.value ? parseDate(endDate.value) : undefined,
   })
