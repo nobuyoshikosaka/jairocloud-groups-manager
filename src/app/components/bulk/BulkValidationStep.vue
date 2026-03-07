@@ -109,8 +109,13 @@ const deselectAllMissingUsers = () => {
   selectedMissingUsers.value = {}
 }
 
-const totalCount = computed(() => data.value.total)
+const totalCount = computed(() => data.value?.total)
 const indicators = useBulkIndicators
+
+const indicatorWrapper = useTemplateRef('indicatorWrapper')
+const { isStuck } = useSticky(indicatorWrapper,
+  { baseElementSelector: 'header', spaceRem: 1, fallbackPosition: 64 },
+)
 </script>
 
 <template>
@@ -120,14 +125,36 @@ const indicators = useBulkIndicators
       :as="$t('bulk.validation.error')" :description="$t('bulk.validation.error-detail')"
     />
 
-    <div class="sticky top-0 z-10 bg-background flex items-center justify-between gap-4">
+    <div
+      ref="indicatorWrapper" :data-stuck="isStuck || undefined"
+      :class="[
+        'sticky top-[calc(var(--ui-header-height)+1rem)] z-10',
+        'flex items-center justify-between gap-4 rounded group',
+        'transition-all data-stuck:bg-default/25 data-stuck:backdrop-blur',
+        'data-stuck:justify-start data-stuck:ring  data-stuck:ring-default',
+      ]"
+    >
       <NumberIndicator
-        v-for="indicator in indicators"
-        :key="indicator.key"
-        :title="indicator.title"
-        :icon="indicator.icon"
-        :number="indicator.number"
+        v-for="indicator in indicators" :key="indicator.key"
+        :title="indicator.title" :icon="indicator.icon" :number="indicator.number"
         :color="indicator.color"
+        :ui="{
+          root: [
+            'w-full',
+            'group-data-stuck:w-fit', 'group-data-stuck:ring-0 group-data-stuck:bg-transparent',
+          ],
+          container: [
+            'md:px-4 gap-4 md:gap-4',
+            'group-data-stuck:p-2 group-data-stuck:gap-2 group-data-stuck:width-auto',
+          ],
+          wrapper: 'flex-3',
+          body: 'group-data-stuck:flex group-data-stuck:gap-2',
+          iconWrapper: 'flex-2',
+          iconBody: 'transition-all p-1.5 size-10 group-data-stuck:p-1 group-data-stuck:size-8',
+          icon: 'transition-all size-7 group-data-stuck:size-6',
+          title: 'group-data-stuck:text-sm',
+          description: 'group-data-stuck:text-sm',
+        }"
       />
     </div>
 

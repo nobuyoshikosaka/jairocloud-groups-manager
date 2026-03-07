@@ -182,6 +182,7 @@ const onDelete = async () => {
         v-for="(indicator, index) in indicators"
         :key="index" :title="indicator.title" :to="indicator.to"
         :number="indicator.count" :color="indicator.color" :icon="indicator.icon"
+        :ui="{ container: 'lg:px-18 md:px-12' }"
       />
     </div>
 
