@@ -211,6 +211,7 @@ def get_by_id(
         raise
 
     if isinstance(result, MapError):
+        current_app.logger.error(E.FAILED_GET_USER, {"id": user_id})
         current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
         return None
 
@@ -274,6 +275,7 @@ def get_by_eppn(eppn: str, *, raw: bool = False) -> UserDetail | MapUser | None:
         raise
 
     if isinstance(result, MapError):
+        current_app.logger.error(E.FAILED_GET_USER_BY_EPPN, {"eppn": eppn})
         current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
         return None
 
@@ -575,7 +577,7 @@ def update_affiliations(user: UserDetail) -> UserDetail:
     user_id = t.cast("str", user.id)
     current: UserDetail | None = get_by_id(user_id)
     if current is None:
-        error = f"User '{user.id}' Not Found"
+        error = E.USER_NOT_FOUND % {"id": user_id}
         raise ResourceNotFound(error)
 
     validated = validate_user_to_map_user(user, mode="update")

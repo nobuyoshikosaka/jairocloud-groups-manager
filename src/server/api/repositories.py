@@ -7,7 +7,7 @@
 import traceback
 import typing as t
 
-from flask import Blueprint, url_for
+from flask import Blueprint, current_app, url_for
 from flask_login import login_required
 from flask_pydantic import validate
 
@@ -115,11 +115,13 @@ def id_get(repository_id: str) -> tuple[RepositoryDetail | ErrorResponse, int]:
     """
     result = repositories.get_by_id(repository_id, more_detail=True)
     if result is None:
+        current_app.logger.error(E.REPOSITORY_NOT_FOUND, {"id": repository_id})
         return ErrorResponse(
             message=E.REPOSITORY_NOT_FOUND % {"id": repository_id}
         ), 404
 
     if not has_permission(repository_id):
+        current_app.logger.error(E.REPOSITORY_FORBIDDEN, {"id": repository_id})
         return ErrorResponse(
             message=E.REPOSITORY_FORBIDDEN % {"id": repository_id}
         ), 403
@@ -147,6 +149,7 @@ def id_put(
         - If repository not found, status code 404
     """
     if not has_permission(repository_id):
+        current_app.logger.error(E.REPOSITORY_FORBIDDEN, {"id": repository_id})
         return ErrorResponse(
             message=E.REPOSITORY_FORBIDDEN % {"id": repository_id}
         ), 403

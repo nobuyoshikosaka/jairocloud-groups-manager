@@ -21,7 +21,7 @@ from redis.exceptions import RedisError
 from server.config import config
 from server.datastore import app_cache
 from server.entities.map_error import MapError
-from server.messages import I, W
+from server.messages import E, I, W
 
 
 @t.overload
@@ -148,7 +148,7 @@ def cache_resource[T: ModelReturner](  # noqa: C901
     return decorator
 
 
-def clear_cache(func: ModelReturner, *identifier: str) -> None:
+def clear_cache(func: t.Callable, *identifier: str) -> None:
     """Delete cached responses for the given function and resource id.
 
     Args:
@@ -156,13 +156,13 @@ def clear_cache(func: ModelReturner, *identifier: str) -> None:
         identifier (str): The identifier(s) to delete cache for.
 
     Raises:
-        ValueError: If the function is not decorated with @response_cache.
+        NotImplementedError: If the function is not decorated with @response_cache.
     """
     prefix = config.REDIS.key_prefix
     import_name = getattr(func, "_import_name", None)
     if not import_name:
-        error = "Function is not decorated with @response_cache."
-        raise ValueError(error)
+        error = E.UNINIT_RESOURCE_CACHE % {"name": func.__name__}
+        raise NotImplementedError(error)
 
     try:
         for cid in identifier:

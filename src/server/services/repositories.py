@@ -220,6 +220,7 @@ def get_by_id(
         raise
 
     if isinstance(result, MapError):
+        current_app.logger.error(E.FAILED_GET_REPOSITORY, {"id": service_id})
         current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
         return None
 

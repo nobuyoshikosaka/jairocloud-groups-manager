@@ -112,6 +112,11 @@ UNRECOGNIZED_SEARCH_CRITERIA = LogMessage(
     "Unrecognized search criteria.",
 )
 
+UNINIT_RESOURCE_CACHE = LogMessage(
+    "E070",
+    "Function (name: %(name)s) is not initialized for resource caching.",
+)
+
 
 FAILED_SEARCH_REPOSITORIES = LogMessage(
     "E100",
@@ -120,7 +125,7 @@ FAILED_SEARCH_REPOSITORIES = LogMessage(
 
 REPOSITORY_FORBIDDEN = LogMessage(
     "E103",
-    "You do not have permission to access this Repository (id: %(id)s).",
+    "Logged-in user does not have permission to access this Repository (id: %(id)s).",
 )
 
 REPOSITORY_NOT_FOUND = LogMessage(
@@ -190,7 +195,7 @@ REPOSITORY_INVALID_SERVICE_URL = LogMessage(
 
 REPOSITORY_TOO_LONG_URL = LogMessage(
     "E144",
-    "Service URL is too long (maximum length: %(max)s characters).",
+    "Service URL is too long; maximum length is %(max)s characters.",
 )
 
 REPOSITORY_REQUIRES_ENTITY_ID = LogMessage(
@@ -484,4 +489,9 @@ UNEXPECTED_SERVER_ERROR = LogMessage(
 SERVER_UNAVAILABLE = LogMessage(
     "E503",
     "The server application is currently unavailable.",
+)
+
+
+UNNECESSARY_CONTRIB = LogMessage(
+    "E999", "Contrib utilities can only be used in development mode."
 )

@@ -5,10 +5,11 @@
 """API endpoints for user-related operations."""
 
 import inspect
+import sys
 import traceback
 import typing as t
 
-from flask import Blueprint, url_for
+from flask import Blueprint, current_app, url_for
 from flask_login import current_user, login_required
 from flask_pydantic import validate
 
@@ -116,10 +117,12 @@ def id_get(user_id: str) -> tuple[UserDetail | ErrorResponse, int]:
     """
     user = users.get_by_id(user_id, more_detail=True)
     if user is None:
-        return ErrorResponse(message=E.USER_NOT_FOUND), 404
+        current_app.logger.error(E.USER_NOT_FOUND, {"id": user_id})
+        return ErrorResponse(message=E.USER_NOT_FOUND % {"id": user_id}), 404
 
     if not has_permission(user):
-        return ErrorResponse(message=E.USER_FORBIDDEN), 403
+        current_app.logger.error(E.USER_FORBIDDEN, {"id": user_id})
+        return ErrorResponse(message=E.USER_FORBIDDEN % {"id": user_id}), 403
 
     return user, 200
 
@@ -149,24 +152,23 @@ def id_put(user_id: str, body: UserDetail) -> tuple[UserDetail | ErrorResponse, 
     # permission will be checked in validation process.
     try:
         updated = users.update(body)
-        traceback.print_exc()
-
     except* InvalidFormError as exc:
-        if exc.message == E.USER_NO_UPDATE_SYSTEM_ADMIN:
+        if exc.exceptions[0].message == E.USER_NO_UPDATE_SYSTEM_ADMIN:
             error = ErrorResponse(message=exc.message), 403
         else:
             error = ErrorResponse(message=exc.message), 400
     except* ResourceNotFound as exc:
-        traceback.print_exc()
         error = ErrorResponse(message=exc.message), 404
     except* (ResourceInvalid, RequestConflict) as exc:
-        traceback.print_exc()
         error = ErrorResponse(message=exc.message), 409
     else:
         if t.cast("LoginUser", current_user).map_id == user_id:
             # user is updating their own information, need to refresh session role.
             inspect.unwrap(logout)()
         return updated, 200
+    finally:
+        if sys.exc_info()[0] is not None:
+            traceback.print_exc()
 
     return error
 
