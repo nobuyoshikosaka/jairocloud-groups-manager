@@ -4,6 +4,7 @@
 
 """API endpoints for repository-related operations."""
 
+import traceback
 import typing as t
 
 from flask import Blueprint, url_for
@@ -53,6 +54,7 @@ def get(
     try:
         results = repositories.search(query)
     except InvalidQueryError as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 400
 
     return results, 200
@@ -81,14 +83,18 @@ def post(
     try:
         created = repositories.create(body)
     except InvalidFormError as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 400
     except ResourceInvalid as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 409
 
-    location = url_for(
-        "api.repositories.id_get", repository_id=created.id, _external=True
-    )
-    return created, 201, {"Location": location}
+    header = {
+        "Location": url_for(
+            "api.repositories.id_get", repository_id=created.id, _external=True
+        )
+    }
+    return created, 201, header
 
 
 @bp.get("/<string:repository_id>")
@@ -149,10 +155,13 @@ def id_put(
     try:
         updated = repositories.update(body)
     except InvalidFormError as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 400
     except ResourceNotFound as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 404
     except ResourceInvalid as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 409
 
     return updated, 200
@@ -178,10 +187,13 @@ def id_delete(
     try:
         repositories.delete_by_id(repository_id, query.confirmation)
     except InvalidFormError as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 400
     except ResourceNotFound as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 404
     except ResourceInvalid as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 400
 
     return "", 204
