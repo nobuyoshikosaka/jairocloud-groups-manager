@@ -68,7 +68,7 @@ class Meta(BaseModel):
     Alias for 'lastModified'.
     """
 
-    created_by: str | None
+    created_by: str | None = None
     """ID of the user who created this resource. Alias for 'createdBy'."""
 
     model_config = camel_case_config | forbid_extra_config | {"frozen": True}

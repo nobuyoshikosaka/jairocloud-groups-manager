@@ -94,3 +94,24 @@ SUCCESS_DELETE_REPOSITORY = LogMessage(
     "I130",
     "Successfully deleted Service resource for Repository (id: %(id)s)",
 )
+
+
+SEARCHED_SYSTEM_ADMINS = LogMessage(
+    "I210",
+    "Search performed on System Administrator.",
+)
+
+SUCCESS_CREATE_USER = LogMessage(
+    "I310",
+    "Successfully created User resource (id: %(id)s, ePPN: %(eppn)s).",
+)
+
+SUCCESS_UPDATE_USER = LogMessage(
+    "I320",
+    "Successfully updated User resource (id: %(id)s, ePPN: %(eppn)s).",
+)
+
+SUCCESS_UPDATE_USER_AFFILIATIONS = LogMessage(
+    "I321",
+    "Successfully updated affiliations of User resource (id: %(id)s, ePPN: %(eppn)s).",
+)

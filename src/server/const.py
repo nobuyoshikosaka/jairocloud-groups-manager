@@ -105,7 +105,7 @@ MAP_SERVICES_ENDPOINT: Final = "/api/v2/Services"
 MAP_DEFAULT_SEARCH_COUNT: Final = 20
 """Default number of resources to return in search results from mAP Core API."""
 
-MAP_BULK_ENDPOINT: Final = "api/v2/Bulk"
+MAP_BULK_ENDPOINT: Final = "/api/v2/Bulk"
 """Endpoint for Bulk resources in mAP Core API."""
 
 MAP_NOT_FOUND_PATTERN: Final = r"'(.*)' Not Found"
@@ -114,11 +114,22 @@ MAP_NOT_FOUND_PATTERN: Final = r"'(.*)' Not Found"
 MAP_DUPLICATE_ID_PATTERN: Final = r"Duplicate id '(.*)'"
 """Pattern to identify 'Duplicate ID' errors from mAP Core API."""
 
+MAP_ALREADY_TIED_PATTERN: Final = r"(.*) is already tied to another account"
+"""Pattern to identify 'Already Tied' errors from mAP Core API."""
+
+MAP_ILLEGAL_EPPN_PATTERN: Final = (
+    r"'(.*)' illegal (eduPersonPrincipalNames needs idpEntityId)"
+)
+"""Pattern to identify 'Illegal ePPN' errors from mAP Core API."""
+
 MAP_NO_RIGHTS_CREATE_PATTERN: Final = r"You do not have creation right of '(.*)'"
 """Pattern to identify 'No Creation Rights' errors from mAP Core API."""
 
 MAP_NO_RIGHTS_UPDATE_PATTERN: Final = r"No update rights for '(.*)'"
 """Pattern to identify 'No Update Rights' errors from mAP Core API."""
+
+MAP_NO_RIGHTS_APPEND_PATTERN: Final = r"No append rights for '(.*)'"
+"""Pattern to identify 'No Append Rights' errors from mAP Core API."""
 
 
 GROUP_DEFAULT_PUBLIC: Final = False

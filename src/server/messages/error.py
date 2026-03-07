@@ -123,6 +123,11 @@ REPOSITORY_FORBIDDEN = LogMessage(
     "You do not have permission to access this Repository (id: %(id)s).",
 )
 
+REPOSITORY_NOT_FOUND = LogMessage(
+    "E104",
+    "Service resource for Repository (id: %(id)s) not found.",
+)
+
 FAILED_GET_REPOSITORY = LogMessage(
     "E105",
     "Failed to get Service resource for Repository (id: %(id)s).",
@@ -151,11 +156,6 @@ FAILED_UPDATE_REPOSITORY = LogMessage(
 NO_RIGHTS_UPDATE_REPOSITORY = LogMessage(
     "E123",
     "No update rights for Repository (id: %(id)s) with current access token.",
-)
-
-REPOSITORY_NOT_FOUND = LogMessage(
-    "E124",
-    "Service resource for Repository (id: %(id)s) not found.",
 )
 
 FAILED_DELETE_REPOSITORY = LogMessage(
@@ -202,6 +202,141 @@ REPOSITORY_REQUIRES_ENTITY_ID = LogMessage(
 UNCHANGEABLE_REPOSITORY_URL = LogMessage(
     "E150",
     "Service URL of Repository cannot be updated.",
+)
+
+
+FAILED_SEARCH_USERS = LogMessage(
+    "E300",
+    "Failed to search User resources (filter: %(filter)s).",
+)
+
+FAILED_COUNT_USERS = LogMessage(
+    "E301",
+    "Failed to count User resources (filter: %(filter)s).",
+)
+
+USER_FORBIDDEN = LogMessage(
+    "E303",
+    "Logged-in user does not have permission to access User (id: %(id)s).",
+)
+
+USER_NOT_FOUND = LogMessage(
+    "E304",
+    "User resource (id: %(id)s) not found.",
+)
+
+FAILED_GET_USER = LogMessage(
+    "E305",
+    "Failed to get User resource (id: %(id)s).",
+)
+
+FAILED_GET_USER_BY_EPPN = LogMessage(
+    "E306",
+    "Failed to get User resource (ePPN: %(eppn)s).",
+)
+
+FAILED_CREATE_USER = LogMessage(
+    "E310",
+    "Failed to create User resource (ePPN: %(eppn)s).",
+)
+
+USER_DUPLICATE_ID = LogMessage(
+    "E311",
+    "A User resource (id: %(id)s) already exists.",
+)
+
+USER_ALREADY_TIED_EPPN = LogMessage(
+    "E312",
+    "The ePPN '%(eppn)s' is already tied to another account.",
+)
+
+USER_EPPN_ILLEGAL = LogMessage(
+    "E313",
+    "The ePPN '%(eppn)s' is illegal.",
+)
+
+FAILED_UPDATE_USER = LogMessage(
+    "E320",
+    "Failed to update User resource (id: %(id)s, ePPN: %(eppn)s).",
+)
+
+FAILED_UPDATE_USER_AFFILIATIONS = LogMessage(
+    "E321",
+    "Failed to update some affiliations for User resource "
+    "(id: %(id)s, ePPN: %(eppn)s).",
+)
+
+NO_RIGHTS_UPDATE_USER = LogMessage(
+    "E323",
+    "No update rights for User (id: %(id)s) with current access token.",
+)
+
+USER_REQUIRES_USERNAME = LogMessage(
+    "E340",
+    "Username is required for a User.",
+)
+
+USER_REQUIRES_EPPN = LogMessage(
+    "E341",
+    "At least one ePPN is required for a User.",
+)
+
+USER_REQUIRES_EMAIL = LogMessage(
+    "E342",
+    "At least one email is required for a User.",
+)
+
+USER_REQUIRES_REPOSITORY = LogMessage(
+    "E343",
+    "At least one Repository affiliation is required for a User.",
+)
+
+USER_FORBIDDEN_REPOSITORY = LogMessage(
+    "E344",
+    "Logged-in user does not have permission to add or remove User"
+    "to the Repository (id: %(id)s).",
+)
+
+USER_REQUIRES_EXISTING_REPOSITORY = LogMessage(
+    "E345",
+    "The specified Repository (id: %(id)s) does not exist.",
+)
+
+USER_REQUIRES_EXISTING_GROUP = LogMessage(
+    "E346",
+    "The specified Group (id: %(id)s) does not exist.",
+)
+
+USER_FORBIDDEN_GROUP = LogMessage(
+    "E347",
+    "Logged-in user does not have permission to add or remove User"
+    "to the Group (id: %(id)s).",
+)
+
+USER_REQUIRES_NO_REPOSITORY = LogMessage(
+    "E348",
+    "System Administrator cannot be affiliated with any repository.",
+)
+
+USER_REQUIRES_NO_GROUP = LogMessage(
+    "E349",
+    "System Administrator cannot be affiliated with any group.",
+)
+
+USER_NO_CREATE_SYSTEM_ADMIN = LogMessage(
+    "E350",
+    "Logged-in user does not have permission to create a System Administrator user.",
+)
+
+USER_NO_UPDATE_SYSTEM_ADMIN = LogMessage(
+    "E351",
+    "Logged-in user does not have permission to update a System Administrator user.",
+)
+
+USER_NO_PROMOTE_SYSTEM_ADMIN = LogMessage(
+    "E352",
+    "Logged-in user does not have permission to promote a user to "
+    "System Administrator.",
 )
 
 
