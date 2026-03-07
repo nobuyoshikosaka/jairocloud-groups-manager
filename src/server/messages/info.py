@@ -110,8 +110,35 @@ SUCCESS_DELETE_REPOSITORY = LogMessage(
 )
 
 
-SEARCHED_SYSTEM_ADMINS = LogMessage(
+SUCCESS_CREATE_GROUP = LogMessage(
     "I210",
+    "Successfully created Group resource (id: %(id)s) in Repository (id: %(rid)s).",
+)
+
+SUCCESS_UPDATE_GROUP = LogMessage(
+    "I220",
+    "Successfully updated Group resource (id: %(id)s) in Repository (id: %(rid)s).",
+)
+
+SUCCESS_UPDATE_GROUP_MEMBERS = LogMessage(
+    "I221",
+    "Successfully updated members of Group resource "
+    "(id: %(id)s, added: %(add)s, removed: %(remove)s).",
+)
+
+SUCCESS_DELETE_GROUP = LogMessage(
+    "I230",
+    "Successfully deleted Group resource (id: %(id)s) in Repository (id: %(rid)s).",
+)
+
+SUCCESS_DELETE_GROUPS = LogMessage(
+    "I231",
+    "Successfully deleted Group resources (ids: %(ids)s) in Repository (id: %(rid)s).",
+)
+
+
+SEARCHED_SYSTEM_ADMINS = LogMessage(
+    "I301",
     "Search performed on System Administrator.",
 )
 

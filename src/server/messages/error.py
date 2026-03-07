@@ -205,6 +205,137 @@ UNCHANGEABLE_REPOSITORY_URL = LogMessage(
 )
 
 
+FAILED_SEARCH_GROUPS = LogMessage(
+    "E200",
+    "Failed to search Group resources (filter: %(filter)s).",
+)
+
+GROUP_UNRECOGNIZED_ID = LogMessage(
+    "E201",
+    "Group ID (id: %(id)s) is unrecognized; it may be out of this service's scope.",
+)
+
+GROUP_FORBIDDEN = LogMessage(
+    "E203",
+    "Logged-in user does not have permission to access Group (id: %(id)s).",
+)
+
+GROUP_NOT_FOUND = LogMessage(
+    "E204",
+    "Group resource (id: %(id)s) not found.",
+)
+
+FAILED_GET_GROUP = LogMessage(
+    "E205",
+    "Failed to get Group resource (id: %(id)s).",
+)
+
+GROUP_UNSUPPORTED_PATCH_PATH = LogMessage(
+    "E207",
+    "Unsupported patch path for Group resource: %(path)s.",
+)
+
+FAILED_CREATE_GROUP = LogMessage(
+    "E210",
+    "Failed to create Group resource (id: %(id)s).",
+)
+
+GROUP_DUPLICATE_ID = LogMessage(
+    "E211",
+    "A Group resource (id: %(id)s) already exists.",
+)
+
+FAILED_UPDATE_GROUP = LogMessage(
+    "E220",
+    "Failed to update Group resource (id: %(id)s).",
+)
+
+FAILED_UPDATE_GROUP_MEMBERS = LogMessage(
+    "E221",
+    "Failed to update members of Group resource "
+    "(id: %(id)s, add: %(add)s, remove: %(remove)s).",
+)
+
+NO_RIGHTS_UPDATE_GROUP = LogMessage(
+    "E223",
+    "No update rights for Group (id: %(id)s) with current access token.",
+)
+
+FAILED_DELETE_GROUP = LogMessage(
+    "E230",
+    "Failed to delete Group resource (id: %(id)s).",
+)
+
+FAILED_DELETE_GROUPS = LogMessage(
+    "E231",
+    "Failed to delete Group resources (ids: %(ids)s).",
+)
+
+SOME_GROUP_UNRECOGNIZED = LogMessage(
+    "E232",
+    "Some Group IDs are unrecognized (ids: %(ids)s), "
+    "so any of the specified groups has not been deleted.",
+)
+
+ROLEGROUP_CANNOT_DELETE = LogMessage(
+    "E233",
+    "Role-type Group resource cannot be deleted.",
+)
+
+GROUP_REQUIRES_SYSTEM_ADMIN = LogMessage(
+    "E240",
+    "At least one System Administrator is required for a Group.",
+)
+
+GROUP_REQUIRES_DISPLAY_NAME = LogMessage(
+    "E241",
+    "Display name is required for a Group.",
+)
+
+GROUP_REQUIRES_REPOSITORY = LogMessage(
+    "E242",
+    "Group must be affiliated with a Repository.",
+)
+
+GROUP_REQUIRES_EXISTING_REPOSITORY = LogMessage(
+    "E243",
+    "The specified Repository (id: %(rid)s) does not exist.",
+)
+
+GROUP_FORBIDDEN_REPOSITORY = LogMessage(
+    "E244",
+    "Logged-in user does not have permission to create Group "
+    "in the Repository (id: %(rid)s).",
+)
+
+GROUP_REQUIRES_USER_DEFINED_ID = LogMessage(
+    "E245",
+    "Group ID is required to create a group.",
+)
+
+GROUP_TOO_LONG_ID = LogMessage(
+    "E246",
+    "Group ID is too long for the Repository (id: %(rid)s); "
+    "maximum length is %(max)s characters.",
+)
+
+GROUP_REQUIRES_ID = LogMessage(
+    "E250",
+    "Group ID is required to update a Group.",
+)
+
+GROUP_INVALID_ID_PATTERN = LogMessage(
+    "E251",
+    "Group ID does not follow the expected pattern.",
+)
+
+
+CONFLICT_MEMBER_OPERATION = LogMessage(
+    "E260",
+    "Conflict in updating Group members (id: %(id)s, users: %(uids)s).",
+)
+
+
 FAILED_SEARCH_USERS = LogMessage(
     "E300",
     "Failed to search User resources (filter: %(filter)s).",

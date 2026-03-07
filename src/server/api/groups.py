@@ -4,9 +4,10 @@
 
 """API endpoints for group-related operations."""
 
+import traceback
 import typing as t
 
-from flask import Blueprint, url_for
+from flask import Blueprint, current_app, url_for
 from flask_login import login_required
 from flask_pydantic import validate
 
@@ -17,11 +18,14 @@ from server.entities.search_request import FilterOption, SearchResult
 from server.exc import (
     InvalidFormError,
     InvalidQueryError,
+    RequestConflict,
     ResourceInvalid,
     ResourceNotFound,
 )
+from server.messages import E
 from server.services import groups
 from server.services.utils import (
+    detect_affiliation,
     detect_affiliations,
     filter_permitted_group_ids,
     is_current_user_system_admin,
@@ -57,7 +61,8 @@ def get(query: GroupsQuery) -> tuple[SearchResult | ErrorResponse, int]:
     try:
         results = groups.search(query)
     except InvalidQueryError as exc:
-        return ErrorResponse(code="", message=str(exc)), 400
+        traceback.print_exc()
+        return ErrorResponse(message=exc.message), 400
 
     return results, 200
 
@@ -78,25 +83,27 @@ def post(
     Returns:
         - If succeeded in creating group, group information
             and status code 201 and location header
+        - If form data is invalid, error message and status code 400
         - If logged-in user does not have permission, status code 403
         - If id already exist, status code 409
     """
-    repository_id = body.repository.id if body.repository else None
-    if not repository_id:
-        return ErrorResponse(code="", message="repository id is required"), 400
-
-    if not has_permission(repository_id):
-        return ErrorResponse(code="", message="not has permission"), 403
-
+    # permission will be checked in validation process.
     try:
-        result = groups.create(body)
-    except InvalidFormError:
-        return ErrorResponse(code="", message="invalid group information"), 400
-    except ResourceInvalid:
-        return ErrorResponse(code="", message="id already exist"), 409
+        created = groups.create(body)
+    except InvalidFormError as exc:
+        traceback.print_exc()
+        if exc.message == E.GROUP_FORBIDDEN_REPOSITORY:
+            return ErrorResponse(message=exc.message), 403
 
-    location = url_for("api.groups.id_get", group_id=result.id, _external=True)
-    return result, 201, {"Location": location}
+        return ErrorResponse(message=exc.message), 400
+    except ResourceInvalid as exc:
+        traceback.print_exc()
+        return ErrorResponse(message=exc.message), 409
+
+    header = {
+        "Location": url_for("api.groups.id_get", group_id=created.id, _external=True)
+    }
+    return created, 201, header
 
 
 @bp.get("/<string:group_id>")
@@ -115,13 +122,20 @@ def id_get(group_id: str) -> tuple[GroupDetail | ErrorResponse, int]:
         - If logged-in user does not have permission, status code 403
         - If group not found, status code 404
     """
+    if not detect_affiliation(group_id):
+        # out of this service's scope.
+        current_app.logger.error(E.GROUP_UNRECOGNIZED_ID, {"id": group_id})
+        return ErrorResponse(message=E.GROUP_NOT_FOUND % {"id": group_id}), 404
+
     if not has_permission(group_id):
-        return ErrorResponse(code="", message=""), 403
+        current_app.logger.error(E.GROUP_FORBIDDEN, {"id": group_id})
+        return ErrorResponse(message=E.GROUP_FORBIDDEN % {"id": group_id}), 403
 
     result = groups.get_by_id(group_id, more_detail=True)
 
     if result is None:
-        return ErrorResponse(code="", message=f"'{group_id}' Not Found"), 404
+        current_app.logger.error(E.GROUP_NOT_FOUND, {"id": group_id})
+        return ErrorResponse(message=E.GROUP_NOT_FOUND % {"id": group_id}), 404
     return result, 200
 
 
@@ -143,20 +157,24 @@ def id_put(group_id: str, body: GroupDetail) -> tuple[GroupDetail | ErrorRespons
         - If group not found, status code 404
         - If coflicted group information, status code 409
     """
+    if not detect_affiliation(group_id):
+        # out of this service's scope.
+        current_app.logger.error(E.GROUP_UNRECOGNIZED_ID, {"id": group_id})
+        return ErrorResponse(message=E.GROUP_NOT_FOUND % {"id": group_id}), 404
+
     if not has_permission(group_id):
-        return ErrorResponse(
-            code="", message=f"Not have permission to edit {group_id}."
-        ), 403
+        current_app.logger.error(E.GROUP_FORBIDDEN, {"id": group_id})
+        return ErrorResponse(message=E.GROUP_FORBIDDEN % {"id": group_id}), 403
 
     body.id = group_id
     try:
         result = groups.update(body)
-    except InvalidFormError as ex:
-        return ErrorResponse(code="", message=str(ex)), 400
-    except ResourceInvalid as ex:
-        return ErrorResponse(code="", message=str(ex)), 409
-    except ResourceNotFound as ex:
-        return ErrorResponse(code="", message=str(ex)), 404
+    except InvalidFormError as exc:
+        traceback.print_exc()
+        return ErrorResponse(message=exc.message), 400
+    except ResourceNotFound as exc:
+        traceback.print_exc()
+        return ErrorResponse(message=exc.message), 404
     return result, 200
 
 
@@ -183,15 +201,25 @@ def id_patch(
         - If group not found, status code 404
         - If coflicted group member, status code 409
     """
+    if not detect_affiliation(group_id):
+        # out of this service's scope.
+        current_app.logger.error(E.GROUP_UNRECOGNIZED_ID, {"id": group_id})
+        return ErrorResponse(message=E.GROUP_NOT_FOUND % {"id": group_id}), 404
+
     if not has_permission(group_id):
-        return ErrorResponse(code="", message=""), 403
+        current_app.logger.error(E.GROUP_FORBIDDEN, {"id": group_id})
+        return ErrorResponse(message=E.GROUP_FORBIDDEN % {"id": group_id}), 403
 
     adding = set()
     removing = set()
     for operation in body.operations:
         if operation.path != "members":
-            error = f"Unsupported attribute to update: {operation.path}"
-            return ErrorResponse(code="", message=error), 400
+            current_app.logger.error(
+                E.GROUP_UNSUPPORTED_PATCH_PATH, {"path": operation.path}
+            )
+            return ErrorResponse(
+                message=E.GROUP_UNSUPPORTED_PATCH_PATH % {"path": operation.path}
+            ), 400
 
         if operation.op == "add":
             adding.update(set(operation.value))
@@ -200,10 +228,12 @@ def id_patch(
 
     try:
         result = groups.update_member(group_id, add=adding, remove=removing)
-    except ResourceInvalid as ex:
-        return ErrorResponse(code="", message=str(ex)), 409
-    except ResourceNotFound as ex:
-        return ErrorResponse(code="", message=str(ex)), 404
+    except RequestConflict as exc:
+        traceback.print_exc()
+        return ErrorResponse(message=exc.message), 409
+    except ResourceNotFound as exc:
+        traceback.print_exc()
+        return ErrorResponse(message=exc.message), 404
 
     return result, 200
 
@@ -224,17 +254,25 @@ def id_delete(group_id: str) -> tuple[t.Literal[""], int] | tuple[ErrorResponse,
         - If logged-in user does not have permission, status code 403
         - If group not found, status code 404
     """
+    if not detect_affiliation(group_id):
+        # out of this service's scope.
+        current_app.logger.error(E.GROUP_UNRECOGNIZED_ID, {"id": group_id})
+        return ErrorResponse(message=E.GROUP_NOT_FOUND % {"id": group_id}), 404
+
     rolegroups, _ = detect_affiliations(list(group_id))
     if rolegroups:
-        return ErrorResponse(code="", message="Cannot delete role-type group."), 400
+        current_app.logger.error(E.ROLEGROUP_CANNOT_DELETE)
+        return ErrorResponse(message=E.ROLEGROUP_CANNOT_DELETE), 400
 
     if not has_permission(group_id):
-        return ErrorResponse(code="", message=""), 403
+        current_app.logger.error(E.GROUP_FORBIDDEN, {"id": group_id})
+        return ErrorResponse(message=E.GROUP_FORBIDDEN % {"id": group_id}), 403
 
     try:
         groups.delete_by_id(group_id)
-    except ResourceNotFound as ex:
-        return ErrorResponse(code="", message=str(ex)), 404
+    except ResourceNotFound as exc:
+        traceback.print_exc()
+        return ErrorResponse(message=exc.message), 404
 
     return "", 204
 
@@ -259,10 +297,20 @@ def delete_post(
           (In this case, no group will be deleted.)
         - If logged-in user does not have permission, status code 403
     """
-    rolegroups, _ = detect_affiliations(list(group_ids := body.group_ids))
+    rolegroups, groups_ = detect_affiliations(list(group_ids := body.group_ids))
 
     if rolegroups:
-        return ErrorResponse(code="", message="Cannot delete role-type group."), 400
+        current_app.logger.error(E.ROLEGROUP_CANNOT_DELETE)
+        return ErrorResponse(message=E.ROLEGROUP_CANNOT_DELETE), 400
+
+    non_detected = {_.group_id for _ in groups_} ^ set(group_ids)
+    if non_detected:
+        current_app.logger.error(
+            E.SOME_GROUP_UNRECOGNIZED, {"ids": ", ".join(non_detected)}
+        )
+        return ErrorResponse(
+            message=E.SOME_GROUP_UNRECOGNIZED % {"ids": ", ".join(non_detected)}
+        ), 400
 
     if not has_permission(*group_ids):
         return ErrorResponse(code="", message=""), 403

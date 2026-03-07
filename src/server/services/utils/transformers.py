@@ -277,7 +277,7 @@ def prepare_group(
     service_id = resolve_service_id(repository_id=repository_id)
 
     if not administrators:
-        error = "At least one administrator is required to create a repository."
+        error = E.GROUP_REQUIRES_SYSTEM_ADMIN
         raise SystemAdminNotFound(error)
 
     map_group.administrators = [
@@ -366,7 +366,7 @@ def validate_group_to_map_group(
 ) -> MapGroup: ...
 
 
-def validate_group_to_map_group(  # noqa: C901
+def validate_group_to_map_group(  # noqa: C901, PLR0912
     group: GroupDetail, *, mode: t.Literal["create", "update"]
 ) -> tuple[MapGroup, str] | MapGroup:
     """Validate the GroupDetail instance and convert it to a MapGroup instance.
@@ -383,36 +383,50 @@ def validate_group_to_map_group(  # noqa: C901
         InvalidFormError: If the GroupDetail instance cannot be converted to a MapGroup.
     """
     if not group.display_name:
-        error = "Display name is required to create a group."
+        error = E.GROUP_REQUIRES_DISPLAY_NAME
         raise InvalidFormError(error)
 
     if mode == "update":
         if not group.id:
-            error = "Group ID is required to update a group."
+            error = E.GROUP_REQUIRES_ID
             raise InvalidFormError(error)
+
+        detected = detect_affiliation(group.id)
+        if not detected:
+            # out of this service's scope.
+            error = E.GROUP_INVALID_ID_PATTERN
+            raise InvalidFormError(error)
+
+        if detected.repository_id:
+            # ensure the repository detected.
+            group.repository = GroupRepository(id=detected.repository_id)
 
         return make_map_group(group)
 
     repository_id = group.repository.id if group.repository else None
     if not repository_id:
-        error = "Repository ID is required to create a group."
+        error = E.GROUP_REQUIRES_REPOSITORY
         raise InvalidFormError(error)
 
     from server.services import repositories  # noqa: PLC0415
 
     if repositories.get_by_id(repository_id) is None:
-        error = f"Repository with ID '{repository_id}' does not exist."
+        error = E.GROUP_REQUIRES_EXISTING_REPOSITORY % {"id": repository_id}
+        raise InvalidFormError(error)
+
+    if not is_super() and repository_id not in get_permitted_repository_ids():
+        error = E.GROUP_FORBIDDEN_REPOSITORY % {"id": repository_id}
         raise InvalidFormError(error)
 
     user_defined_id = group.user_defined_id
     if not user_defined_id:
-        error = "Group ID is required to create a group."
+        error = E.GROUP_REQUIRES_USER_DEFINED_ID
         raise InvalidFormError(error)
 
     if user_defined_id:
         max_id_length = config.GROUPS.max_id_length - len(repository_id)
         if len(user_defined_id) > max_id_length:
-            error = "Group ID is too long."
+            error = E.GROUP_TOO_LONG_ID % {"rid": repository_id, "max": max_id_length}
             raise InvalidFormError(error)
 
         id_pattern = config.GROUPS.id_patterns.user_defined

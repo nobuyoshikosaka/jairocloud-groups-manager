@@ -16,9 +16,13 @@ from pydantic_core import ValidationError
 
 from server.clients import bulks, groups
 from server.config import config
-from server.const import MAP_NOT_FOUND_PATTERN
+from server.const import (
+    MAP_DUPLICATE_ID_PATTERN,
+    MAP_NO_RIGHTS_UPDATE_PATTERN,
+    MAP_NOT_FOUND_PATTERN,
+)
 from server.entities.bulk_request import BulkOperation
-from server.entities.group_detail import GroupDetail
+from server.entities.group_detail import GroupDetail, Repository
 from server.entities.map_error import MapError
 from server.entities.map_group import MapGroup, MemberUser
 from server.entities.search_request import SearchResponse, SearchResult
@@ -33,6 +37,7 @@ from server.exc import (
     ResourceNotFound,
     UnexpectedResponseError,
 )
+from server.messages import E, I
 from server.services.utils import validate_group_to_map_group
 
 from . import users
@@ -93,8 +98,8 @@ def search(
         "members",
         "services",
     }
+    query = build_search_query(criteria)
     try:
-        query = build_search_query(criteria)
         access_token = get_access_token()
         client_secret = get_client_secret()
         results: GroupsSearchResponse = groups.search(
@@ -104,32 +109,35 @@ def search(
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_SEARCH_GROUPS, {"filter": query.filter})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to search Group resources from mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_SEARCH_GROUPS, {"filter": query.filter})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Group resources from mAP Core API."
+        current_app.logger.error(E.FAILED_SEARCH_GROUPS, {"filter": query.filter})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except InvalidQueryError, OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(results, MapError):
-        current_app.logger.info(results.detail)
-        raise InvalidQueryError(results.detail)
+        current_app.logger.error(E.FAILED_SEARCH_GROUPS, {"filter": query.filter})
+        current_app.logger.error(
+            E.RECEIVE_RESPONSE_MESSAGE, {"message": results.detail}
+        )
+        error = E.UNSUPPORTED_SEARCH_FILTER
+        raise InvalidQueryError(error)
 
     if raw:
         return results
@@ -189,31 +197,31 @@ def get_by_id(
             group_id, access_token=access_token, client_secret=client_secret
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_GET_GROUP, {"id": group_id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to get Group resource from mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_GET_GROUP, {"id": group_id})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
+        current_app.logger.error(E.FAILED_GET_GROUP, {"id": group_id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
+        current_app.logger.error(E.FAILED_GET_GROUP, {"id": group_id})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
         return None
 
     if raw:
@@ -253,37 +261,46 @@ def create(group: GroupDetail) -> GroupDetail:
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_CREATE_GROUP, {"id": group.id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to get Group resource from mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_CREATE_GROUP, {"id": group.id})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
+        current_app.logger.error(E.FAILED_CREATE_GROUP, {"id": group.id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError, InvalidFormError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        raise ResourceInvalid(result.detail)
+        current_app.logger.error(E.FAILED_CREATE_GROUP, {"id": group.id})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if m := re.search(MAP_DUPLICATE_ID_PATTERN, result.detail):
+            error = E.GROUP_DUPLICATE_ID % {"id": m.group(1)}
+            raise ResourceInvalid(error)
 
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
+
+    current_app.logger.info(
+        I.SUCCESS_CREATE_GROUP,
+        {"id": group.id, "rid": t.cast("Repository", group.repository).id},
+    )
     return GroupDetail.from_map_group(result)
 
 
-def update(group: GroupDetail) -> GroupDetail:
+def update(group: GroupDetail) -> GroupDetail:  # noqa: C901
     """Update group from mAP Core API by group_id.
 
     Args:
@@ -296,7 +313,6 @@ def update(group: GroupDetail) -> GroupDetail:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
         InvalidFormError: If failed to validate group form data for update.
-        ResourceInvalid: If the Group resource data is invalid.
         ResourceNotFound: If the Group resource is not found.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
@@ -309,7 +325,7 @@ def update(group: GroupDetail) -> GroupDetail:
         group_id = t.cast("str", group.id)
         current: GroupDetail | None = get_by_id(group_id)
         if current is None:
-            error = f"Group '{group_id}' Not Found"
+            error = E.GROUP_NOT_FOUND % {"id": group_id}
             raise ResourceNotFound(error)
 
         operations: list[PatchOperation[MapGroup]] = build_patch_operations(
@@ -327,33 +343,45 @@ def update(group: GroupDetail) -> GroupDetail:
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_UPDATE_GROUP, {"id": group.id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to update Group resource from mAP Core API."
+        error = E.UNEXPECTED_SERVER_ERROR
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_GROUP, {"id": group.id})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_GROUP, {"id": group.id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError, InvalidFormError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        raise ResourceInvalid(result.detail)
+        current_app.logger.error(E.FAILED_UPDATE_GROUP, {"id": group.id})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.REPOSITORY_NOT_FOUND % {"id": m.group(1)}
+            raise ResourceNotFound(error)
+        if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail):
+            error = E.NO_RIGHTS_UPDATE_GROUP % {"id": group.id}
+            raise OAuthTokenError(error)
 
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
+
+    current_app.logger.info(
+        I.SUCCESS_UPDATE_GROUP,
+        {"id": group.id, "rid": group.repository.id if group.repository else "N/A"},
+    )
     return GroupDetail.from_map_group(result)
 
 
@@ -370,7 +398,6 @@ def update_put(group: GroupDetail) -> GroupDetail:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
         InvalidFormError: If failed to validate group form data for update.
-        ResourceInvalid: If the Group resource data is invalid.
         ResourceNotFound: If the Group resource is not found.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
@@ -389,36 +416,45 @@ def update_put(group: GroupDetail) -> GroupDetail:
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_UPDATE_GROUP, {"id": group.id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to update Group resource from mAP Core API."
+        error = E.UNEXPECTED_SERVER_ERROR
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_GROUP, {"id": group.id})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_GROUP, {"id": group.id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError, InvalidFormError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-            raise ResourceNotFound(result.detail)
+        current_app.logger.error(E.FAILED_UPDATE_GROUP, {"id": group.id})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.REPOSITORY_NOT_FOUND % {"id": m.group(1)}
+            raise ResourceNotFound(error)
+        if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail):
+            error = E.NO_RIGHTS_UPDATE_GROUP % {"id": group.id}
+            raise OAuthTokenError(error)
 
-        raise ResourceInvalid(result.detail)
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
 
+    current_app.logger.info(
+        I.SUCCESS_UPDATE_GROUP,
+        {"id": group.id, "rid": group.repository.id if group.repository else "N/A"},
+    )
     return GroupDetail.from_map_group(result)
 
 
@@ -434,7 +470,6 @@ def delete_multiple(group_ids: set[str]) -> set[str] | None:
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
-        ResourceInvalid: If the Group resource data is invalid.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
     operations = [
@@ -446,38 +481,47 @@ def delete_multiple(group_ids: set[str]) -> set[str] | None:
         client_secret = get_client_secret()
         result = bulks.post(operations, access_token, client_secret)
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_DELETE_GROUPS, {"ids": ", ".join(group_ids)})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to delete Group resource from mAP Core API."
+        error = E.UNEXPECTED_SERVER_ERROR
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_DELETE_GROUPS, {"ids": ", ".join(group_ids)})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
+        current_app.logger.error(E.FAILED_DELETE_GROUPS, {"ids": ", ".join(group_ids)})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        raise ResourceInvalid(result.detail)
+        current_app.logger.error(E.FAILED_DELETE_GROUPS, {"ids": ", ".join(group_ids)})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
 
     failed_list = {
         o.path.removeprefix("Groups/")
         for o in result.operations
         if type(o.response) is MapError
     }
+    if failed_list:
+        current_app.logger.error(
+            E.FAILED_DELETE_GROUPS, {"ids": ", ".join(failed_list)}
+        )
+    current_app.logger.info(
+        I.SUCCESS_DELETE_GROUPS,
+        {"ids": ", ".join(group_ids - failed_list)},
+    )
     return failed_list if failed_list != set() else None
 
 
@@ -491,7 +535,6 @@ def delete_by_id(group_id: str) -> None:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
         ResourceNotFound: If the Group resource is not found.
-        ResourceInvalid: If the Group resource data is invalid.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
     try:
@@ -501,24 +544,23 @@ def delete_by_id(group_id: str) -> None:
             group_id, access_token=access_token, client_secret=client_secret
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_DELETE_GROUP, {"id": group_id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to delete Group resource from mAP Core API."
+        error = E.UNEXPECTED_SERVER_ERROR
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_DELETE_GROUP, {"id": group_id})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
+        current_app.logger.error(E.FAILED_DELETE_GROUP, {"id": group_id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
@@ -527,10 +569,14 @@ def delete_by_id(group_id: str) -> None:
     if result is None:
         return
 
+    current_app.logger.error(E.FAILED_DELETE_GROUP, {"id": group_id})
+    current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
     if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-        raise ResourceNotFound(result.detail)
+        error = E.GROUP_NOT_FOUND % {"id": group_id}
+        raise ResourceNotFound(error)
 
-    raise ResourceInvalid(result.detail)
+    error = E.FAILED_PARSE_RESPONSE
+    raise UnexpectedResponseError(error)
 
 
 def update_member(  # noqa: C901
@@ -549,7 +595,6 @@ def update_member(  # noqa: C901
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
-        ResourceInvalid: If the Group resource data is invalid.
         ResourceNotFound: If the Group resource is not found.
         RequestConflict: If the User id exists in both "add" and "remove".
         UnexpectedResponseError: If response from mAP Core API is unexpected.
@@ -561,14 +606,22 @@ def update_member(  # noqa: C901
     remove = remove or set()
 
     if add & remove:
-        error = "Conflict user IDs in add and remove."
+        error = E.CONFLICT_MEMBER_OPERATION % {
+            "id": group_id,
+            "uids": ", ".join(add & remove),
+        }
         raise RequestConflict(error)
 
     current = get_by_id(group_id, raw=True)
     if current is None:
-        error = f"Group '{group_id}' Not Found"
+        error = E.GROUP_NOT_FOUND % {"id": group_id}
         raise ResourceNotFound(error)
 
+    logging_params = {
+        "id": group_id,
+        "add": ", ".join(add) or "N/A",
+        "remove": ", ".join(remove) or "N/A",
+    }
     try:
         access_token = get_access_token()
         client_secret = get_client_secret()
@@ -589,33 +642,42 @@ def update_member(  # noqa: C901
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_UPDATE_GROUP_MEMBERS, logging_params)
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to update Group resource from mAP Core API."
+        error = E.UNEXPECTED_SERVER_ERROR
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_GROUP_MEMBERS, logging_params)
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_GROUP_MEMBERS, logging_params)
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        raise ResourceInvalid(result.detail)
+        current_app.logger.error(E.FAILED_UPDATE_GROUP_MEMBERS, logging_params)
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.GROUP_NOT_FOUND % {"id": group_id}
+            raise ResourceNotFound(error)
+        if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail):
+            error = E.NO_RIGHTS_UPDATE_GROUP % {"id": group_id}
+            raise OAuthTokenError(error)
 
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
+
+    current_app.logger.info(I.SUCCESS_UPDATE_GROUP_MEMBERS, logging_params)
     return GroupDetail.from_map_group(result)
 
 
@@ -635,7 +697,6 @@ def update_member_put(  # noqa: C901
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
-        ResourceInvalid: If the Group resource data is invalid.
         ResourceNotFound: If the Group resource is not found.
         RequestConflict: If the User id exists in both "add" and "remove".
         UnexpectedResponseError: If response from mAP Core API is unexpected.
@@ -647,12 +708,15 @@ def update_member_put(  # noqa: C901
     remove = remove or set()
 
     if add & remove:
-        error = "Conflict user IDs in add and remove."
+        error = E.CONFLICT_MEMBER_OPERATION % {
+            "id": group_id,
+            "uids": ", ".join(add & remove),
+        }
         raise RequestConflict(error)
 
     current = get_by_id(group_id, raw=True)
     if current is None:
-        error = f"Group '{group_id}' Not Found"
+        error = E.GROUP_NOT_FOUND % {"id": group_id}
         raise ResourceNotFound(error)
 
     existing = {m.value for m in current.members or [] if m.type == "User"}
@@ -663,6 +727,11 @@ def update_member_put(  # noqa: C901
         MemberUser(type="User", value=uid) for uid in add if uid not in existing
     )
 
+    logging_params = {
+        "id": group_id,
+        "add": ", ".join(add) or "N/A",
+        "remove": ", ".join(remove) or "N/A",
+    }
     try:
         access_token = get_access_token()
         client_secret = get_client_secret()
@@ -674,34 +743,40 @@ def update_member_put(  # noqa: C901
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_UPDATE_GROUP_MEMBERS, logging_params)
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to update Group resource from mAP Core API."
+        error = E.UNEXPECTED_SERVER_ERROR
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_GROUP_MEMBERS, logging_params)
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Group resource from mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_GROUP_MEMBERS, logging_params)
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
+        current_app.logger.error(E.FAILED_UPDATE_GROUP_MEMBERS, logging_params)
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
         if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-            raise ResourceNotFound(result.detail)
+            error = E.GROUP_NOT_FOUND % {"id": group_id}
+            raise ResourceNotFound(error)
+        if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail):
+            error = E.NO_RIGHTS_UPDATE_GROUP % {"id": group_id}
+            raise OAuthTokenError(error)
 
-        raise ResourceInvalid(result.detail)
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
 
+    current_app.logger.info(I.SUCCESS_UPDATE_GROUP_MEMBERS, logging_params)
     return GroupDetail.from_map_group(result)
