@@ -4,7 +4,7 @@ import { twMerge } from 'tailwind-merge'
 interface Properties {
   title: string
   number: number
-  color?: string
+  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info'
   icon: string
   to?: string
   ui?: {
