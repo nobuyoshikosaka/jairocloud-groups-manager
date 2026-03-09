@@ -368,6 +368,22 @@ MAP_EXIST_EPPN_ENDPOINT: str
 ```
 
 
+## MAP_SELF_ENDPOINT
+mAP Core API V2 の OAuth2.0 認証ユーザー情報エンドポイントの URL パス。
+アクセストークンを使用して認証されたユーザーの情報の取得に使用される。
+
+#### シグネチャ
+```python[const.py]
+MAP_SELF_ENDPOINT: str
+```
+
+#### 値
+
+```python
+"/api/v2/Self"
+```
+
+
 ## MAP_GROUPS_ENDPOINT
 mAP Core API V2 のグループリソースエンドポイントの URL パス。
 グループ情報の取得や操作に使用される。
@@ -415,6 +431,20 @@ MAP_BULK_ENDPOINT: str
 "/api/v2/Bulk"
 ```
 
+## MAP_DEFAULT_SEARCH_COUNT
+mAP Core API V2 の検索リクエストのデフォルトの最大件数。
+検索リクエストでページサイズが指定されない場合に使用される。
+
+#### シグネチャ
+```python[const.py]
+MAP_DEFAULT_SEARCH_COUNT: int
+```
+
+#### 値
+
+```python
+20
+```
 
 ## MAP_NOT_FOUND_PATTERN
 mAP Core API V2 のリソースが見つからない場合のエラーメッセージのパターン。
@@ -429,6 +459,99 @@ MAP_NOT_FOUND_PATTERN: str
 
 ```python
 r"'(.*)' Not Found"
+```
+
+
+## MAP_DUPLICATE_ID_PATTERN
+mAP Core API V2 のリソースの ID が重複している場合のエラーメッセージのパターン。
+エラーメッセージの解析やエラー処理に使用される。
+
+#### シグネチャ
+```python[const.py]
+MAP_DUPLICATE_ID_PATTERN: str
+```
+
+#### 値
+
+```python
+r"Duplicate id '(.*)'"
+```
+
+
+## MAP_ALREADY_TIED_PATTERN
+mAP Core API V2 の 既に ePPN がユーザーリソースに関連付けられている場合のエラーメッセージのパターン。
+エラーメッセージの解析やエラー処理に使用される。
+
+#### シグネチャ
+```python[const.py]
+MAP_ALREADY_TIED_PATTERN: str
+```
+
+#### 値
+
+```python
+r"(.*) is already tied to another account"
+```
+
+
+## MAP_ILLEGAL_EPPN_PATTERN
+mAP Core API V2 の ePPN が不正な形式である場合のエラーメッセージのパターン。
+エラーメッセージの解析やエラー処理に使用される。
+
+#### シグネチャ
+```python[const.py]
+MAP_ILLEGAL_EPPN_PATTERN: str
+```
+
+#### 値
+
+```python
+r"'(.*)' illegal (eduPersonPrincipalNames needs idpEntityId)"
+```
+
+## MAP_NO_RIGHTS_CREATE_PATTERN
+mAP Core API V2 のアクセストークンにリソースの作成権限がない場合のエラーメッセージのパターン。
+エラーメッセージの解析やエラー処理に使用される。
+
+#### シグネチャ
+```python[const.py]
+MAP_NO_RIGHTS_CREATE_PATTERN: str
+```
+
+#### 値
+
+```python
+r"You do not have creation right of '(.*)'"
+```
+
+## MAP_NO_RIGHTS_UPDATE_PATTERN
+mAP Core API V2 のアクセストークンにリソースの更新権限がない場合のエラーメッセージのパターン。
+エラーメッセージの解析やエラー処理に使用される。
+
+#### シグネチャ
+```python[const.py]
+MAP_NO_RIGHTS_UPDATE_PATTERN: str
+```
+
+#### 値
+
+```python
+r"No update rights for '(.*)'"
+```
+
+## MAP_NO_RIGHTS_APPEND_PATTERN
+mAP Core API V2 のアクセストークンにリソースの属性に追加権限がない場合のエラーメッセージのパターン。
+エラーメッセージの解析やエラー処理に使用される。
+
+#### シグネチャ
+```python[const.py]
+MAP_NO_RIGHTS_APPEND_PATTERN: str
+```
+
+#### 値
+
+```python
+r"No append rights for '(.*)'"
 ```
 
 
@@ -463,6 +586,7 @@ GROUP_DEFAULT_MEMBER_LIST_VISIBILITY: Literal["Public", "Private", "Hidden"]
 "Private"
 ```
 
+<span id="user_role" />
 
 ## USER_ROLES.SYSTEM_ADMIN
 システム管理者ユーザーの役割を表す定数文字列。

@@ -20,11 +20,11 @@ def create_app(import_name: str, config_path: Any = None, config: Any = None) ->
 
 #### 引数
 
-| 名前        | 型                                            | デフォルト | 説明                                       |
-| ----------- | --------------------------------------------- | ---------- | ------------------------------------------ |
-| import_name | str                                           | -          | Flask アプリケーションのインポート名       |
-| config_path | str                                           | None       | （オーバーロード）設定ファイルのパス       |
-| config      | [RuntimeConfig](./02.config.md#runtimeconfig) | None       | （オーバーロード）サーバー設定インスタンス |
+| 名前        | 型                                         | デフォルト | 説明                                       |
+| ----------- | ------------------------------------------ | ---------- | ------------------------------------------ |
+| import_name | str                                        | -          | Flask アプリケーションのインポート名       |
+| config_path | str                                        | None       | （オーバーロード）設定ファイルのパス       |
+| config      | [RuntimeConfig](./config.md#runtimeconfig) | None       | （オーバーロード）サーバー設定インスタンス |
 
 #### 戻り値
 
@@ -37,7 +37,7 @@ def create_app(import_name: str, config_path: Any = None, config: Any = None) ->
 
 #### 処理概要
 1. 引数 `import_name` を使用して Flask アプリケーションのインスタンスを生成する。
-2. Flask 拡張 [`ext:JAIROCloudGroupsManager`](./05.ext.md#jairocloudgroupsmanager) をアプリケーションインスタンスで初期化する。
+2. Flask 拡張 [`ext:JAIROCloudGroupsManager`](./ext.md#jairocloudgroupsmanager) をアプリケーションインスタンスで初期化する。
   このとき、引数 `config_path` または `config` を渡す。
 3. [`celery_init_app`](#celery_init_app) を呼び出し、 Celery アプリケーションを初期化する。
 4. 初期化された Flask アプリケーションインスタンスを戻り値として返却する。
