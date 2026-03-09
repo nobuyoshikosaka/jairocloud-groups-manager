@@ -35,8 +35,7 @@ from .schemas import ErrorResponse, RepositoriesQuery, RepositoryDeleteQuery
 bp = Blueprint("repositories", __name__)
 
 
-@bp.get("")
-@bp.get("/")
+@bp.get("/", strict_slashes=False)
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
@@ -61,8 +60,7 @@ def get(
     return results, 200
 
 
-@bp.post("")
-@bp.post("/")
+@bp.get("/", strict_slashes=False)
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN)
 @validate(response_by_alias=True)
