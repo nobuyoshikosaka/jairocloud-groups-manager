@@ -83,6 +83,9 @@ class RuntimeConfig(BaseSettings):
     GROUPS: GroupsConfig
     """Group related configuration values."""
 
+    USERS: UsersConfig
+    """Users related configuration values."""
+
     POSTGRES: PostgresConfig = Field(
         default_factory=lambda: PostgresConfig(),  # noqa: PLW0108
         exclude=True,
@@ -406,6 +409,22 @@ class GroupNamePatternsConfig(BaseModel):
 
     def __getitem__(self, key: USER_ROLES) -> str:  # noqa: D105
         return getattr(self, key)
+
+
+class UsersConfig(BaseModel):
+    """Schema for user export file configuration."""
+
+    export_fields: list[str] = [
+        "id",
+        "user_name",
+        "groups[].id",
+        "groups[].name",
+        "role",
+        "edu_person_principal_names[]",
+        "preferred_language",
+        "emails[]",
+    ]
+    """List of fields to include in the exported user details."""
 
 
 class MapCoreConfig(BaseModel):

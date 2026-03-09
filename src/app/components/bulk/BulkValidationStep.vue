@@ -24,6 +24,7 @@ const { data: status, execute: getValidateStatus }
       method: 'GET',
       lazy: true,
       server: false,
+      immediate: false,
       onResponseError({ response }) {
         switch (response.status) {
           case 404: {
@@ -41,12 +42,16 @@ const { data: status, execute: getValidateStatus }
         }
       },
     })
-
+const isPolling = ref(false)
 const pollValidationStatus = async () => {
+  isPolling.value = true
   for (let index = 0; index < maxAttempts; index++) {
     await getValidateStatus()
     const st = (status.value?.status)
-    if (st === 'SUCCESS') return
+    if (st === 'SUCCESS') {
+      isPolling.value = false
+      return
+    }
     if (st === 'FAILURE') {
       toast.add({
         title: $t('bulk.status.error'),
@@ -54,6 +59,7 @@ const pollValidationStatus = async () => {
         color: 'error',
         icon: 'i-lucide-circle-x',
       })
+      isPolling.value = false
       return
     }
 
@@ -65,21 +71,24 @@ const pollValidationStatus = async () => {
     color: 'error',
     icon: 'i-lucide-circle-x',
   })
+  isPolling.value = false
 }
 
-const { data: validationResults, execute: getValidateResult }
+const { data: validationResults, execute: getValidateResult, status: getResultStatus }
   = await useFetch<ValidationResults>(`/api/bulk/validate/result/${taskId.value}`, {
     method: 'GET',
     query,
     lazy: true,
     server: false,
+    immediate: false,
     onResponseError({ response }) {
       switch (response.status) {
         case 400: {
-          showError({
-            status: 400,
-            statusText: 'Bad Request',
-            message: $t('error-page.failed.bulk-validation'),
+          toast.add({
+            title: $t('bulk.status.error'),
+            description: $t('bulk.validation.failed'),
+            color: 'error',
+            icon: 'i-lucide-circle-x',
           })
           break
         }
@@ -182,9 +191,6 @@ const deselectAllMissingUsers = () => {
   selectedMissingUsers.value = {}
 }
 
-const totalCount = computed(() => data.value?.total)
-const indicators = useBulkIndicators
-
 const indicatorWrapper = useTemplateRef('indicatorWrapper')
 const { isStuck } = useSticky(indicatorWrapper,
   { baseElementSelector: 'header', spaceRem: 1, fallbackPosition: 64 },
@@ -235,7 +241,7 @@ const { isStuck } = useSticky(indicatorWrapper,
     <BulkUserTable
       :data="validationResults?.results ?? []" :total-count="totalCount ?? 0"
       :page-info="pageInfo" :offset="offset"
-      :title="$t('bulk.validation.results')"
+      :title="$t('bulk.validation.results')" :status="isPolling ? 'loading' : getResultStatus"
     />
 
     <div v-if="validationResults?.missingUsers.length ?? 0 > 0" variant="outline">

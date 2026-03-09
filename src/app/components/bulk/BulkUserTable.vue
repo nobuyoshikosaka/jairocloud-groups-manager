@@ -5,6 +5,7 @@ defineProps<{
   title?: string
   pageInfo?: string
   offset?: number
+  status: string
 }>()
 
 const { updateQuery, pageNumber, pageSize, makeStatusFilters, columns } = useBulk()
@@ -43,6 +44,7 @@ const filterSelects = makeStatusFilters()
   <UTable
     :data="data"
     :columns="columns"
+    :loading="status === 'loading'"
     sticky
   >
     <template #empty>

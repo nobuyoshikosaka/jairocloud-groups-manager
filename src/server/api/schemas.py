@@ -354,3 +354,23 @@ class UploadQuery(BaseModel):
 
     l: t.Annotated[int | None, "length"] = None  # noqa: E741
     """Page size (number of items per page)."""
+
+
+class FileQuery(BaseModel):
+    """Query parameters for file export."""
+
+    f: t.Annotated[t.Literal["tsv", "csv"], "format"] = "tsv"
+    """File format for export."""
+
+    model_config = ignore_extra_config
+    """Configure to ignore extra fields."""
+
+
+class ExportBody(BaseModel):
+    """Body for user export request."""
+
+    user_ids: list[str]
+    """List of user IDs to export."""
+
+    model_config = camel_case_config
+    """Configure to use camelCase aliasing."""

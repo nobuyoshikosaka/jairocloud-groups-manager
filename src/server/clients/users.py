@@ -91,10 +91,6 @@ def search(
         by_alias=True,
     )
 
-    from contrib import dump
-
-    dump(auth_params | attributes_params | query_params, "users_search_query")
-
     response = requests.get(
         f"{config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}",
         params=auth_params | attributes_params | query_params,
@@ -103,8 +99,6 @@ def search(
         },
         timeout=config.MAP_CORE.timeout,
     )
-
-    dump(response.text, "users_search_response")
 
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()

@@ -18,6 +18,10 @@ const onUploadComplete = ({ taskId: taskIdValue, historyId }: ExcuteResponse) =>
   navigateTo(`/bulk/${historyId}?taskId=${taskIdValue}`)
 }
 
+const onSelectRepository = (repositoryId: string) => {
+  selectedRepository.value = repositoryId
+}
+
 const goBackToUpload = () => {
   currentStep.value = 'upload'
 }
@@ -48,6 +52,7 @@ const goBackToUpload = () => {
     <BulkUploadStep
       v-else
       @next="onValidateComplete"
+      @update="onSelectRepository"
     />
   </div>
 </template>

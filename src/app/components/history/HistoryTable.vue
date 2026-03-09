@@ -12,6 +12,7 @@ interface Properties<T> {
   childData?: DownloadHistoryData[]
   pageInfo: string
   offset: number
+  status: string
   fileAvailabilityCheck?: (data: DownloadHistoryData) => boolean
   loadMoreChildren?: (row: DownloadHistoryData) => void
 }
@@ -43,7 +44,7 @@ const isRowExpandable = (row: DownloadHistoryData) => row.childrenCount && row.c
     :data="data"
     :columns="columns"
     row-key="id"
-    :loading="false"
+    :loading="status === 'loading'"
     :expandable="isRowExpandable"
     @expand="loadMoreChildren"
   >

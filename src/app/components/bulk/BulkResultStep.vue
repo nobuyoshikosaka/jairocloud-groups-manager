@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const properties = defineProps<{
   historyId: string
-  taskId: string
+  taskId?: string
 }>()
 
 const { query, makePageInfo, makeIndicators } = useBulk()
@@ -14,6 +14,7 @@ const { data: status, execute: executeStatus }
     {
       method: 'GET',
       lazy: true,
+      immediate: false,
       onResponseError({ response }) {
         switch (response.status) {
           case 404: {
@@ -28,11 +29,16 @@ const { data: status, execute: executeStatus }
       server: false })
 
 const { polling: { interval, maxAttempts } } = useAppConfig()
+const isPolling = ref(false)
 const pollExecuteStatus = async () => {
+  isPolling.value = true
   for (let index = 0; index < maxAttempts; index++) {
     await executeStatus()
     const st = (status.value?.status)
-    if (st === 'SUCCESS') return
+    if (st === 'SUCCESS') {
+      isPolling.value = false
+      return
+    }
     if (st === 'FAILURE') {
       toast.add({
         title: $t('bulk.status.error'),
@@ -40,6 +46,7 @@ const pollExecuteStatus = async () => {
         color: 'error',
         icon: 'i-lucide-circle-x',
       })
+      isPolling.value = false
       return
     }
     await new Promise(r => setTimeout(r, interval))
@@ -50,14 +57,16 @@ const pollExecuteStatus = async () => {
     color: 'error',
     icon: 'i-lucide-circle-x',
   })
+  isPolling.value = false
 }
 
-const { data: executeResult, execute: fetchExecuteResult }
+const { data: executeResult, execute: fetchExecuteResult, status: getResultStatus }
   = await useFetch<ExecuteResults>(`/api/bulk/result/${properties.historyId}`, {
     method: 'GET',
     query,
     lazy: true,
     server: false,
+    immediate: false,
     onResponseError({ response }) {
       switch (response.status) {
         case 403: {
@@ -91,7 +100,7 @@ onMounted(async () => {
 
 const indicators = computed(() => makeIndicators(executeResult.value))
 const fileInfo = computed(() => executeResult.value!.fileInfo)
-const pageInfo = makePageInfo(executeResult)
+const pageInfo = computed(() => makePageInfo(executeResult))
 </script>
 
 <template>
@@ -143,6 +152,7 @@ const pageInfo = makePageInfo(executeResult)
       :page-info="pageInfo"
       :offset="executeResult!.offset"
       :title="$t('bulk.import-results')"
+      :status="isPolling ? 'loading' : getResultStatus "
     />
   </div>
 </template>

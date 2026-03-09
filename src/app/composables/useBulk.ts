@@ -144,7 +144,52 @@ const useBulk = <T extends EachResult>() => {
       },
     },
   ])
+  type IndicatorColor = 'success' | 'info' | 'error' | 'warning'
+  interface Indicator {
+    title: string
+    icon: string
+    number: number
+    color: IndicatorColor
+    key: string
+  }
 
+  const makeIndicators = (summary: ValidationResults | ExecuteResults | undefined): Indicator[] => [
+    {
+      title: $t('bulk.status.create'),
+      icon: 'i-lucide-plus-circle',
+      number: summary?.summary.create ?? 0,
+      color: 'success',
+      key: 'create',
+    },
+    {
+      title: $t('bulk.status.update'),
+      icon: 'i-lucide-pencil',
+      number: summary?.summary.update ?? 0,
+      color: 'info',
+      key: 'update',
+    },
+    {
+      title: $t('bulk.status.delete'),
+      icon: 'i-lucide-trash-2',
+      number: summary?.summary.delete ?? 0,
+      color: 'error',
+      key: 'delete',
+    },
+    {
+      title: $t('bulk.status.skip'),
+      icon: 'i-lucide-minus-circle',
+      number: summary?.summary.skip ?? 0,
+      color: 'warning',
+      key: 'skip',
+    },
+    {
+      title: $t('bulk.status.error'),
+      icon: 'i-lucide-circle-x',
+      number: summary?.summary.error ?? 0,
+      color: 'error',
+      key: 'error',
+    },
+  ]
   return {
     query,
     currentStep,
@@ -169,53 +214,6 @@ const useUserUpload = () => {
     isProcessing,
   }
 }
-
-type IndicatorColor = 'success' | 'info' | 'error' | 'warning'
-interface Indicator {
-  title: string
-  icon: string
-  number: number
-  color: IndicatorColor
-  key: string
-}
-
-const makeIndicators = (summary: ValidationResults | ExecuteResults | undefined): Indicator[] => [
-  {
-    title: $t('bulk.status.create'),
-    icon: 'i-lucide-plus-circle',
-    number: summary?.summary.create ?? 0,
-    color: 'success',
-    key: 'create',
-  },
-  {
-    title: $t('bulk.status.update'),
-    icon: 'i-lucide-pencil',
-    number: summary?.summary.update ?? 0,
-    color: 'info',
-    key: 'update',
-  },
-  {
-    title: $t('bulk.status.delete'),
-    icon: 'i-lucide-trash-2',
-    number: summary?.summary.delete ?? 0,
-    color: 'error',
-    key: 'delete',
-  },
-  {
-    title: $t('bulk.status.skip'),
-    icon: 'i-lucide-minus-circle',
-    number: summary?.summary.skip ?? 0,
-    color: 'warning',
-    key: 'skip',
-  },
-  {
-    title: $t('bulk.status.error'),
-    icon: 'i-lucide-circle-x',
-    number: summary?.summary.error ?? 0,
-    color: 'error',
-    key: 'error',
-  },
-]
 
 const useValidation = ({ taskId }: { taskId: Ref<string | undefined>
   selectedRepository: Ref<string | undefined> }) => {

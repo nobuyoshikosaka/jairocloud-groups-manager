@@ -9,7 +9,7 @@ import sys
 import traceback
 import typing as t
 
-from flask import Blueprint, current_app, url_for
+from flask import Blueprint, Response, current_app, send_file, url_for
 from flask_login import current_user, login_required
 from flask_pydantic import validate
 
@@ -18,6 +18,7 @@ from server.entities.login_user import LoginUser
 from server.entities.search_request import FilterOption, SearchResult
 from server.entities.user_detail import UserDetail
 from server.exc import (
+    InvalidExportError,
     InvalidFormError,
     InvalidQueryError,
     RequestConflict,
@@ -33,7 +34,7 @@ from server.services.utils import (
 
 from .auth import logout
 from .helpers import roles_required
-from .schemas import ErrorResponse, UsersQuery
+from .schemas import ErrorResponse, ExportBody, FileQuery, UsersQuery
 
 
 bp = Blueprint("users", __name__)
@@ -205,3 +206,31 @@ def filter_options() -> list[FilterOption]:
         list[FilterOption]: List of filter options for user search.
     """
     return search_users_options()
+
+
+@bp.get("/export")
+@bp.post("/export")
+@login_required
+@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
+@validate(response_by_alias=True)
+def user_export(
+    body: ExportBody, query: FileQuery
+) -> Response | tuple[ErrorResponse, int]:
+    """Export users to a file for bulk processing.
+
+    Args:
+        body (ExportBody):
+            The body of the export request containing the IDs of the users to export.
+        query (FileQuery): The query parameters for the export.
+
+    Returns:
+        Response: The response containing the exported file
+        ErrorResponse: The response containing an error message if the export fails
+    """
+    try:
+        files = users.make_export_file(
+            body.user_ids or [], query, current_user.map_id, current_user.name
+        )
+    except InvalidExportError as exc:
+        return ErrorResponse(message=exc.message), 403
+    return send_file(files)

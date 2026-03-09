@@ -15,16 +15,17 @@ const tabItems = computed<TabsItem[]>(() => [
 ])
 
 const { handleFetchError } = useErrorHandling()
-const { data, execute } = useFetch<DownloadApiModel | UploadApiModel>(`/api/history/${tab.value}`, {
-  method: 'GET',
-  query,
-  onResponseError: async ({ response }) => {
-    handleFetchError({ response })
-  },
-  lazy: true,
-  server: false,
-})
-const pageInfo = makePageInfo(data)
+const { data, execute, status } = useFetch<DownloadApiModel | UploadApiModel>(
+  `/api/history/${tab.value}`, {
+    method: 'GET',
+    query,
+    onResponseError: async ({ response }) => {
+      handleFetchError({ response })
+    },
+    lazy: true,
+    server: false,
+  })
+const pageInfo = computed(() => makePageInfo(data))
 const offset = computed(() => (data.value?.offset ?? 1))
 const activeTab = computed<'download' | 'upload'>({
   get() {
@@ -90,9 +91,10 @@ const handleLoadMoreChildren = async (row: DownloadHistoryData) => {
             :total="data?.total ?? 0"
             :table-config="{ enableExpand: true, showStatus: false }"
             :file-availability-check="isFileAvailable"
-            :page-info="pageInfo" :offset="offset"
+            :page-info="pageInfo.value" :offset="offset"
             :child-data="childData?.resources ?? []"
             :columns="downloadColumns"
+            :status="status"
             @sort-change="toggleSort"
             @load-more-children="handleLoadMoreChildren"
           />
@@ -109,8 +111,9 @@ const handleLoadMoreChildren = async (row: DownloadHistoryData) => {
             key="upload-table" :data="(data?.resources ?? []) as UploadHistoryData[]"
             :total="data?.total ?? 0"
             :table-config="{ enableExpand: false, showStatus: true }"
-            :page-info="pageInfo" :offset="offset"
+            :page-info="pageInfo.value" :offset="offset"
             :columns="uploadColumns"
+            :status="status"
             @sort-change="toggleSort"
           />
         </div>

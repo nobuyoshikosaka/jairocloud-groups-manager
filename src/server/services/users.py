@@ -7,7 +7,10 @@
 import re
 import typing as t
 
+from datetime import UTC, datetime
 from http import HTTPStatus
+from pathlib import Path
+from uuid import uuid7
 
 import requests
 
@@ -23,7 +26,9 @@ from server.const import (
     MAP_NO_RIGHTS_APPEND_PATTERN,
     MAP_NO_RIGHTS_UPDATE_PATTERN,
     MAP_NOT_FOUND_PATTERN,
+    USER_ROLES,
 )
+from server.db import db
 from server.entities.map_error import MapError
 from server.entities.search_request import SearchResponse, SearchResult
 from server.entities.summaries import UserSummary
@@ -32,6 +37,7 @@ from server.exc import (
     ApiClientError,
     ApiRequestError,
     CredentialsError,
+    InvalidExportError,
     InvalidFormError,
     InvalidQueryError,
     OAuthTokenError,
@@ -40,6 +46,9 @@ from server.exc import (
     UnexpectedResponseError,
 )
 from server.messages import E, I
+from server.services import history_table
+from server.services.utils.affiliations import detect_affiliations
+from server.services.utils.permissions import get_permitted_repository_ids
 from server.signals import user_deleted, user_updated
 
 from .token import get_access_token, get_client_secret
@@ -55,6 +64,7 @@ from .utils import (
 
 
 if t.TYPE_CHECKING:
+    from server.api.schemas import FileQuery
     from server.clients.users import UsersSearchResponse
     from server.entities.map_user import Group, MapUser
     from server.entities.patch_request import PatchOperation
@@ -733,3 +743,119 @@ def handle_user_updated(
     users.get_by_id.clear_cache(user.id)  # pyright: ignore[reportFunctionMemberAccess]
     if user.eppns:
         users.get_by_eppn.clear_cache(*user.eppns)  # pyright: ignore[reportFunctionMemberAccess]
+
+
+def make_export_file(
+    user_ids: list[str], query: FileQuery, operator_id: str, operator_name: str
+) -> Path:
+    """Generate a file containing user details for the specified user IDs.
+
+    Args:
+        user_ids (list[str]): A list of user IDs to include in the export file.
+        query (FileQuery): The file query containing export format and other parameters.
+        operator_id (str): The ID of the operator performing the export.
+        operator_name (str): The name of the operator performing the export.
+
+    Returns:
+        Path: The path to the generated export file.
+    """
+    user_list = search(make_criteria_object("users", i=user_ids), raw=True).resources
+    delimiter = "," if query.f == "csv" else "\t"
+    file_id = uuid7()
+    target_dir = Path(config.STORAGE.local.storage) / datetime.now(UTC).strftime(
+        "%Y/%m"
+    )
+    target_dir.mkdir(parents=True, exist_ok=True)
+    file_path = target_dir / f"{file_id}.{query.f}"
+    file_path.write_text(delimiter.join(config.USERS.export_fields), encoding="utf-8")
+
+    permitted_repository_ids = get_permitted_repository_ids()
+
+    file_repositories, file_groups, file_users = _wite_user(
+        user_list, delimiter, file_path, permitted_repository_ids
+    )
+    file_content = {
+        "repositories": list(file_repositories),
+        "groups": list(file_groups),
+        "users": list(file_users),
+    }
+    history_table.create_download_history(
+        file_id, str(file_path), file_content, operator_id, operator_name
+    )
+    db.session.commit()
+    return file_path
+
+
+def _wite_user(
+    user_list: list[MapUser],
+    delimiter: str,
+    file_path: Path,
+    permitted_repository_ids: set[str],
+) -> tuple[set[dict[str, str]], set[dict[str, str]], set[dict[str, str]]]:
+    """Write user details to file.
+
+    Args:
+        user_list (list[MapUser]): A list of user details.
+        delimiter (str): The delimiter to use in the file.
+        file_path (Path): The path to the file.
+        permitted_repository_ids (list[str]): A list of permitted repository IDs.
+
+    Returns:
+        tuple[set[dict[str, str]], set[dict[str, str]], set[dict[str, str]]]:
+          A tuple containing sets of file repositories, file groups, and file users.
+
+    Raises:
+        InvalidExportError:
+          If the user cannot be exported due to insufficient permissions.
+    """
+    file_repositories = set[dict[str, str]]()
+    file_groups = set[dict[str, str]]()
+    file_users = set[dict[str, str]]()
+    for map_user in user_list:
+        roles, groups = detect_affiliations([g.value for g in map_user.groups or []])
+        if not is_current_user_system_admin() and any(
+            role.role == USER_ROLES.SYSTEM_ADMIN for role in roles
+        ):
+            error = E.USER_CANNOT_EXPORT_SYSTEM_ADMIN
+            raise InvalidExportError(error)
+        if not is_current_user_system_admin() and not any(
+            group.repository_id in permitted_repository_ids for group in groups
+        ):
+            error = E.USER_FORBIDDEN_EXPORT
+            raise InvalidExportError(error)
+
+        file_users.add({"id": map_user.id or "", "user_name": map_user.user_name or ""})
+        group_ids = []
+        for group in groups:
+            if group.repository_id not in permitted_repository_ids:
+                continue
+
+            file_groups.add({"id": group.group_id or "", "display_name": ""})
+            file_repositories.add({"id": group.repository_id or "", "display_name": ""})
+            group_ids.append(group.group_id or "")
+        roles_list = [
+            r.role.value for r in roles if r.repository_id in permitted_repository_ids
+        ] or [""]
+        eppns = [eppn.value for eppn in map_user.edu_person_principal_names or []]
+        emails = [email.value for email in map_user.emails or []]
+
+        max_len = max(len(group_ids), len(roles_list), len(eppns), len(emails))
+
+        for i in range(max_len):
+            row = [
+                map_user.id,
+                map_user.user_name,
+                group_ids[i] if i < len(group_ids) else group_ids[len(group_ids) - 1],
+                "",  # group name is not exported. it can't be get from mAP Core API search user endpoint  # noqa: E501
+                roles_list[i]
+                if i < len(roles_list)
+                else roles_list[len(roles_list) - 1],
+                eppns[i] if i < len(eppns) else eppns[len(eppns) - 1],
+                map_user.preferred_language or "",
+                emails[i] if i < len(emails) else emails[len(emails) - 1],
+            ]
+            file_path.write_text(
+                delimiter.join(row) + "\n",
+                encoding="utf-8",
+            )
+    return file_repositories, file_groups, file_users

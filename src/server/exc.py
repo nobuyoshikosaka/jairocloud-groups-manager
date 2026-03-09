@@ -202,6 +202,20 @@ class FileNotFound(BulkOperationError):  # noqa: N818
     """
 
 
+class FileFormatError(BulkOperationError):
+    """Exception for file format errors in bulk operations.
+
+    Errors caused by invalid file formats during bulk operations.
+    """
+
+
+class FileUploadError(BulkOperationError):
+    """Exception for file upload errors in bulk operations.
+
+    Errors caused by issues during file upload in bulk operations.
+    """
+
+
 class InvalidExportError(BulkOperationError):
     """Exception for invalid export errors.
 
