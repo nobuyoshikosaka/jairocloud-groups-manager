@@ -87,8 +87,32 @@
     "upload": "アップロード"
   },
   "cache-groups": {
+    "button": {
+      "update-all-repositories": "全リポジトリを更新",
+      "update-selected-repositories": "選択したリポジトリを更新"
+    },
+    "confirm-update-all-repositories": "全リポジトリ（{count}件）の更新を行いますか？",
+    "confirm-update-selected-repositories": "以下の{count}リポジトリを更新しますか？",
+    "count": "{current} / {total} 件",
     "description": "WEKO3が利用するグループ情報のキャッシュ状況を管理できます。",
-    "title": "グループキャッシュ"
+    "filter-placeholder": "キャッシュ状態",
+    "search-placeholder": "検索...",
+    "select": {
+      "cache": "キャッシュあり",
+      "no-cache": "キャッシュなし"
+    },
+    "table": {
+      "column": {
+        "repository-name": "リポジトリ名",
+        "repository-status": "更新状況",
+        "repository-updated-at": "キャッシュ更新日時",
+        "repository-url": "リポジトリURL"
+      }
+    },
+    "title": "グループキャッシュ",
+    "update-completed": "更新完了（{count}件）",
+    "update-error": "キャッシュ更新処理が実行中です。",
+    "updating": "更新中..."
   },
   "common": {
     "loading": "読み込み中..."
@@ -307,6 +331,10 @@
       "copy-sp-connector-id": "SP コネクタ ID をコピー"
     },
     "description": "あなたが管理しているリポジトリの情報を確認できます。",
+    "list": {
+      "no-repositories-description": "検索条件を変更して、再度お試しください。",
+      "no-repositories-title": "リポジトリが見つかりません"
+    },
     "entity-id-label": "Entity ID：",
     "table": {
       "column": {
@@ -381,6 +409,9 @@
     },
     "actions-label": "アクション",
     "display-columns-label": "表示項目",
+    "display-count-label": "表示件数：",
+    "display-info-text": "{start}～{end}件を表示（全{total}件）",
+    "display-info-text-empty": "0件を表示（全0件）",
     "filter-button-label": "フィルター",
     "page-size-label": "表示件数：",
     "selected": "選択",

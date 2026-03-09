@@ -221,6 +221,27 @@ port = 26379
 url = "amqp://guest:guest@rabbitmq:5672//"
 
 
+[cache_groups]
+# Redis key pattern for caching group data.
+cache_redis_key = "{prefix}cache"
+
+# Redis key pattern for caching GakuNin group data.
+gakunin_redis_key = "{fqdn}_gakunin_groups"
+
+# Map groups API endpoint.
+map_groups_api_endpoint = "https://sample.gakunin.jp/api/groups/"
+
+# If toml_path and either directory_path or fqdn_list_file are defined, toml_path takes precedence.
+# Schema for cache database configuration.
+toml_path = "cache_db_config.toml"
+
+# Path to the directory containing institution TLS files.
+directory_path = "./cache_db/tls"
+
+# Path to the file containing FQDN list.
+fqdn_list_file = "fqdn_list.toml"
+
+
 # [develop]
 # Enable or disable developer login feature.
 # developer_login = false

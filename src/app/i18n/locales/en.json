@@ -87,8 +87,32 @@
     "upload": "Upload"
   },
   "cache-groups": {
+    "button": {
+      "update-all-repositories": "Update all repositories",
+      "update-selected-repositories": "Update selected repositories"
+    },
+    "confirm-update-all-repositories": "Do you want to update all repositories ({count})?",
+    "confirm-update-selected-repositories": "Would you like to update the following {count} repositories?",
+    "count": "{current} / {total} items",
     "description": "You can manage the cache status of group information used by WEKO3.",
-    "title": "Caching Groups"
+    "filter-placeholder": "Cache status",
+    "search-placeholder": "search...",
+    "select": {
+      "cache": "With cash",
+      "no-cache": "No cache"
+    },
+    "table": {
+      "column": {
+        "repository-name": "Repository name",
+        "repository-status": "Update status",
+        "repository-updated-at": "Cache update date and time",
+        "repository-url": "Repository URL"
+      }
+    },
+    "title": "Caching Groups",
+    "update-completed": "Update completed ({count} items)",
+    "update-error": "Cache update processing is in progress.",
+    "updating": "Updating..."
   },
   "common": {
     "loading": "Loading..."
@@ -322,6 +346,10 @@
       "copy-sp-connector-id": "Copy SP Connecter ID to clipboard\t"
     },
     "description": "You can check information about the repositories you manage.",
+    "list": {
+      "no-repositories-description": "Please change your search criteria and try again.",
+      "no-repositories-title": "Repository not found"
+    },
     "entity-id-label": "Entity ID: ",
     "table": {
       "column": {
@@ -408,6 +436,10 @@
     },
     "actions-label": "Action",
     "display-columns-label": "Columns",
+    "display-count-label": "Number of items displayed:",
+    "display-info-text": "Displaying {start}～{end} items (all {total} items)",
+    "display-info-text-empty": "Displaying 0 items (all 0 items)",
+    "page-size-label": "Page size:"
     "filter-button-label": "Filter",
     "page-size-label": "Page size:",
     "selected": "selected",

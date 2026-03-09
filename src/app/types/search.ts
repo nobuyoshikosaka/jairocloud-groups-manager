@@ -50,6 +50,13 @@ interface UsersSearchQuery {
   l?: number
 }
 
+interface CacheGroupsSearchQuery {
+  q?: string
+  f?: string[]
+  p?: number
+  l?: number
+}
+
 type RepositoriesSortableKeys = 'id' | 'serviceName' | 'serviceUrl' | 'entityIds'
 
 type GroupsSortableKeys = 'id' | 'displayName' | 'public' | 'memberListVisibility'
@@ -90,4 +97,5 @@ export type {
   SortOrder,
   SearchResult, UsersSearchResult, GroupsSearchResult, RepositoriesSearchResult,
   GlobalSearchResults,
+  CacheGroupsSearchQuery,
 }

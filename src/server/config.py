@@ -95,7 +95,39 @@ class RuntimeConfig(BaseSettings):
     RABBITMQ: RabbitmqConfig
     """RabbitMQ configuration values."""
 
+    CACHE_GROUPS: CacheGroupsConfig
+    """Cache groups task configuration values."""
+
     DEVELOP: DevelopConfig | None = None
+
+    @computed_field
+    @property
+    def CACHE_DB(self) -> dict[str, t.Any]:
+        """Cache database configuration values."""
+        return {
+            "CACHE_KEY_SUFFIX": self.CACHE_GROUPS.gakunin_redis_key,
+            "MAP_GROUPS_API_ENDPOINT": self.CACHE_GROUPS.map_groups_api_endpoint,
+            "REDIS_TYPE": "redis"
+            if self.REDIS.cache_type == "RedisCache"
+            else "sentinel",
+            "REDIS_HOST": self.REDIS.single.base_url.replace("redis://", "").split(":")[
+                0
+            ]
+            if self.REDIS.cache_type == "RedisCache"
+            else "",
+            "REDIS_PORT": int(
+                self.REDIS.single.base_url.replace("redis://", "").split(":")[1]
+            )
+            if self.REDIS.cache_type == "RedisCache"
+            else 0,
+            "REDIS_DB_INDEX": self.REDIS.database.group_cache,
+            "REDIS_SENTINEL_MASTER": self.REDIS.sentinel.master_name
+            if self.REDIS.cache_type == "RedisSentinelCache"
+            else "",
+            "SENTINELS": self.REDIS.sentinel.nodes
+            if self.REDIS.cache_type == "RedisSentinelCache"
+            else [],
+        }
 
     @computed_field
     @property
@@ -525,6 +557,28 @@ class RabbitmqConfig(BaseModel):
 
     url: str = "amqp://guest:guest@localhost:5672//"
     """Hostname or IP address of the RabbitMQ server for Celery broker."""
+
+
+class CacheGroupsConfig(BaseModel):
+    """Schema for cache groups configuration."""
+
+    cache_redis_key: str
+    """Redis key for cache groups."""
+
+    gakunin_redis_key: str
+    """Redis key pattern for caching GakuNin group data."""
+
+    map_groups_api_endpoint: str
+    """Map groups API endpoint."""
+
+    toml_path: str
+    """Path to the TOML file with cache database configuration."""
+
+    directory_path: str
+    """Path to the directory containing institution TLS files."""
+
+    fqdn_list_file: str
+    """Path to the file containing FQDN list."""
 
 
 type HasRepoId = t.Annotated[str, StringConstraints(pattern=HAS_REPO_ID_PATTERN)]

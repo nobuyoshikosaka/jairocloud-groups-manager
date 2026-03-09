@@ -20,6 +20,7 @@ dependencies = [
     "pydantic[email]>=2.12.5",
     "requests>=2.32.5",
     "sqlalchemy-utils>=0.42.1",
+    "weko-group-cache-db",
 ]
 
 [dependency-groups]
@@ -105,3 +106,6 @@ skip-magic-trailing-comma = false
 include = ["src"]
 extraPaths = ["src"]
 typeCheckingMode =  "standard"
+
+[tool.uv.sources]
+weko-group-cache-db = { git = "https://github.com/ivis-weko3-dev/weko-group-cache-db.git", rev = "develop" }

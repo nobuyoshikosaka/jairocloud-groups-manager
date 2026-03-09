@@ -354,3 +354,34 @@ class UploadQuery(BaseModel):
 
     l: t.Annotated[int | None, "length"] = None  # noqa: E741
     """Page size (number of items per page)."""
+
+
+class CacheQuery(BaseModel):
+    """Schema for cache query parameters."""
+
+    q: t.Annotated[str | None, "term"] = None
+    """Search term for querying cache entries."""
+
+    f: t.Annotated[list[str] | None, "filter"] = None
+    """Filter expression for querying cache entries."""
+
+    p: t.Annotated[int | None, "page"] = None
+    """Page number for pagination."""
+
+    l: t.Annotated[int | None, "per"] = None
+    """Number of items per page for pagination."""
+
+
+type CacheOperation = t.Literal["all", "id-specified"]
+
+
+class CacheRequest(BaseModel):
+    """Schema for cache update request."""
+
+    fqdn_list: list[str] | None = None
+    """List of fully qualified domain names to update in the cache."""
+
+    op: CacheOperation
+    """Operation type: 'all' to update all, 'id-specified' to update specified FQDNs."""
+
+    model_config = camel_case_config

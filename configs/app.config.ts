@@ -56,6 +56,7 @@ const table = {
     users: [20, 50, 100] as [number, ...number[]],
     history: [20, 50, 100] as [number, ...number[]],
     bulks: [20, 50, 100] as [number, ...number[]],
+    cacheGroups: [20, 50, 100] as number[],
   },
 }
 
@@ -175,6 +176,13 @@ const wayf = {
   ] as { name: string, entityID: string }[],
 }
 
+const groupCache = {
+  /**
+   * Time (in milliseconds) to wait before showing loading indicator when updating cache
+   */
+  loadingWaitTime: 3000 as number,
+}
+
 export default {
   /** Server hostname of this application */
   serverName,
@@ -192,4 +200,6 @@ export default {
   polling,
   /** WAYF (Embedded DS) configuration */
   wayf,
+  /** Group cache configuration */
+  groupCache,
 }
