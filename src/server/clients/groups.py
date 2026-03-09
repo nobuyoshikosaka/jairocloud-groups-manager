@@ -91,10 +91,6 @@ def search(
         by_alias=True,
     )
 
-    from contrib import dump
-
-    dump(auth_params | attributes_params | query_params, "groups_search_query")
-
     response = requests.get(
         f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}",
         params=auth_params | attributes_params | query_params,
@@ -103,8 +99,6 @@ def search(
         },
         timeout=config.MAP_CORE.timeout,
     )
-
-    dump(response.text, "groups_search_response")
 
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()
@@ -216,10 +210,6 @@ def post(
             alias_generator(name) for name in exclude
         ])
 
-    from contrib import dump
-
-    dump(auth_params | payload, "groups_post_payload")
-
     response = requests.post(
         f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}",
         params=attributes_params,
@@ -229,8 +219,6 @@ def post(
         json={"request": auth_params} | payload,
         timeout=config.MAP_CORE.timeout,
     )
-
-    dump(response.text, "groups_post_response")
 
     if response.status_code > HTTPStatus.BAD_REQUEST:
         response.raise_for_status()

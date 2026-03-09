@@ -193,3 +193,31 @@ class FileValidationError(BulkOperationError):
 
     Errors caused by validation failures during bulk operations.
     """
+
+
+class FileNotFound(BulkOperationError):  # noqa: N818
+    """Exception for file not found errors in bulk operations.
+
+    Errors caused by missing files during bulk operations.
+    """
+
+
+class FileFormatError(BulkOperationError):
+    """Exception for file format errors in bulk operations.
+
+    Errors caused by invalid file formats during bulk operations.
+    """
+
+
+class FileUploadError(BulkOperationError):
+    """Exception for file upload errors in bulk operations.
+
+    Errors caused by issues during file upload in bulk operations.
+    """
+
+
+class InvalidExportError(BulkOperationError):
+    """Exception for invalid export errors.
+
+    Errors caused by issues during export operations.
+    """

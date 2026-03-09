@@ -6,9 +6,8 @@ import type { Row } from '@tanstack/table-core'
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui'
 import type { DateRange } from 'reka-ui'
 
-const toast = useToast()
-
 const useHistory = () => {
+  const toast = useToast()
   const route = useRoute()
   const { t: $t } = useI18n()
   const { currentUser } = useAuth()
@@ -26,39 +25,10 @@ const useHistory = () => {
   const sortOrder = computed(() => query.value.d)
   const pageNumber = ref(query.value.p)
   const pageSize = ref(query.value.l)
-  const loading = ref(false)
-  const downloadGroups = ref<DownloadGroupItem[]>([])
-  const uploadRows = ref<UploadHistoryData[]>([])
   const totalItems = ref<number>(0)
-  const fileExistsCache = ref<Map<string, boolean>>(new Map())
-
-  const checkFileExists = async (fileId: string): Promise<boolean> => {
-    if (fileExistsCache.value.has(fileId)) {
-      return fileExistsCache.value.get(fileId)!
-    }
-
-    try {
-      const result = await $fetch<boolean>(`/api/history/files/${fileId}/exists`)
-      fileExistsCache.value.set(fileId, result)
-      return result
-    }
-    catch {
-      fileExistsCache.value.set(fileId, false)
-      return false
-    }
-  }
-
-  const preloadFileExistence = async (items: DownloadHistoryData[]) => {
-    const fileIds = items
-      .filter(item => item.fileId)
-      .map(item => item.fileId!)
-
-    await Promise.all(fileIds.map(id => checkFileExists(id)))
-  }
 
   const isFileAvailable = (data: DownloadHistoryData): boolean => {
-    if (!data.fileId) return false
-    return fileExistsCache.value.get(data.fileId) ?? true
+    return data.fileExists
   }
 
   const uploadColumns = computed<TableColumn<UploadHistoryData>[]>(() => [
@@ -137,6 +107,24 @@ const useHistory = () => {
 
   const downloadColumns = computed<TableColumn<DownloadHistoryData>[]>(() => [
     {
+      id: 'expand',
+      cell: ({ row }) =>
+        h(UButton, {
+          'color': 'neutral',
+          'variant': 'ghost',
+          'icon': 'i-lucide-chevron-down',
+          'square': true,
+          'aria-label': 'Expand',
+          'ui': {
+            leadingIcon: [
+              'transition-transform',
+              row.getIsExpanded() ? 'duration-200 rotate-180' : '',
+            ],
+          },
+          'onClick': () => { row.toggleExpanded() },
+        }),
+    },
+    {
       accessorKey: 'timestamp',
       header: () => sortableHeader('timestamp'),
       cell: ({ row }) => {
@@ -149,7 +137,21 @@ const useHistory = () => {
       header: () => h(
         'span', { class: 'text-xs text-default font-medium' },
         $t('history.operator')),
-      cell: ({ row }) => row.original.operator.userName,
+      cell: ({ row }) => {
+        const name = row.original.operator.userName
+        const childrenCount = row.original.childrenCount
+        if (childrenCount && childrenCount > 0) {
+          return h('span', { class: 'inline-flex items-center gap-1' }, [
+            name,
+            h(UBadge, {
+              color: 'info',
+              variant: 'soft',
+              class: 'ml-1',
+            }, () => $t('history.re-download-count', { count: childrenCount })),
+          ])
+        }
+        return name
+      },
     },
     { accessorKey: 'users',
       header: () => h(
@@ -168,24 +170,26 @@ const useHistory = () => {
         'span', { class: 'text-xs text-default font-medium' },
         $t('history.re-download')),
       cell: ({ row }) => {
-        return h(UButton, {
-          color: 'primary',
-          variant: 'outline',
-          size: 'sm',
-          onClick: async () => {
-            const data = row.original
-            try {
-              await $fetch(`/api/history/files/${data.fileId}`, { method: 'GET' })
-            }
-            catch {
-              toast.add({
-                title: $t('history.file_not_available'),
-                color: 'error',
-                icon: 'i-lucide-circle-x',
-              })
-            }
-          },
-        }, () => $t('history.re-download'))
+        const data = row.original
+        return isFileAvailable(data)
+          ? h(UButton, {
+              color: 'primary',
+              variant: 'outline',
+              size: 'sm',
+              onClick: async () => {
+                try {
+                  await $fetch(`/api/history/files/${data.fileId}`, { method: 'GET' })
+                }
+                catch {
+                  toast.add({
+                    title: $t('history.file_not_available'),
+                    color: 'error',
+                    icon: 'i-lucide-circle-x',
+                  })
+                }
+              },
+            }, () => $t('history.re-download'))
+          : h('span', { class: 'text-xs text-error' }, $t('history.expired'))
       },
     },
     { accessorKey: 'actions',
@@ -290,43 +294,6 @@ const useHistory = () => {
       },
     ]
   }
-  const { handleFetchError } = useErrorHandling()
-  const loadChildren = async (
-    parentId: string,
-  ) => {
-    const { data } = await useFetch<DownloadApiModel>('/api/history/download', {
-      method: 'GET',
-      query: {
-        i: [parentId],
-      },
-      onResponseError({ response }) {
-        switch (response.status) {
-          case 400: { {
-            toast.add({
-              title: $t('bulk.status.error'),
-              description: $t('bulk.execute.result_failed'),
-              color: 'error',
-              icon: 'i-lucide-circle-x',
-            }) }
-          break
-          }
-          default:{
-            handleFetchError({ response })
-            break
-          }
-        }
-      },
-    })
-
-    const items: DownloadHistoryData[] = data.value?.resources ?? []
-
-    const group = downloadGroups.value.find(g => g.parent.id === parentId)
-    if (!group) return
-
-    group.children = [...group.children, ...items]
-    const totalChildCount = group.parent.childrenCount ?? group.children.length
-    group.hasMoreChildren = group.children.length < totalChildCount
-  }
 
   const togglePublicStatus = async (
     id: string,
@@ -334,11 +301,13 @@ const useHistory = () => {
   ) => {
     const body = { public: !currentPublic }
     try {
-      const result = await $fetch<boolean>(`/api/history/${tab.value}/${id}/public-status`, {
-        method: 'PUT',
-        body,
-      })
-      return result
+      const result
+        = await $fetch<PublicStatusUpdateRequest>(`/api/history/${tab.value}/${id}/public-status`,
+          {
+            method: 'PUT',
+            body,
+          })
+      return result.public
     }
     catch {
       toast.add({
@@ -360,12 +329,9 @@ const useHistory = () => {
   }
 
   return {
-    loading,
     tab,
     uploadColumns,
     downloadColumns,
-    downloadGroups,
-    uploadRows,
     totalItems,
     sortOrder,
     pageNumber,
@@ -373,8 +339,6 @@ const useHistory = () => {
     query,
     makePageInfo,
     updateQuery,
-    loadChildren,
-    preloadFileExistence,
     togglePublicStatus,
     isFileAvailable,
   }
@@ -558,11 +522,9 @@ const useHistoryFilter = () => {
   const targetLabel = computed(() =>
     tab.value === 'download' ? $t('history.target', 1) : $t('history.target', 2),
   )
-  const loading = ref(false)
 
   return {
     query,
-    loading,
     tab,
     isFiltered,
     updateQuery,
