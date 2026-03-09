@@ -221,7 +221,7 @@ const onDelete = async () => {
     <template #empty>
       <UEmpty
         :title="$t('users.table.no-users-title')"
-        :description="$t('users.table.no-users-description')"
+        :description="$t('groups.table.no-groupss-description')"
         :actions="emptyActions"
       />
     </template>
