@@ -8,89 +8,172 @@ from .base import LogMessage
 
 
 DATABASE_CREATED = LogMessage(
-    "I000",
+    "I010",
     "Database has been created.",
 )
 
 DATABASE_ALREADY_EXISTS = LogMessage(
-    "I001",
+    "I011",
     "Database already exists. No action taken.",
 )
 
 DATABASE_DESTROYED = LogMessage(
-    "I002",
+    "I012",
     "Database has been destroyed.",
 )
 
 DATABASE_NOT_EXIST = LogMessage(
-    "I003",
+    "I013",
     "Database does not exist. No action taken.",
 )
 
 TABLE_CREATED = LogMessage(
-    "I004",
+    "I014",
     "Database tables created.",
 )
 
 TABLE_DROPPED = LogMessage(
-    "I005",
+    "I015",
     "Database tables dropped.",
 )
 
 
 SUCCESS_ISSUE_CREDENTIALS = LogMessage(
-    "I020",
+    "I030",
     "Successfully issued client credentials for the mAP Core API.",
 )
 
 REQUEST_FOR_AUTH_CODE = LogMessage(
-    "I021",
+    "I031",
     "Please authenticate at the following URL to issue an access token: %(url)s",
 )
 
 SUCCESS_ISSUE_TOKEN = LogMessage(
-    "I022",
+    "I032",
     "Successfully issued access token for the mAP Core API.",
 )
 
 SUCCESS_REFRESH_TOKEN = LogMessage(
-    "I023",
+    "I033",
     "Successfully refreshed access token for the mAP Core API.",
 )
 
 ACCESS_TOKEN_AVAILABLE = LogMessage(
-    "I024",
+    "I034",
     "Access token is valid and available.",
 )
 
 SUCCESS_GET_TOKEN_OWNER = LogMessage(
-    "I025",
+    "I035",
     "Successfully get token owner's User resource from mAP Core API. \n%(user)s",
 )
 
 
 RECEIVE_RESPONSE_MESSAGE = LogMessage(
-    "I030",
+    "I050",
     "Received response from mAP Core API: %(message)s",
 )
 
 
+USER_LOGGED_IN = LogMessage(
+    "I060",
+    "User (ePPN: %(eppn)s) logged in.",
+)
+
+USER_LOGGED_OUT = LogMessage(
+    "I061",
+    "User (ePPN: %(eppn)s) logged out.",
+)
+
+USER_SESSION_EXPIRED = LogMessage(
+    "I062",
+    "Session terminated due to expiration for user (ePPN: %(eppn)s).",
+)
+
+USER_CONTEXT_PREPARED = LogMessage(
+    "I065",
+    "User context prepared for task (ePPN: %(eppn)s).",
+)
+
+
+RESOURCE_CACHE_CREATED = LogMessage(
+    "I080", "Cache created for resource (func %(func)s, id: %(id)s)."
+)
+
+RESOURCE_CACHE_HIT = LogMessage(
+    "I081",
+    "Cache hit for resource (func %(func)s, id: %(id)s).",
+)
+
+RESOURCE_CACHE_DELETED = LogMessage(
+    "I082",
+    "Cache deleted for resource (func %(func)s, id: %(id)s).",
+)
+
 SUCCESS_CREATE_REPOSITORY = LogMessage(
-    "I100",
-    "Successfully created Service resource for Repository (id: %(service_id)s)",
+    "I110",
+    "Successfully created Service resource for Repository (id: %(id)s)",
 )
 
 SUCCESS_CREATE_ROLEGROUPS = LogMessage(
-    "I101",
-    "Successfully created role-type groups for Repository (id: %(service_id)s)",
+    "I111",
+    "Successfully created role-type groups for Repository (id: %(id)s)",
 )
 
 SUCCESS_UPDATE_REPOSITORY = LogMessage(
-    "I102",
-    "Successfully updated Service resource for Repository (id: %(service_id)s)",
+    "I120",
+    "Successfully updated Service resource for Repository (id: %(id)s)",
 )
 
 SUCCESS_DELETE_REPOSITORY = LogMessage(
-    "I103",
-    "Successfully deleted Service resource for Repository (id: %(service_id)s)",
+    "I130",
+    "Successfully deleted Service resource for Repository (id: %(id)s)",
+)
+
+
+SUCCESS_CREATE_GROUP = LogMessage(
+    "I210",
+    "Successfully created Group resource (id: %(id)s) in Repository (id: %(rid)s).",
+)
+
+SUCCESS_UPDATE_GROUP = LogMessage(
+    "I220",
+    "Successfully updated Group resource (id: %(id)s) in Repository (id: %(rid)s).",
+)
+
+SUCCESS_UPDATE_GROUP_MEMBERS = LogMessage(
+    "I221",
+    "Successfully updated members of Group resource "
+    "(id: %(id)s, added: %(add)s, removed: %(remove)s).",
+)
+
+SUCCESS_DELETE_GROUP = LogMessage(
+    "I230",
+    "Successfully deleted Group resource (id: %(id)s) in Repository (id: %(rid)s).",
+)
+
+SUCCESS_DELETE_GROUPS = LogMessage(
+    "I231",
+    "Successfully deleted Group resources (ids: %(ids)s) in Repository (id: %(rid)s).",
+)
+
+
+SEARCHED_SYSTEM_ADMINS = LogMessage(
+    "I301",
+    "Search performed on System Administrator.",
+)
+
+SUCCESS_CREATE_USER = LogMessage(
+    "I310",
+    "Successfully created User resource (id: %(id)s, ePPN: %(eppn)s).",
+)
+
+SUCCESS_UPDATE_USER = LogMessage(
+    "I320",
+    "Successfully updated User resource (id: %(id)s, ePPN: %(eppn)s).",
+)
+
+SUCCESS_UPDATE_USER_AFFILIATIONS = LogMessage(
+    "I321",
+    "Successfully updated affiliations of User resource (id: %(id)s, ePPN: %(eppn)s).",
 )

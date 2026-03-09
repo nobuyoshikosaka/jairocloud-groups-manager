@@ -28,7 +28,7 @@ from server.entities.search_request import SearchRequestParameter
 from server.exc import ConfigurationError, InvalidQueryError
 from server.messages import E
 
-from .affiliations import detect_affiliations
+from .affiliations import detect_affiliation, detect_affiliations
 from .permissions import get_permitted_repository_ids, is_current_user_system_admin
 
 
@@ -216,6 +216,8 @@ def _group_groups_filter(criteria: GroupsCriteria, id_path: str) -> str:
     if is_system_admin:
         # no additional filter for system admin
         specified = criteria.r
+        if criteria.i:
+            criteria.i = [gid for gid in criteria.i if detect_affiliation(gid)]
     else:
         # reduce specified group IDs to only user-defined groups
         if criteria.i:

@@ -17,7 +17,6 @@ from server.const import (
 from server.entities.group_detail import (
     GroupDetail,
     Repository as GroupRepository,
-    Service as GroupService_,
 )
 from server.entities.map_group import (
     Administrator as GroupAdministrator,
@@ -33,13 +32,16 @@ from server.entities.map_service import (
 )
 from server.entities.map_user import EPPN, Email, Group as UserGroup, MapUser
 from server.entities.repository_detail import RepositoryDetail
-from server.entities.summaries import GroupSummary, UserSummary
+from server.entities.summaries import GroupSummary
 from server.entities.user_detail import RepositoryRole, UserDetail
 from server.exc import InvalidFormError, SystemAdminNotFound
 from server.messages import E
 
 from .affiliations import detect_affiliation, detect_affiliations
-from .permissions import get_permitted_repository_ids, is_current_user_system_admin
+from .permissions import (
+    get_permitted_repository_ids,
+    is_current_user_system_admin as is_super,
+)
 from .resolvers import resolve_repository_id, resolve_service_id
 from .search_queries import make_criteria_object
 
@@ -274,7 +276,7 @@ def prepare_group(
     service_id = resolve_service_id(repository_id=repository_id)
 
     if not administrators:
-        error = "At least one administrator is required to create a repository."
+        error = E.GROUP_REQUIRES_SYSTEM_ADMIN
         raise SystemAdminNotFound(error)
 
     map_group.administrators = [
@@ -313,21 +315,13 @@ def make_group_detail(group: MapGroup, *, more_detail: bool = False) -> GroupDet
         users = [member for member in group.members if member.type == "User"]
         user_count = len(users)
         detail.users_count = user_count
-        detail._users = [
-            UserSummary(id=member.value, user_name=member.display) for member in users
-        ]
+        detail._users = [member.value for member in users]
 
     if group.administrators:
-        detail._admins = [
-            UserSummary(id=admin.value, user_name=admin.display)
-            for admin in group.administrators
-        ]
+        detail._admins = [admin.value for admin in group.administrators]
 
     if group.services:
-        detail._services = [
-            GroupService_(id=service.value, service_name=service.display)
-            for service in group.services
-        ]
+        detail._services = [service.value for service in group.services]
 
     if group.meta:
         detail.created = group.meta.created
@@ -363,7 +357,7 @@ def validate_group_to_map_group(
 ) -> MapGroup: ...
 
 
-def validate_group_to_map_group(  # noqa: C901
+def validate_group_to_map_group(  # noqa: C901, PLR0912
     group: GroupDetail, *, mode: t.Literal["create", "update"]
 ) -> tuple[MapGroup, str] | MapGroup:
     """Validate the GroupDetail instance and convert it to a MapGroup instance.
@@ -380,36 +374,50 @@ def validate_group_to_map_group(  # noqa: C901
         InvalidFormError: If the GroupDetail instance cannot be converted to a MapGroup.
     """
     if not group.display_name:
-        error = "Display name is required to create a group."
+        error = E.GROUP_REQUIRES_DISPLAY_NAME
         raise InvalidFormError(error)
 
     if mode == "update":
         if not group.id:
-            error = "Group ID is required to update a group."
+            error = E.GROUP_REQUIRES_ID
             raise InvalidFormError(error)
+
+        detected = detect_affiliation(group.id)
+        if not detected:
+            # out of this service's scope.
+            error = E.GROUP_INVALID_ID_PATTERN
+            raise InvalidFormError(error)
+
+        if detected.repository_id:
+            # ensure the repository detected.
+            group.repository = GroupRepository(id=detected.repository_id)
 
         return make_map_group(group)
 
     repository_id = group.repository.id if group.repository else None
     if not repository_id:
-        error = "Repository ID is required to create a group."
+        error = E.GROUP_REQUIRES_REPOSITORY
         raise InvalidFormError(error)
 
     from server.services import repositories  # noqa: PLC0415
 
     if repositories.get_by_id(repository_id) is None:
-        error = f"Repository with ID '{repository_id}' does not exist."
+        error = E.GROUP_REQUIRES_EXISTING_REPOSITORY % {"id": repository_id}
+        raise InvalidFormError(error)
+
+    if not is_super() and repository_id not in get_permitted_repository_ids():
+        error = E.GROUP_FORBIDDEN_REPOSITORY % {"id": repository_id}
         raise InvalidFormError(error)
 
     user_defined_id = group.user_defined_id
     if not user_defined_id:
-        error = "Group ID is required to create a group."
+        error = E.GROUP_REQUIRES_USER_DEFINED_ID
         raise InvalidFormError(error)
 
     if user_defined_id:
         max_id_length = config.GROUPS.max_id_length - len(repository_id)
         if len(user_defined_id) > max_id_length:
-            error = "Group ID is too long."
+            error = E.GROUP_TOO_LONG_ID % {"rid": repository_id, "max": max_id_length}
             raise InvalidFormError(error)
 
         id_pattern = config.GROUPS.id_patterns.user_defined
@@ -443,22 +451,15 @@ def make_map_group(group: GroupDetail) -> MapGroup:
     )
 
     if group._users:
-        map_group.members = [
-            MemberUser(type="User", value=user.id, display=user.user_name)
-            for user in group._users
-        ]
+        map_group.members = [MemberUser(type="User", value=uid) for uid in group._users]
 
     if group._admins:
         map_group.administrators = [
-            GroupAdministrator(value=admin.id, display=admin.user_name)
-            for admin in group._admins
+            GroupAdministrator(value=uid) for uid in group._admins
         ]
 
     if group._services:
-        map_group.services = [
-            GroupService(value=service.id, display=service.service_name)
-            for service in group._services
-        ]
+        map_group.services = [GroupService(value=sid) for sid in group._services]
 
     return map_group
 
@@ -512,13 +513,13 @@ def make_user_detail(user: MapUser, *, more_detail: bool = False) -> UserDetail:
     group_ids = {
         g.group_id
         for g in detected_groups
-        if is_current_user_system_admin() or g.repository_id in permitted
+        if is_super() or g.repository_id in permitted
     }
     user_roles = {
         role.repository_id: role.role
         for role in detected_repos
         if role.repository_id
-        if is_current_user_system_admin() or role.repository_id in permitted
+        if is_super() or role.repository_id in permitted
     }
 
     is_system_admin = any(
@@ -526,7 +527,7 @@ def make_user_detail(user: MapUser, *, more_detail: bool = False) -> UserDetail:
     )
     if is_system_admin:
         # System Administrator did not affiliate with any repository
-        detail.is_system_admin = is_system_admin and is_current_user_system_admin()
+        detail.is_system_admin = is_system_admin and is_super()
 
         return detail
 
@@ -567,7 +568,7 @@ def make_user_detail(user: MapUser, *, more_detail: bool = False) -> UserDetail:
     return detail
 
 
-def validate_user_to_map_user(  # noqa: C901, PLR0912
+def validate_user_to_map_user(
     user: UserDetail, *, mode: t.Literal["create", "update"]
 ) -> MapUser:
     """Validate the UserDetail instance and convert it to a MapUser instance.
@@ -585,63 +586,137 @@ def validate_user_to_map_user(  # noqa: C901, PLR0912
     """
     if mode == "create":
         if not user.user_name:
-            error = "Username is required to create a user."
+            error = E.USER_REQUIRES_USERNAME
             raise InvalidFormError(error)
 
         if not user.eppns or all(not _ for _ in user.eppns):
-            error = "At least one eduPersonPrincipalName is required to create a user."
+            error = E.USER_REQUIRES_EPPN
             raise InvalidFormError(error)
 
         if not user.emails or all(not _ for _ in user.emails):
-            error = "At least one email is required to create a user."
+            error = E.USER_REQUIRES_EMAIL
             raise InvalidFormError(error)
 
-    if user.groups:
-        group_query = make_criteria_object(
-            "groups", i=[group.id for group in user.groups if group.id], l=-1
-        )
-        from server.services import groups  # noqa: PLC0415
-
-        existed = {group.id for group in groups.search(criteria=group_query).resources}
-
-        if {group.id for group in user.groups if group.id} - existed:
-            error = "Cannot specify groups that do not exist."
+        if user.is_system_admin and not is_super():
+            error = E.USER_NO_CREATE_SYSTEM_ADMIN
             raise InvalidFormError(error)
-
-    else:
-        user.groups = []
 
     if user.is_system_admin:
+        if not is_super():
+            error = E.USER_NO_PROMOTE_SYSTEM_ADMIN
+            raise InvalidFormError(error)
+
         if user.repository_roles:
-            error = "System administrator cannot be affiliated with any repository."
+            error = E.USER_REQUIRES_NO_REPOSITORY
             raise InvalidFormError(error)
 
-        user.groups.append(GroupSummary(id=config.GROUPS.id_patterns.system_admin))
-
-    else:
-        if not user.repository_roles or all(
-            not _.id or not _.user_role for _ in user.repository_roles
-        ):
-            error = "At least one repository and role is required."
+        if user.groups:
+            error = E.USER_REQUIRES_NO_GROUP
             raise InvalidFormError(error)
 
-        from server.services import repositories  # noqa: PLC0415
+        user.groups = [GroupSummary(id=config.GROUPS.id_patterns.system_admin)]
+        return make_map_user(user)
 
-        for repo_role in user.repository_roles:
-            if (rid := repo_role.id) and not repositories.get_by_id(rid):
-                error = "Cannot specify repositories that do not exist."
-                raise InvalidFormError(error)
+    permitted = get_permitted_repository_ids()
 
-            user_role = repo_role.user_role
-            if not user_role or user_role == USER_ROLES.SYSTEM_ADMIN:
-                continue
+    valid_group_ids = validate_user_roles(user, permitted)
+    valid_group_ids.extend(validate_user_groups(user, permitted))
 
-            pattern = config.GROUPS.id_patterns[user_role]
-            user.groups.append(
-                GroupSummary(id=pattern.format(repository_id=repo_role.id))
-            )
-
+    user.groups = [GroupSummary(id=gid) for gid in valid_group_ids]
     return make_map_user(user)
+
+
+def validate_user_roles(user: UserDetail, permitted: set[str]) -> list[str]:
+    """Validate the repository roles of a UserDetail instance.
+
+    Args:
+        user (UserDetail): The UserDetail instance to validate.
+        permitted (set[str]): The set of permitted repository IDs for the user.
+
+    Returns:
+        list[str]: A list of valid group IDs based on the user's repository roles.
+
+    Raises:
+        InvalidFormError:
+            If the user specifies non-existent or non-permitted repositories.
+    """
+    if not user.repository_roles or all(
+        not _.id or not _.user_role for _ in user.repository_roles
+    ):
+        error = E.USER_REQUIRES_REPOSITORY
+        raise InvalidFormError(error)
+
+    from server.services import repositories  # noqa: PLC0415
+
+    repositories_query = make_criteria_object(
+        "repositories",
+        i=[role.id for role in user.repository_roles if role.id],
+        l=-1,
+    )
+    existed = {r.id for r in repositories.search(criteria=repositories_query).resources}
+
+    valid_group_ids: list[str] = []
+    for repo_role in user.repository_roles:
+        if not (rid := repo_role.id):
+            continue
+
+        if rid not in existed:
+            error = E.USER_REQUIRES_EXISTING_REPOSITORY % {"id": rid}
+            raise InvalidFormError(error)
+
+        if not is_super() and repo_role.id not in permitted:
+            error = E.USER_FORBIDDEN_REPOSITORY % {"id": repo_role.id}
+            raise InvalidFormError(error)
+
+        user_role = repo_role.user_role
+        if not user_role or user_role == USER_ROLES.SYSTEM_ADMIN:
+            continue
+
+        pattern = config.GROUPS.id_patterns[user_role]
+        valid_group_ids.append(pattern.format(repository_id=repo_role.id))
+
+    return valid_group_ids
+
+
+def validate_user_groups(user: UserDetail, permitted: set[str]) -> list[str]:
+    """Validate the groups of a UserDetail instance.
+
+    Args:
+        user (UserDetail): The UserDetail instance to validate.
+        permitted (set): The set of permitted repository IDs for the user.
+
+    Returns:
+        list: A list of valid group IDs based on the user's groups.
+
+    Raises:
+        InvalidFormError:
+            If the user specifies non-existent or non-permitted groups.
+    """
+    if not user.groups:
+        return []
+
+    specified = [group.id for group in user.groups if group.id]
+    _, detected = detect_affiliations(specified)
+    group_query = make_criteria_object(
+        "groups", i=[group.group_id for group in detected], l=-1
+    )
+
+    from server.services import groups  # noqa: PLC0415
+
+    existed = {g.id for g in groups.search(criteria=group_query).resources}
+
+    if non_existent := set(specified) - existed:
+        error = E.USER_REQUIRES_EXISTING_GROUP % {"id": ", ".join(non_existent)}
+        raise InvalidFormError(error)
+
+    for group in detected:
+        if is_super() or group.repository_id in permitted:
+            continue
+
+        error = E.USER_FORBIDDEN_GROUP % {"id": group.group_id}
+        raise InvalidFormError(error)
+
+    return [group.group_id for group in detected]
 
 
 def make_map_user(user: UserDetail) -> MapUser:

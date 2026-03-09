@@ -10,6 +10,7 @@ from http import HTTPStatus
 
 import requests
 
+from flask import current_app
 from flask_login import current_user
 from pydantic import TypeAdapter
 
@@ -40,9 +41,9 @@ adapter_search: TypeAdapter[ServicesSearchResponse] = TypeAdapter(
 
 def _search_cache_identifier(*args, **kwargs) -> str:  # noqa: ANN002, ANN003, ARG001
     if not is_user_logged_in(current_user):
-        return "anonymous"
+        return "by_anonymous"
     if current_user.is_system_admin:
-        return "system_admin"
+        return "by_system_admin"
     permitted = sorted(current_user.permitted_repositories)
     return ",".join(permitted)
 
@@ -213,6 +214,10 @@ def post(
             alias_generator(name) for name in exclude
         ])
 
+    from contrib import dump
+
+    dump({"request": auth_params} | payload, "service_post_payload")
+
     response = requests.post(
         f"{config.MAP_CORE.base_url}{MAP_SERVICES_ENDPOINT}",
         params=attributes_params,
@@ -222,6 +227,8 @@ def post(
         json={"request": auth_params} | payload,
         timeout=config.MAP_CORE.timeout,
     )
+
+    dump(response.text, "service_post_response")
 
     status_code = response.status_code
     if status_code not in {HTTPStatus.BAD_REQUEST, HTTPStatus.CONFLICT}:
@@ -303,7 +310,7 @@ def put_by_id(
 
 def patch_by_id(
     service_id: str,
-    operations: list[PatchOperation],
+    operations: list[PatchOperation[MapService]],
     /,
     include: set[str] | None = None,
     exclude: set[str] | None = None,
@@ -402,6 +409,12 @@ def delete_by_id(
             "Authorization": f"Bearer {access_token}",
         },
         timeout=config.MAP_CORE.timeout,
+    )
+
+    current_app.logger.info(
+        "status_code: %s, response: %s",
+        response.status_code,
+        response.text,
     )
 
     if response.ok:

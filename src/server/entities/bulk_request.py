@@ -26,8 +26,11 @@ class BulkRequestPayload(BaseModel):
     ]
     """Schema URIs that define the attributes present in the bulk resource."""
 
-    operations: list[BulkOperation]
-    """Bulk operations."""
+    operations: t.Annotated[
+        list[BulkOperation],
+        Field(..., serialization_alias="Operations"),
+    ] = []
+    """Bulk operations. Alias for 'Operations'."""
 
     fail_on_errors: int | None = None
     """The number of errors allowed before returning an error response."""
@@ -44,14 +47,22 @@ class BulkResponse(BaseModel):
     ]
     """Schema URIs that define the attributes present in the bulk resource."""
 
-    operations: list[BulkOperation]
-    """Bulk operations."""
+    operations: t.Annotated[
+        list[BulkOperation],
+        Field(..., validation_alias="Operations"),
+    ] = []
+    """Bulk operations. Alias for 'Operations'."""
 
     model_config = camel_case_config | forbid_extra_config
     """Configure camelCase aliasing and forbid extra fields."""
 
 
-class BulkOperation(BaseModel):
+type BulkResource = MapService | MapGroup | MapUser | PatchOperation
+
+type BulkResponseResource = MapService | MapGroup | MapUser | MapError
+
+
+class BulkOperation[D: BulkResource, R: BulkResponseResource](BaseModel):
     """Operation object in Bulk request/response.
 
     Each operation corresponds to a single HTTP request against a resource endpoint.
@@ -66,7 +77,7 @@ class BulkOperation(BaseModel):
     path: str
     """The resource's relative path to the SCIM service provider's root."""
 
-    data: MapService | MapGroup | MapUser | PatchOperation | None = None
+    data: D | None = None
     """The resource data.
     It would appear for a single SCIM POST, PUT, or PATCH operation.
     """
@@ -74,7 +85,7 @@ class BulkOperation(BaseModel):
     location: str | None = None
     """The resource endpoint URL."""
 
-    response: MapError | MapService | MapGroup | MapUser | None = None
+    response: R | None = None
     """The HTTP response body."""
 
     status: str | None = None

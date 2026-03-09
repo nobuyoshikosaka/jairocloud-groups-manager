@@ -104,7 +104,12 @@ const onCancel = () => {
         v-else
         class="mt-1 px-3 py-2 text-base"
       >
-        {{ state.repository.label || '-' }}
+        <ULink
+          :to="`/repositories/${state.repository.value}`"
+          class="font-bold hover:underline inline-flex items-center"
+        >
+          {{ state.repository.label || '-' }}
+        </ULink>
       </div>
     </UFormField>
 

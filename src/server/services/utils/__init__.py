@@ -19,8 +19,6 @@ from .permissions import (
     get_current_user_affiliations,
     get_permitted_repository_ids,
     is_current_user_system_admin,
-    is_user_logged_in,
-    remove_info_outside_system,
 )
 from .resolvers import resolve_repository_id, resolve_service_id
 from .roles import get_highest_role
@@ -35,6 +33,8 @@ from .transformers import (
     prepare_group,
     prepare_role_groups,
     prepare_service,
+    prepare_user,
     validate_group_to_map_group,
     validate_repository_to_map_service,
+    validate_user_to_map_user,
 )

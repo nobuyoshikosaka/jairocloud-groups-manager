@@ -76,31 +76,45 @@ class SystemAdminNotFound(JAIROCloudGroupsManagerError):  # noqa: N818
     """
 
 
-class DatabaseError(JAIROCloudGroupsManagerError):
+class InfrastructureError(JAIROCloudGroupsManagerError):
+    """Exception for infrastructure errors.
+
+    Errors caused by issues in the underlying infrastructure.
+    """
+
+
+class DatabaseError(InfrastructureError):
     """Exception for database errors.
 
     Errors caused by database operation issues.
     """
 
 
-class RecordNotFound(DatabaseError):  # noqa: N818
+class DatastoreError(InfrastructureError):
+    """Exception for datastore errors.
+
+    Errors caused by datastore operation issues.
+    """
+
+
+class TaskExcutionError(DatastoreError):
+    """Exception for task execution errors.
+
+    Errors caused by issues during task execution.
+    """
+
+
+class RecordNotFound(JAIROCloudGroupsManagerError):  # noqa: N818
     """Exception for record not found errors.
 
     Errors caused by requests for non-existing records.
     """
 
 
-class InvalidRecordError(DatabaseError):
+class InvalidRecordError(JAIROCloudGroupsManagerError):
     """Exception for invalid record errors.
 
     Errors caused by invalid record data or structure.
-    """
-
-
-class DatastoreError(JAIROCloudGroupsManagerError):
-    """Exception for datastore errors.
-
-    Errors caused by datastore operation issues.
     """
 
 
@@ -146,14 +160,14 @@ class RequestConflict(ApiRequestError):  # noqa: N818
     """
 
 
-class InvalidQueryError(JAIROCloudGroupsManagerError):
+class InvalidQueryError(ApiRequestError):
     """Exception for unexpected query construction errors.
 
     Errors caused by unexpected query structure or data during query construction.
     """
 
 
-class InvalidFormError(JAIROCloudGroupsManagerError):
+class InvalidFormError(ApiRequestError):
     """Exception for invalid form data errors.
 
     Errors caused by invalid form data in API requests.

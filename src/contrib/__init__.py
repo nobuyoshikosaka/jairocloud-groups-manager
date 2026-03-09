@@ -8,10 +8,12 @@
 
 from flask import current_app
 
+from server.messages import E
+
 from .dump import dump
 from .messages import generate_type_stub
 
 
 if current_app.config["ENV"] != "development" or not current_app.debug:
-    error = "Contrib utilities can only be used in development mode."
+    error = E.UNNECESSARY_CONTRIB
     raise RuntimeError(error)

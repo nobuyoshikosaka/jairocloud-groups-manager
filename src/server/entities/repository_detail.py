@@ -19,9 +19,6 @@ from .map_service import MapService
 class RepositoryDetail(BaseModel):
     """Model for detailed Repository information in mAP Core API."""
 
-    _fqdn: str | None = PrivateAttr(None)
-    """The fully qualified domain name of the repository."""
-
     id: str | None = None
     """The unique identifier for the repository."""
 

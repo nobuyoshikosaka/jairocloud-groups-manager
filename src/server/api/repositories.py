@@ -4,15 +4,16 @@
 
 """API endpoints for repository-related operations."""
 
+import traceback
 import typing as t
 
-from flask import Blueprint, url_for
+from flask import Blueprint, current_app, url_for
 from flask_login import login_required
 from flask_pydantic import validate
 
 from server.const import USER_ROLES
 from server.entities.repository_detail import RepositoryDetail
-from server.entities.search_request import SearchResult
+from server.entities.search_request import FilterOption, SearchResult
 from server.exc import (
     InvalidFormError,
     InvalidQueryError,
@@ -24,6 +25,7 @@ from server.services import repositories
 from server.services.utils import (
     get_permitted_repository_ids,
     is_current_user_system_admin,
+    search_repositories_options,
 )
 
 from .helpers import roles_required
@@ -53,6 +55,7 @@ def get(
     try:
         results = repositories.search(query)
     except InvalidQueryError as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 400
 
     return results, 200
@@ -81,20 +84,24 @@ def post(
     try:
         created = repositories.create(body)
     except InvalidFormError as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 400
     except ResourceInvalid as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 409
 
-    location = url_for(
-        "api.repositories.id_get", repository_id=created.id, _external=True
-    )
-    return created, 201, {"Location": location}
+    header = {
+        "Location": url_for(
+            "api.repositories.id_get", repository_id=created.id, _external=True
+        )
+    }
+    return created, 201, header
 
 
 @bp.get("/<string:repository_id>")
-@validate(response_by_alias=True)
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
+@validate(response_by_alias=True)
 def id_get(repository_id: str) -> tuple[RepositoryDetail | ErrorResponse, int]:
     """Get information of repository endpoint.
 
@@ -109,11 +116,13 @@ def id_get(repository_id: str) -> tuple[RepositoryDetail | ErrorResponse, int]:
     """
     result = repositories.get_by_id(repository_id, more_detail=True)
     if result is None:
+        current_app.logger.error(E.REPOSITORY_NOT_FOUND, {"id": repository_id})
         return ErrorResponse(
             message=E.REPOSITORY_NOT_FOUND % {"id": repository_id}
         ), 404
 
     if not has_permission(repository_id):
+        current_app.logger.error(E.REPOSITORY_FORBIDDEN, {"id": repository_id})
         return ErrorResponse(
             message=E.REPOSITORY_FORBIDDEN % {"id": repository_id}
         ), 403
@@ -122,9 +131,9 @@ def id_get(repository_id: str) -> tuple[RepositoryDetail | ErrorResponse, int]:
 
 
 @bp.put("/<string:repository_id>")
-@validate(response_by_alias=True)
 @login_required
-@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
+@roles_required(USER_ROLES.SYSTEM_ADMIN)
+@validate(response_by_alias=True)
 def id_put(
     repository_id: str, body: RepositoryDetail
 ) -> tuple[RepositoryDetail | ErrorResponse, int]:
@@ -137,23 +146,18 @@ def id_put(
     Returns:
         - If succeeded in updating repository, repository information
             and status code 200
-        - If logged-in user does not have permission, status code 403
+        - If form data is invalid, error message and status code 400
         - If repository not found, status code 404
     """
-    if not has_permission(repository_id):
-        return ErrorResponse(
-            message=E.REPOSITORY_FORBIDDEN % {"id": repository_id}
-        ), 403
-
     body.id = repository_id
     try:
         updated = repositories.update(body)
     except InvalidFormError as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 400
     except ResourceNotFound as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 404
-    except ResourceInvalid as exc:
-        return ErrorResponse(message=exc.message), 409
 
     return updated, 200
 
@@ -178,11 +182,11 @@ def id_delete(
     try:
         repositories.delete_by_id(repository_id, query.confirmation)
     except InvalidFormError as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 400
     except ResourceNotFound as exc:
+        traceback.print_exc()
         return ErrorResponse(message=exc.message), 404
-    except ResourceInvalid as exc:
-        return ErrorResponse(message=exc.message), 400
 
     return "", 204
 
@@ -206,3 +210,14 @@ def has_permission(repository_id: str) -> bool:
 
     permitted_repository_ids = get_permitted_repository_ids()
     return repository_id in permitted_repository_ids
+
+
+@bp.get("/filter-options")
+@validate(response_many=True)
+def filter_options() -> list[FilterOption]:
+    """Get filter options for repository search.
+
+    Returns:
+        list[FilterOption]: List of filter options for repository search.
+    """
+    return search_repositories_options()

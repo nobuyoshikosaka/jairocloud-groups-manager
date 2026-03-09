@@ -39,9 +39,7 @@ def detect_affiliations(group_ids: list[str]) -> Affiliations:
               that is, (`repository_id`, `group_id`, `user_defined_id`, `type`="group").
     """
     detect_affiliations = [
-        detect
-        for group_id in group_ids
-        if (detect := detect_affiliation(group_id)) is not None
+        detect for group_id in group_ids if (detect := detect_affiliation(group_id))
     ]
 
     aggregated: defaultdict[str | None, list[USER_ROLES]] = defaultdict(list)

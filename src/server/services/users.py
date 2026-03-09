@@ -16,7 +16,14 @@ from pydantic_core import ValidationError
 
 from server.clients import users
 from server.config import config
-from server.const import MAP_NOT_FOUND_PATTERN
+from server.const import (
+    MAP_ALREADY_TIED_PATTERN,
+    MAP_DUPLICATE_ID_PATTERN,
+    MAP_ILLEGAL_EPPN_PATTERN,
+    MAP_NO_RIGHTS_APPEND_PATTERN,
+    MAP_NO_RIGHTS_UPDATE_PATTERN,
+    MAP_NOT_FOUND_PATTERN,
+)
 from server.entities.map_error import MapError
 from server.entities.search_request import SearchResponse, SearchResult
 from server.entities.summaries import UserSummary
@@ -25,13 +32,14 @@ from server.exc import (
     ApiClientError,
     ApiRequestError,
     CredentialsError,
+    InvalidFormError,
     InvalidQueryError,
     OAuthTokenError,
     ResourceInvalid,
     ResourceNotFound,
     UnexpectedResponseError,
 )
-from server.services.utils.transformers import prepare_user, validate_user_to_map_user
+from server.messages import E, I
 from server.signals import user_deleted, user_updated
 
 from .token import get_access_token, get_client_secret
@@ -39,7 +47,10 @@ from .utils import (
     UsersCriteria,
     build_patch_operations,
     build_search_query,
+    is_current_user_system_admin,
     make_criteria_object,
+    prepare_user,
+    validate_user_to_map_user,
 )
 
 
@@ -91,8 +102,8 @@ def search(
         "groups",
     }
 
+    query = build_search_query(criteria)
     try:
-        query = build_search_query(criteria)
         access_token = get_access_token()
         client_secret = get_client_secret()
         results: UsersSearchResponse = users.search(
@@ -102,32 +113,35 @@ def search(
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_SEARCH_USERS, {"filter": query.filter})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to search User resources from mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_SEARCH_USERS, {"filter": query.filter})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse User resources from mAP Core API."
+        current_app.logger.error(E.FAILED_SEARCH_USERS, {"filter": query.filter})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
-    except InvalidQueryError, OAuthTokenError, CredentialsError:
+    except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(results, MapError):
-        current_app.logger.info(results.detail)
-        raise InvalidQueryError(results.detail)
+        current_app.logger.error(E.FAILED_SEARCH_USERS, {"filter": query.filter})
+        current_app.logger.error(
+            E.RECEIVE_RESPONSE_MESSAGE, {"message": results.detail}
+        )
+        error = E.UNSUPPORTED_SEARCH_FILTER
+        raise InvalidQueryError(error)
 
     if raw:
         return results
@@ -175,31 +189,31 @@ def get_by_id(
             user_id, access_token=access_token, client_secret=client_secret
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_GET_USER, {"id": user_id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to get User resource from mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_GET_USER, {"id": user_id})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse User resource from mAP Core API."
+        current_app.logger.error(E.FAILED_GET_USER, {"id": user_id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
+        current_app.logger.error(E.FAILED_GET_USER, {"id": user_id})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
         return None
 
     if raw:
@@ -239,31 +253,31 @@ def get_by_eppn(eppn: str, *, raw: bool = False) -> UserDetail | MapUser | None:
             eppn, access_token=access_token, client_secret=client_secret
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_GET_USER_BY_EPPN, {"eppn": eppn})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to get User resource from mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_GET_USER_BY_EPPN, {"eppn": eppn})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse User resource from mAP Core API."
+        current_app.logger.error(E.FAILED_GET_USER_BY_EPPN, {"eppn": eppn})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
+        current_app.logger.error(E.FAILED_GET_USER_BY_EPPN, {"eppn": eppn})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
         return None
 
     if raw:
@@ -284,9 +298,11 @@ def create(user: UserDetail) -> UserDetail:
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
-        ResourceInvalid: If the User resource data is invalid.
+        InvalidFormError: If the form data to create is invalid.
+        ResourceInvalid: If the User resource is invalid despite passing validation.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
+    primary_eppn = user.eppns[0] if user.eppns else "N/A"
     try:
         map_user = prepare_user(user)
 
@@ -300,33 +316,47 @@ def create(user: UserDetail) -> UserDetail:
         )
 
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_CREATE_USER, {"eppn": primary_eppn})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to create User resource in mAP Core API."
+        error = E.FAILED_CREATE_USER
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_CREATE_USER, {"eppn": primary_eppn})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse User resource from mAP Core API."
+        current_app.logger.error(E.FAILED_CREATE_USER, {"eppn": primary_eppn})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
-    except OAuthTokenError, CredentialsError:
+    except OAuthTokenError, CredentialsError, InvalidFormError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        raise ResourceInvalid(result.detail)
+        current_app.logger.error(E.FAILED_CREATE_USER, {"eppn": primary_eppn})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if m := re.search(MAP_DUPLICATE_ID_PATTERN, result.detail):
+            error = E.USER_DUPLICATE_ID % {"id": m.group(1)}
+            raise ResourceInvalid(error)
+        if m := re.search(MAP_ALREADY_TIED_PATTERN, result.detail):
+            error = E.USER_ALREADY_TIED_EPPN % {"eppn": m.group(1)}
+            raise ResourceInvalid(error)
+        if m := re.search(MAP_ILLEGAL_EPPN_PATTERN, result.detail):
+            error = E.USER_EPPN_ILLEGAL % {"eppn": m.group(1)}
+            raise ResourceInvalid(error)
 
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
+
+    current_app.logger.info(
+        I.SUCCESS_CREATE_USER, {"id": result.id, "eppn": primary_eppn}
+    )
     return UserDetail.from_map_user(result)
 
 
@@ -342,6 +372,7 @@ def update(user: UserDetail) -> UserDetail:  # noqa: C901
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
+        InvalidFormError: If the form data to update is invalid.
         ResourceInvalid: If the User resource data is invalid.
         ResourceNotFound: If the User resource is not found.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
@@ -355,9 +386,15 @@ def update(user: UserDetail) -> UserDetail:  # noqa: C901
     user_id = t.cast("str", user.id)
     current: UserDetail | None = get_by_id(user_id)
     if current is None:
-        error = f"User '{user.id}' Not Found"
+        error = E.USER_NOT_FOUND % {"id": user_id}
         raise ResourceNotFound(error)
 
+    if not is_current_user_system_admin() and current.is_system_admin:
+        error = E.USER_NO_UPDATE_SYSTEM_ADMIN
+        raise InvalidFormError(error)
+    # promotion permission will be checked in validation process.
+
+    primary_eppn = user.eppns[0] if user.eppns else "N/A"
     try:
         validated = validate_user_to_map_user(user, mode="update")
 
@@ -378,36 +415,51 @@ def update(user: UserDetail) -> UserDetail:  # noqa: C901
         )
 
     except requests.HTTPError as exc:
+        current_app.logger.error(
+            E.FAILED_UPDATE_USER, {"id": user_id, "eppn": primary_eppn}
+        )
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to update User resource in mAP Core API."
+        error = E.FAILED_UPDATE_USER
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(
+            E.FAILED_UPDATE_USER, {"id": user_id, "eppn": primary_eppn}
+        )
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse User resource from mAP Core API."
+        current_app.logger.error(
+            E.FAILED_UPDATE_USER, {"id": user_id, "eppn": primary_eppn}
+        )
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-            raise ResourceNotFound(result.detail)
+        current_app.logger.error(
+            E.FAILED_UPDATE_USER, {"id": user_id, "eppn": primary_eppn}
+        )
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.USER_NOT_FOUND % {"id": m.group(1)}
+            raise ResourceNotFound(error)
+        if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail):
+            error = E.NO_RIGHTS_UPDATE_USER % {"id": user_id}
+            raise OAuthTokenError(error)
 
         raise ResourceInvalid(result.detail)
 
+    current_app.logger.info(
+        I.SUCCESS_UPDATE_USER, {"id": user_id, "eppn": primary_eppn}
+    )
     return UserDetail.from_map_user(result)
 
 
@@ -423,7 +475,8 @@ def update_put(user: UserDetail) -> UserDetail:  # noqa: C901
     Raises:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
-        ResourceInvalid: If the User resource data is invalid.
+        InvalidFormError: If the form data to update is invalid.
+        ResourceInvalid: If the User resource is invalid despite passing validation.
         ResourceNotFound: If the User resource is not found.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
@@ -433,6 +486,17 @@ def update_put(user: UserDetail) -> UserDetail:  # noqa: C901
     if config.MAP_CORE.update_strategy == "patch":
         return update(user)
 
+    user_id = t.cast("str", user.id)
+    current: UserDetail | None = get_by_id(user_id)
+    if current is None:
+        error = E.USER_NOT_FOUND % {"id": user_id}
+        raise ResourceNotFound(error)
+
+    if not is_current_user_system_admin() and current.is_system_admin:
+        error = E.USER_NO_UPDATE_SYSTEM_ADMIN
+        raise InvalidFormError(error)
+
+    primary_eppn = user.eppns[0] if user.eppns else "N/A"
     try:
         validated = validate_user_to_map_user(user, mode="update")
 
@@ -446,36 +510,53 @@ def update_put(user: UserDetail) -> UserDetail:  # noqa: C901
         )
 
     except requests.HTTPError as exc:
+        current_app.logger.error(
+            E.FAILED_UPDATE_USER, {"id": user.id, "eppn": primary_eppn}
+        )
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to update User resource in mAP Core API."
+        error = E.FAILED_UPDATE_USER
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(
+            E.FAILED_UPDATE_USER, {"id": user.id, "eppn": primary_eppn}
+        )
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse User resource from mAP Core API."
+        current_app.logger.error(
+            E.FAILED_UPDATE_USER, {"id": user.id, "eppn": primary_eppn}
+        )
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-            raise ResourceNotFound(result.detail)
+        current_app.logger.error(
+            E.FAILED_UPDATE_USER, {"id": user.id, "eppn": primary_eppn}
+        )
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.USER_NOT_FOUND % {"id": m.group(1)}
+            raise ResourceNotFound(error)
+        if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail) or re.search(
+            MAP_NO_RIGHTS_APPEND_PATTERN, result.detail
+        ):
+            error = E.NO_RIGHTS_UPDATE_USER % {"id": user.id}
+            raise OAuthTokenError(error)
 
         raise ResourceInvalid(result.detail)
 
+    current_app.logger.info(
+        I.SUCCESS_UPDATE_USER, {"id": user.id, "eppn": primary_eppn}
+    )
     return UserDetail.from_map_user(result)
 
 
@@ -497,7 +578,7 @@ def update_affiliations(user: UserDetail) -> UserDetail:
     user_id = t.cast("str", user.id)
     current: UserDetail | None = get_by_id(user_id)
     if current is None:
-        error = f"User '{user.id}' Not Found"
+        error = E.USER_NOT_FOUND % {"id": user_id}
         raise ResourceNotFound(error)
 
     validated = validate_user_to_map_user(user, mode="update")
@@ -507,12 +588,9 @@ def update_affiliations(user: UserDetail) -> UserDetail:
         include={"groups"},
     )
 
-    current_app.logger.info(
-        "Built patch operations for user '%s': %s", user_id, operations
-    )
+    from . import groups  # noqa: PLC0415
 
-    from server.services import groups  # noqa: PLC0415
-
+    primary_eppn = user.eppns[0] if user.eppns else "N/A"
     errors: list[Exception] = []
     for op in operations:
         if op.op == "replace":
@@ -530,19 +608,20 @@ def update_affiliations(user: UserDetail) -> UserDetail:
         except OAuthTokenError, CredentialsError:
             raise
         except (ApiClientError, ApiRequestError) as exc:
-            current_app.logger.error(
-                "Failed to update affiliations for user '%s' in group '%s'",
-                user_id,
-                group_id,
-            )
             errors.append(exc)
 
     user_updated.send(None, user=user)
 
     if errors:
-        error = "Failed to update some affiliations for the user."
+        error = E.FAILED_UPDATE_USER_AFFILIATIONS % {
+            "id": user_id,
+            "eppn": primary_eppn,
+        }
         raise ExceptionGroup(error, errors)
 
+    current_app.logger.info(
+        I.SUCCESS_UPDATE_USER_AFFILIATIONS, {"id": user_id, "eppn": primary_eppn}
+    )
     return t.cast("UserDetail", get_by_id(user_id))
 
 
@@ -565,7 +644,10 @@ def get_system_admins(*, raw: bool = False) -> set[str] | list[MapUser]:
         - MapUser: The raw User objects of system administrators from mAP Core API.
     """
     criteria = make_criteria_object("users", a=[0], super=True)
-    result = search(criteria, raw=True)
+    try:
+        result = search(criteria, raw=True)
+    finally:
+        current_app.logger.info(I.SEARCHED_SYSTEM_ADMINS)
 
     if raw:
         return result.resources
@@ -588,9 +670,9 @@ def count(criteria: UsersCriteria) -> int:
         CredentialsError: If the client credentials are invalid.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
-    criteria.l = 1
+    criteria.l = 0
+    query = build_search_query(criteria)
     try:
-        query = build_search_query(criteria)
         access_token = get_access_token()
         client_secret = get_client_secret()
         results: UsersSearchResponse = users.search(
@@ -600,31 +682,33 @@ def count(criteria: UsersCriteria) -> int:
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_COUNT_USERS, {"filter": query.filter})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to search User resources from mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_COUNT_USERS, {"filter": query.filter})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse User resources from mAP Core API."
+        current_app.logger.error(E.FAILED_COUNT_USERS, {"filter": query.filter})
+        error = E.FAILED_DECODE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
-    except InvalidQueryError, OAuthTokenError, CredentialsError:
+    except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(results, MapError):
-        current_app.logger.info(results.detail)
+        current_app.logger.error(E.FAILED_COUNT_USERS, {"filter": query.filter})
+        current_app.logger.error(
+            E.RECEIVE_RESPONSE_MESSAGE, {"message": results.detail}
+        )
         raise InvalidQueryError(results.detail)
 
     return results.total_results
