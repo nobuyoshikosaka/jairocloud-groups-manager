@@ -12,7 +12,6 @@ from pydantic import BaseModel, PrivateAttr
 
 from .common import camel_case_config, forbid_extra_config
 from .map_group import MapGroup, Visibility
-from .summaries import UserSummary
 
 
 class GroupDetail(BaseModel):
@@ -51,13 +50,13 @@ class GroupDetail(BaseModel):
     users_count: int | None = None
     """The number of users in the group. Alias to 'usersCount'."""
 
-    _users: list[UserSummary] | None = PrivateAttr(None)
+    _users: list[str] | None = PrivateAttr(None)
     """The users in the group."""
 
-    _admins: list[UserSummary] | None = PrivateAttr(None)
+    _admins: list[str] | None = PrivateAttr(None)
     """The administrators of the group."""
 
-    _services: list[Service] | None = PrivateAttr(None)
+    _services: list[str] | None = PrivateAttr(None)
     """The services associated with the group."""
 
     model_config = camel_case_config | forbid_extra_config
@@ -101,19 +100,6 @@ class Repository(BaseModel):
 
     service_name: str | None = None
     """The name of the repository. Alias to 'serviceName'."""
-
-    model_config = camel_case_config | forbid_extra_config
-    """Configure to use camelCase aliasing and forbid extra fields."""
-
-
-class Service(BaseModel):
-    """Model for summary Service information in mAP Core API."""
-
-    id: str
-    """The unique identifier for the service."""
-
-    service_name: str | None = None
-    """The name of the service. Alias to 'serviceName'."""
 
     model_config = camel_case_config | forbid_extra_config
     """Configure to use camelCase aliasing and forbid extra fields."""

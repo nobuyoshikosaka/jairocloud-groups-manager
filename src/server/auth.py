@@ -4,17 +4,17 @@
 
 """helper for api decorator."""
 
-import traceback
 import typing as t
 
 from datetime import UTC, datetime
 
-from flask import session
+from flask import current_app, session
 from flask_login import LoginManager, current_user
 
 from server.config import config
 from server.datastore import account_store
 from server.entities.login_user import LoginUser
+from server.messages import I
 
 
 if t.TYPE_CHECKING:
@@ -40,7 +40,6 @@ def is_user_logged_in(current_user: LocalProxy) -> t.TypeGuard[LoginUser]:
     try:
         return t.cast("CurrentUser", current_user).is_authenticated
     except AttributeError:
-        traceback.print_exc()
         return False
 
 
@@ -52,18 +51,12 @@ def refresh_session() -> None:
         return
 
     session_id: str = current_user.session_id or session["_id"]
-
     key = build_account_store_key(session_id)
-    login_date_raw = account_store.hget(key, "loginDate")
-    if isinstance(login_date_raw, bytes):
-        login_date_raw = login_date_raw.decode("utf-8")
-    if not isinstance(login_date_raw, str):
-        return
 
-    login_date = datetime.fromisoformat(login_date_raw)
-    time_since_login = datetime.now(UTC) - login_date
+    time_since_login = datetime.now(UTC) - current_user.login_date
     if time_since_login.total_seconds() > config.SESSION.absolute_lifetime:
         account_store.delete(key)
+        current_app.logger.info(I.USER_SESSION_EXPIRED, {"eppn": current_user.eppn})
         return
 
     session_ttl: int = config.SESSION.sliding_lifetime

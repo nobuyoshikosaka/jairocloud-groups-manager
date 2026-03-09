@@ -21,8 +21,8 @@
     "check-updates": "pnpx --package=npm-check-updates ncu"
   },
   "dependencies": {
-    "@iconify-json/lucide": "^1.2.95",
-    "@nuxt/content": "3.12.0",
+    "@iconify-json/lucide": "^1.2.96",
+    "@nuxt/content": "^3.12.0",
     "@nuxt/ui": "^4.5.1",
     "@nuxtjs/i18n": "^10.2.3",
     "@pinia/nuxt": "^0.11.3",
@@ -38,7 +38,7 @@
     "@nuxt/eslint": "^1.15.2",
     "@nuxt/test-utils": "4.0.0",
     "better-sqlite3": "^12.6.2",
-    "eslint": "^10.0.2",
+    "eslint": "^10.0.3",
     "eslint-plugin-unicorn": "^63.0.0",
     "husky": "^9.1.7",
     "typescript": "^5.9.3",

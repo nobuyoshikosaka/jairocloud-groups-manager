@@ -8,8 +8,14 @@ import click
 
 from flask import current_app
 
-from server.messages import I
-from server.services.token import prepare_issuing_url, refresh_access_token
+from server.messages import E, I
+from server.services.token import (
+    check_token_validity,
+    get_access_token,
+    get_token_owner,
+    prepare_issuing_url,
+    refresh_access_token,
+)
 
 
 @click.group()
@@ -25,7 +31,30 @@ def issue() -> None:
 
 
 @token.command()
+def check() -> None:
+    """Check access token validity."""
+    token = get_access_token()
+
+    if not check_token_validity(token):
+        current_app.logger.info(E.ACCESS_TOKEN_NOT_AVAILABLE)
+        return
+
+    current_app.logger.info(I.ACCESS_TOKEN_AVAILABLE)
+
+
+@token.command()
 def refresh() -> None:
     """Refresh access token."""
     refresh_access_token()
-    current_app.logger.info(I.SUCCESS_REFRESH_TOKEN)
+
+
+@token.command()
+def whoami() -> None:
+    """Get the user details of the token owner."""
+    owner = get_token_owner()
+    current_app.logger.info(
+        I.SUCCESS_GET_TOKEN_OWNER,
+        {
+            "user": owner.model_dump_json(indent=2, ensure_ascii=False),
+        },
+    )

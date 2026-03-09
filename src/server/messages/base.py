@@ -26,6 +26,14 @@ class LogMessage(UserString):
         super().__init__(message)
         self.code = code
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, LogMessage):
+            return NotImplemented
+        return self.code == other.code
+
+    def __hash__(self) -> int:
+        return hash((self.code, self.data))
+
     def __format__(self, format_spec: str) -> t.NoReturn:
         raise NotImplementedError
 

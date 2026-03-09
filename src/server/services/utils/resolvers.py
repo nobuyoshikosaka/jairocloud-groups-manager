@@ -7,6 +7,7 @@
 import typing as t
 
 from server.config import config
+from server.messages import E
 
 
 @t.overload
@@ -41,7 +42,7 @@ def resolve_repository_id(
             return None
         return service_id.removeprefix(prefix).removesuffix(suffix)
 
-    error = "Either 'fqdn' or 'resource_id' must be provided."
+    error = E.REPOSITORY_REQUIRES_FQDN_OR_SERVICE_ID
     raise ValueError(error)
 
 
@@ -73,5 +74,5 @@ def resolve_service_id(
     if repository_id is not None:
         return pattern.format(repository_id=repository_id)
 
-    error = "Either 'fqdn' or 'repository_id' must be provided."
+    error = E.RESOURCE_REQUIRES_FQDN_OR_REPOSITORY_ID
     raise ValueError(error)

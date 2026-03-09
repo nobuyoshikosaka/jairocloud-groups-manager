@@ -12,11 +12,12 @@ import typing as t
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, RootModel
+from pydantic import BaseModel, ConfigDict, RootModel, model_validator
 from werkzeug.datastructures import FileStorage
 
 from server.entities.common import camel_case_config
 from server.entities.search_request import SearchResult
+from server.messages.base import LogMessage
 
 
 ignore_extra_config = ConfigDict(
@@ -65,11 +66,27 @@ class OAuthTokenQuery(BaseModel):
 class ErrorResponse(BaseModel):
     """Schema for error responses."""
 
-    code: str
+    code: str | None = None
     """Message code."""
 
     message: str
     """Error message."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def preprocess(cls, data: dict) -> dict:
+        """Extract error message from string or LogMessage.
+
+        Args:
+            data : The error message.
+
+        Returns:
+            dict: The processed error message.
+        """
+        if (message := data.get("message")) and isinstance(message, LogMessage):
+            data.setdefault("code", message.code)
+            data["message"] = message.data
+        return data
 
 
 class GlobalSearchQuery(BaseModel):
@@ -237,7 +254,7 @@ class GroupPatchOperation(BaseModel):
     """Value to be changed."""
 
 
-class DeleteGroupsRequest(BaseModel):
+class DeleteGroupsBody(BaseModel):
     """Schema for deleting multiple groups."""
 
     group_ids: set[str]
@@ -270,7 +287,7 @@ class OperatorQuery(BaseModel):
     """Configure to ignore extra fields."""
 
 
-class TargetRepository(BaseModel):
+class TargetRepositoryForm(BaseModel):
     """Schema for target repository."""
 
     repository_id: str
@@ -280,7 +297,7 @@ class TargetRepository(BaseModel):
     """Configure to use camelCase aliasing."""
 
 
-class UploadFiles(BaseModel):
+class BulkFileForm(BaseModel):
     """Schema for upload files."""
 
     bulk_file: FileStorage

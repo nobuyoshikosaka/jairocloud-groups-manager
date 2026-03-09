@@ -16,6 +16,7 @@ from werkzeug.datastructures import FileStorage
 
 from server.config import config
 from server.const import USER_ROLES
+from server.messages import E
 from server.services.utils import get_current_user_affiliations, get_highest_role
 
 
@@ -139,7 +140,7 @@ def _check_file_size(field_name: str, *files: FileStorage | None) -> list:
         if file_length > max_size:
             errors.append({
                 "loc": [field_name],
-                "msg": f"File size exceeds limit of {max_size} bytes",
+                "msg": E.FILE_TOO_LARGE % {"max": max_size},
                 "type": "value_error.filesize_limit",
                 "ctx": {"limit_value": max_size, "actual_value": file_length},
             })

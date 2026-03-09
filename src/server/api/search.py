@@ -24,8 +24,7 @@ from .schemas import ErrorResponse, GlobalSearchQuery, GlobalSearchResult
 bp = Blueprint("search", __name__)
 
 
-@bp.get("")
-@bp.get("/")
+@bp.get("/", strict_slashes=False)
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)

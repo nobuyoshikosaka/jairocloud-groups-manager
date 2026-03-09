@@ -38,6 +38,7 @@ from .const import (
     HAS_REPO_NAME_PATTERN,
     USER_ROLES,
 )
+from .messages import E
 
 
 class RuntimeConfig(BaseSettings):
@@ -306,18 +307,17 @@ class RepositoriesConfig(BaseModel):
             value (str): The expression to evaluate for max_url_length.
 
         Returns:
-            int: The evaluated max_url_length value.
+            int|str: The evaluated max_url_length value.
 
         Raises:
             ValueError: If the expression is invalid or does not evaluate to an integer.
         """
-        if not (pursed := safe_eval(value)) or not isinstance(pursed, int):
-            error = (
-                "max_url_length must be an expression that evaluates to an integer, "
-                f"got: {value}"
-            )
-            raise ValueError(error)
-        return pursed
+        try:
+            pursed = safe_eval(value)
+        except SyntaxError as exc:
+            error = E.INVALID_EXPRESSION
+            raise ValueError(error) from exc
+        return t.cast("int", pursed)
 
 
 class RepositoriesIdPatternsConfig(BaseModel):
@@ -353,13 +353,12 @@ class GroupsConfig(BaseModel):
         Raises:
             ValueError: If the expression is invalid or does not evaluate to an integer.
         """
-        if not (pursed := safe_eval(value)) or not isinstance(pursed, int):
-            error = (
-                "max_url_length must be an expression that evaluates to an integer, "
-                f"got: {value}"
-            )
-            raise ValueError(error)
-        return pursed
+        try:
+            pursed = safe_eval(value)
+        except SyntaxError as exc:
+            error = E.INVALID_EXPRESSION
+            raise ValueError(error) from exc
+        return t.cast("int", pursed)
 
 
 class GroupIdPatternsConfig(BaseModel):
@@ -614,7 +613,7 @@ def safe_eval(expr: str) -> int | str:
             if node.func.id == "min":
                 return min(args)
 
-        error = f"Unsupported expression: {ast.dump(node)}"
+        error = E.UNSUPPORTED_EXPRESSION % {"exp": expr}
         raise ValueError(error)
 
     return _eval(ast.parse(expr, mode="eval").body)

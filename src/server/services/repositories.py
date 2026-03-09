@@ -16,7 +16,12 @@ from pydantic_core import ValidationError
 
 from server.clients import groups, services
 from server.config import config
-from server.const import MAP_NOT_FOUND_PATTERN
+from server.const import (
+    MAP_DUPLICATE_ID_PATTERN,
+    MAP_NO_RIGHTS_CREATE_PATTERN,
+    MAP_NO_RIGHTS_UPDATE_PATTERN,
+    MAP_NOT_FOUND_PATTERN,
+)
 from server.entities.map_error import MapError
 from server.entities.repository_detail import RepositoryDetail
 from server.entities.search_request import SearchResponse, SearchResult
@@ -31,9 +36,10 @@ from server.exc import (
     SystemAdminNotFound,
     UnexpectedResponseError,
 )
+from server.messages import E, I
 
+from . import users
 from .token import get_access_token, get_client_secret
-from .users import get_system_admins
 from .utils import (
     RepositoriesCriteria,
     build_patch_operations,
@@ -87,8 +93,8 @@ def search(
     """
     default_include = {"id", "service_name", "service_url", "entity_ids"}
 
+    query = build_search_query(criteria)
     try:
-        query = build_search_query(criteria)
         access_token = get_access_token()
         client_secret = get_client_secret()
         results: ServicesSearchResponse = services.search(
@@ -98,32 +104,35 @@ def search(
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES, {"filter": query.filter})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to search Repository resources from mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to communicate with mAP Core API."
+        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES, {"filter": query.filter})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse Repository resources from mAP Core API."
+        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES, {"filter": query.filter})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
-    except InvalidQueryError, OAuthTokenError, CredentialsError:
+    except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(results, MapError):
-        current_app.logger.info(results.detail)
-        raise InvalidQueryError(results.detail)
+        current_app.logger.error(E.FAILED_SEARCH_REPOSITORIES, {"filter": query.filter})
+        current_app.logger.error(
+            E.RECEIVE_RESPONSE_MESSAGE, {"message": results.detail}
+        )
+        error = E.UNSUPPORTED_SEARCH_FILTER
+        raise InvalidQueryError(error)
 
     if raw:
         return results
@@ -188,31 +197,31 @@ def get_by_id(
             client_secret=client_secret,
         )
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_GET_REPOSITORY, {"id": service_id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to get Repository resource from mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to connect to mAP Core API."
+        current_app.logger.error(E.FAILED_GET_REPOSITORY, {"id": service_id})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse response from mAP Core API."
+        current_app.logger.error(E.FAILED_GET_REPOSITORY, {"id": service_id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
+        current_app.logger.error(E.FAILED_GET_REPOSITORY, {"id": service_id})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
         return None
 
     if raw:
@@ -238,7 +247,7 @@ def create(repository: RepositoryDetail) -> RepositoryDetail:
         SystemAdminNotFound: If no system administrators are found in the system.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
-    admins = get_system_admins()
+    admins = users.get_system_admins()
 
     try:
         service, repository_id = prepare_service(repository, admins)
@@ -250,6 +259,9 @@ def create(repository: RepositoryDetail) -> RepositoryDetail:
         client_secret = get_client_secret()
         for group in role_groups:
             groups.post(group, access_token=access_token, client_secret=client_secret)
+        current_app.logger.info(
+            I.SUCCESS_CREATE_ROLEGROUPS, {"id": repository.service_id}
+        )
 
         result: MapService | MapError = services.post(
             service,
@@ -259,33 +271,49 @@ def create(repository: RepositoryDetail) -> RepositoryDetail:
         )
 
     except requests.HTTPError as exc:
+        current_app.logger.error(
+            E.FAILED_CREATE_REPOSITORY, {"id": repository.service_id}
+        )
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to create Repository resource in mAP Core API."
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to connect to mAP Core API."
+        current_app.logger.error(
+            E.FAILED_CREATE_REPOSITORY, {"id": repository.service_id}
+        )
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse response from mAP Core API."
+        current_app.logger.error(
+            E.FAILED_CREATE_REPOSITORY, {"id": repository.service_id}
+        )
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError, InvalidFormError, SystemAdminNotFound:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        raise ResourceInvalid(result.detail)
+        current_app.logger.error(
+            E.FAILED_CREATE_REPOSITORY, {"id": repository.service_id}
+        )
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if m := re.search(MAP_DUPLICATE_ID_PATTERN, result.detail):
+            error = E.REPOSITORY_DUPLICATE_ID % {"id": m.group(1)}
+            raise ResourceInvalid(error)
+        if re.search(MAP_NO_RIGHTS_CREATE_PATTERN, result.detail):
+            error = E.NO_RIGHTS_CREATE_REPOSITORY
+            raise OAuthTokenError(error)
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
 
+    current_app.logger.info(I.SUCCESS_CREATE_REPOSITORY, {"id": result.id})
     return RepositoryDetail.from_map_service(result)
 
 
@@ -303,7 +331,6 @@ def update(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
         InvalidFormError: If failed to validate repository form data for update.
-        ResourceInvalid: If the Repository resource data is invalid.
         ResourceNotFound: If the Repository resource does not exist.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
@@ -316,11 +343,13 @@ def update(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
     service_id = t.cast("str", validated.id)
     current = get_by_id(repository_id)
     if current is None:
-        error = f"Repository '{repository_id}' Not Found"
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
+        error = E.REPOSITORY_NOT_FOUND % {"id": service_id}
         raise ResourceNotFound(error)
 
     if validated.service_url and validated.service_url != current.service_url:
-        error = "Service URL could not be updated."
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
+        error = E.UNCHANGEABLE_REPOSITORY_URL
         raise InvalidFormError(error)
 
     operations: list[PatchOperation[MapService]] = build_patch_operations(
@@ -340,36 +369,42 @@ def update(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
         )
 
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to update Repository resource in mAP Core API."
+        error = E.UNEXPECTED_SERVER_ERROR
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to connect to mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse response from mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-            raise ResourceNotFound(result.detail)
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.REPOSITORY_NOT_FOUND % {"id": m.group(1)}
+            raise ResourceNotFound(error)
+        if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail):
+            error = E.NO_RIGHTS_UPDATE_REPOSITORY % {"id": service_id}
+            raise OAuthTokenError(error)
 
-        raise ResourceInvalid(result.detail)
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
 
+    current_app.logger.info(I.SUCCESS_UPDATE_REPOSITORY, {"id": result.id})
     return RepositoryDetail.from_map_service(result)
 
 
@@ -388,7 +423,6 @@ def update_put(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
         InvalidFormError: If failed to validate repository form data for update.
-        ResourceInvalid: If the Repository resource data is invalid.
         ResourceNotFound: If the Repository resource does not exist.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
@@ -398,13 +432,14 @@ def update_put(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
     validated = validate_repository_to_map_service(repository)
 
     repository_id = t.cast("str", repository.id)
+    service_id = t.cast("str", validated.id)
     current = get_by_id(repository_id)
     if current is None:
-        error = f"Repository '{repository_id}' Not Found"
+        error = E.REPOSITORY_NOT_FOUND % {"id": service_id}
         raise ResourceNotFound(error)
 
     if validated.service_url and validated.service_url != current.service_url:
-        error = "Service URL could not be updated."
+        error = E.UNCHANGEABLE_REPOSITORY_URL
         raise InvalidFormError(error)
 
     try:
@@ -418,40 +453,46 @@ def update_put(repository: RepositoryDetail) -> RepositoryDetail:  # noqa: C901
         )
 
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to update Repository resource in mAP Core API."
+        error = E.UNEXPECTED_SERVER_ERROR
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to connect to mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
+        error = E.FAILED_CONNECT_REDIS
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse response from mAP Core API."
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
     if isinstance(result, MapError):
-        current_app.logger.info(result.detail)
-        if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-            raise ResourceNotFound(result.detail)
+        current_app.logger.error(E.FAILED_UPDATE_REPOSITORY, {"id": service_id})
+        current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.REPOSITORY_NOT_FOUND % {"id": m.group(1)}
+            raise ResourceNotFound(error)
+        if re.search(MAP_NO_RIGHTS_UPDATE_PATTERN, result.detail):
+            error = E.NO_RIGHTS_UPDATE_REPOSITORY % {"id": service_id}
+            raise OAuthTokenError(error)
 
-        raise ResourceInvalid(result.detail)
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
 
+    current_app.logger.info(I.SUCCESS_UPDATE_REPOSITORY, {"id": result.id})
     return RepositoryDetail.from_map_service(result)
 
 
-def delete_by_id(repository_id: str, service_name: str) -> None:  # noqa: C901
+def delete_by_id(repository_id: str, service_name: str) -> None:
     """Delete a Repository resource by its ID.
 
     Args:
@@ -464,18 +505,18 @@ def delete_by_id(repository_id: str, service_name: str) -> None:  # noqa: C901
         CredentialsError: If the client credentials are invalid.
         ResourceNotFound: If the Repository resource does not exist.
         InvalidFormError: If the service name to confirm does not match.
-        ResourceInvalid: If the Repository resource cannot be deleted.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
     if not (repository := get_by_id(repository_id)):
-        error = f"Repository '{repository_id}' Not Found"
+        error = E.REPOSITORY_NOT_FOUND % {"id": repository_id}
         raise ResourceNotFound(error)
 
     if repository.service_name != service_name:
-        error = "Service name does not match the repository's service."
+        error = E.REPOSITORY_NAME_NOT_MATCH % {"id": repository_id}
         raise InvalidFormError(error)
 
     service_id = resolve_service_id(repository_id=repository_id)
+    groups_to_delete = [*(repository._groups or []), *(repository._rolegroups or [])]  # noqa: SLF001
     try:
         access_token = get_access_token()
         client_secret = get_client_secret()
@@ -486,33 +527,38 @@ def delete_by_id(repository_id: str, service_name: str) -> None:  # noqa: C901
         )
 
     except requests.HTTPError as exc:
+        current_app.logger.error(E.FAILED_DELETE_REPOSITORY, {"id": service_id})
         code = exc.response.status_code
         if code == HTTPStatus.UNAUTHORIZED:
-            error = "Access token is invalid or expired."
+            error = E.ACCESS_TOKEN_NOT_AVAILABLE
             raise OAuthTokenError(error) from exc
 
-        if code == HTTPStatus.INTERNAL_SERVER_ERROR:
-            error = "mAP Core API server error."
-            raise UnexpectedResponseError(error) from exc
-
-        error = "Failed to delete Repository resource in mAP Core API."
+        error = E.UNEXPECTED_SERVER_ERROR
         raise UnexpectedResponseError(error) from exc
 
     except requests.RequestException as exc:
-        error = "Failed to connect to mAP Core API."
+        current_app.logger.error(E.FAILED_DELETE_REPOSITORY, {"id": service_id})
+        error = E.FAILED_COMMUNICATE_API
         raise UnexpectedResponseError(error) from exc
 
     except ValidationError as exc:
-        error = "Failed to parse response from mAP Core API."
+        current_app.logger.error(E.FAILED_DELETE_REPOSITORY, {"id": service_id})
+        error = E.FAILED_PARSE_RESPONSE
         raise UnexpectedResponseError(error) from exc
 
     except OAuthTokenError, CredentialsError:
         raise
 
-    if result is None:
-        return
+    if result:
+        if m := re.search(MAP_NOT_FOUND_PATTERN, result.detail):
+            error = E.REPOSITORY_NOT_FOUND % {"id": m.group(1)}
+            raise ResourceNotFound(error)
 
-    if re.search(MAP_NOT_FOUND_PATTERN, result.detail):
-        raise ResourceNotFound(result.detail)
+        error = E.RECEIVE_UNEXPECTED_RESPONSE
+        raise UnexpectedResponseError(error)
 
-    raise ResourceInvalid(result.detail)
+    current_app.logger.info(I.SUCCESS_DELETE_REPOSITORY, {"id": service_id})
+
+    from . import groups  # noqa: PLC0415
+
+    groups.delete_multiple(set(groups_to_delete))

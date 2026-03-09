@@ -125,7 +125,6 @@ const useRepositoriesTable = () => {
           'div',
           { class: 'text-right' },
           h(
-            // @ts-expect-error: props type mismatch
             UDropdownMenu,
             {
               'content': { align: 'end' },

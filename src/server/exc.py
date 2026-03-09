@@ -10,20 +10,27 @@ from server.messages.base import LogMessage
 class JAIROCloudGroupsManagerError(Exception):
     """Base exception for the server application."""
 
-    def __init__(self, message: str | LogMessage) -> None:
+    def __init__(self, message: str) -> None:
         """Initialize the exception instance.
 
         Args:
             message (str | LogMessage): The error message.
 
         """
-        self.code = ""
+        self.code = None
+        self.message = message
         if isinstance(message, LogMessage):
             self.code = message.code
             message = message.data
         super().__init__(message)
 
-        self.message = message
+        self.string = message
+
+    def __str__(self) -> str:
+        """Return the string representation of the exception."""
+        if self.code:
+            return f"{self.code} | {self.string}"
+        return self.string
 
 
 class ConfigurationError(JAIROCloudGroupsManagerError):
@@ -69,31 +76,45 @@ class SystemAdminNotFound(JAIROCloudGroupsManagerError):  # noqa: N818
     """
 
 
-class DatabaseError(JAIROCloudGroupsManagerError):
+class InfrastructureError(JAIROCloudGroupsManagerError):
+    """Exception for infrastructure errors.
+
+    Errors caused by issues in the underlying infrastructure.
+    """
+
+
+class DatabaseError(InfrastructureError):
     """Exception for database errors.
 
     Errors caused by database operation issues.
     """
 
 
-class RecordNotFound(DatabaseError):  # noqa: N818
+class DatastoreError(InfrastructureError):
+    """Exception for datastore errors.
+
+    Errors caused by datastore operation issues.
+    """
+
+
+class TaskExcutionError(DatastoreError):
+    """Exception for task execution errors.
+
+    Errors caused by issues during task execution.
+    """
+
+
+class RecordNotFound(JAIROCloudGroupsManagerError):  # noqa: N818
     """Exception for record not found errors.
 
     Errors caused by requests for non-existing records.
     """
 
 
-class InvalidRecordError(DatabaseError):
+class InvalidRecordError(JAIROCloudGroupsManagerError):
     """Exception for invalid record errors.
 
     Errors caused by invalid record data or structure.
-    """
-
-
-class DatastoreError(JAIROCloudGroupsManagerError):
-    """Exception for datastore errors.
-
-    Errors caused by datastore operation issues.
     """
 
 
@@ -139,14 +160,14 @@ class RequestConflict(ApiRequestError):  # noqa: N818
     """
 
 
-class InvalidQueryError(JAIROCloudGroupsManagerError):
+class InvalidQueryError(ApiRequestError):
     """Exception for unexpected query construction errors.
 
     Errors caused by unexpected query structure or data during query construction.
     """
 
 
-class InvalidFormError(JAIROCloudGroupsManagerError):
+class InvalidFormError(ApiRequestError):
     """Exception for invalid form data errors.
 
     Errors caused by invalid form data in API requests.
