@@ -15,6 +15,7 @@ from flask_pydantic import validate
 
 from server.auth import login_manager, refresh_session
 from server.exc import (
+    ApiRequestError,
     InfrastructureError,
     JAIROCloudGroupsManagerError,
     ServiceSettingsError,
@@ -49,9 +50,10 @@ def create_api_blueprint() -> Blueprint:
             error: The error object.
 
         Returns:
-            dict: Response body.
+            tuple: Response body and 500 status code.
         """
         traceback.print_exc()
+        # override error message to avoid exposing sensitive information
         return ErrorResponse(code=error.code, message=E.UNEXPECTED_SERVER_ERROR), 500
 
     @bp_api.errorhandler(InfrastructureError)
@@ -67,10 +69,25 @@ def create_api_blueprint() -> Blueprint:
             error: The error object.
 
         Returns:
-            dict: Response body.
+            tuple: Response body and 503 status code.
         """
         traceback.print_exc()
+        # override error message to avoid exposing sensitive information
         return ErrorResponse(code=error.code, message=E.SERVER_UNAVAILABLE), 503
+
+    @bp_api.errorhandler(ApiRequestError)
+    @validate()
+    def handle_api_request_error(error: ApiRequestError) -> tuple[ErrorResponse, int]:
+        """Handle API request errors for the API.
+
+        Args:
+            error: The error object.
+
+        Returns:
+            tuple: Response body and 400 status code.
+        """
+        traceback.print_exc()
+        return ErrorResponse(message=error.message), 400
 
     bp_api.before_request(refresh_session)
 
@@ -80,7 +97,7 @@ def create_api_blueprint() -> Blueprint:
         """Handle unauthorized access attempts.
 
         Returns:
-            dict: Response body indicating unauthorized access.
+            tuple: Response body and 401 status code.
         """
         return ErrorResponse(message=E.UNAUTHORIZED), 401
 

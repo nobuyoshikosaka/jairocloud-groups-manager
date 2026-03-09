@@ -310,7 +310,7 @@ def put_by_id(
 
 def patch_by_id(
     service_id: str,
-    operations: list[PatchOperation],
+    operations: list[PatchOperation[MapService]],
     /,
     include: set[str] | None = None,
     exclude: set[str] | None = None,

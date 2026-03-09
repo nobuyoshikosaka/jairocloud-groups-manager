@@ -74,7 +74,7 @@ class ErrorResponse(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def pre_process(cls, data: dict) -> dict:
+    def preprocess(cls, data: dict) -> dict:
         """Extract error message from string or LogMessage.
 
         Args:
@@ -254,7 +254,7 @@ class GroupPatchOperation(BaseModel):
     """Value to be changed."""
 
 
-class DeleteGroupsRequest(BaseModel):
+class DeleteGroupsBody(BaseModel):
     """Schema for deleting multiple groups."""
 
     group_ids: set[str]
@@ -287,7 +287,7 @@ class OperatorQuery(BaseModel):
     """Configure to ignore extra fields."""
 
 
-class TargetRepository(BaseModel):
+class TargetRepositoryForm(BaseModel):
     """Schema for target repository."""
 
     repository_id: str
@@ -297,7 +297,7 @@ class TargetRepository(BaseModel):
     """Configure to use camelCase aliasing."""
 
 
-class UploadFiles(BaseModel):
+class BulkFileForm(BaseModel):
     """Schema for upload files."""
 
     bulk_file: FileStorage

@@ -102,11 +102,11 @@ MAP_GROUPS_ENDPOINT: Final = "/api/v2/Groups"
 MAP_SERVICES_ENDPOINT: Final = "/api/v2/Services"
 """Endpoint for Service resources in mAP Core API."""
 
-MAP_DEFAULT_SEARCH_COUNT: Final = 20
-"""Default number of resources to return in search results from mAP Core API."""
-
 MAP_BULK_ENDPOINT: Final = "/api/v2/Bulk"
 """Endpoint for Bulk resources in mAP Core API."""
+
+MAP_DEFAULT_SEARCH_COUNT: Final = 20
+"""Default number of resources to return in search results from mAP Core API."""
 
 MAP_NOT_FOUND_PATTERN: Final = r"'(.*)' Not Found"
 """Pattern to identify 'Not Found' errors from mAP Core API."""

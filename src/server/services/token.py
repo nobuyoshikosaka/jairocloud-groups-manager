@@ -159,8 +159,7 @@ def issue_access_token(code: str) -> str:
     """
     certs = get_client_credentials()
     if certs is None:
-        error = "Client credentials are not stored on the server."
-        raise CredentialsError(error)
+        raise CredentialsError(E.CREDENTIALS_NOT_STORED)
 
     try:
         token = auth.issue_oauth_token(code, certs)

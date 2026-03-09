@@ -17,7 +17,6 @@ from server.const import (
 from server.entities.group_detail import (
     GroupDetail,
     Repository as GroupRepository,
-    Service as GroupService_,
 )
 from server.entities.map_group import (
     Administrator as GroupAdministrator,
@@ -33,7 +32,7 @@ from server.entities.map_service import (
 )
 from server.entities.map_user import EPPN, Email, Group as UserGroup, MapUser
 from server.entities.repository_detail import RepositoryDetail
-from server.entities.summaries import GroupSummary, UserSummary
+from server.entities.summaries import GroupSummary
 from server.entities.user_detail import RepositoryRole, UserDetail
 from server.exc import InvalidFormError, SystemAdminNotFound
 from server.messages import E
@@ -316,21 +315,13 @@ def make_group_detail(group: MapGroup, *, more_detail: bool = False) -> GroupDet
         users = [member for member in group.members if member.type == "User"]
         user_count = len(users)
         detail.users_count = user_count
-        detail._users = [
-            UserSummary(id=member.value, user_name=member.display) for member in users
-        ]
+        detail._users = [member.value for member in users]
 
     if group.administrators:
-        detail._admins = [
-            UserSummary(id=admin.value, user_name=admin.display)
-            for admin in group.administrators
-        ]
+        detail._admins = [admin.value for admin in group.administrators]
 
     if group.services:
-        detail._services = [
-            GroupService_(id=service.value, service_name=service.display)
-            for service in group.services
-        ]
+        detail._services = [service.value for service in group.services]
 
     if group.meta:
         detail.created = group.meta.created
@@ -460,22 +451,15 @@ def make_map_group(group: GroupDetail) -> MapGroup:
     )
 
     if group._users:
-        map_group.members = [
-            MemberUser(type="User", value=user.id, display=user.user_name)
-            for user in group._users
-        ]
+        map_group.members = [MemberUser(type="User", value=uid) for uid in group._users]
 
     if group._admins:
         map_group.administrators = [
-            GroupAdministrator(value=admin.id, display=admin.user_name)
-            for admin in group._admins
+            GroupAdministrator(value=uid) for uid in group._admins
         ]
 
     if group._services:
-        map_group.services = [
-            GroupService(value=service.id, display=service.service_name)
-            for service in group._services
-        ]
+        map_group.services = [GroupService(value=sid) for sid in group._services]
 
     return map_group
 

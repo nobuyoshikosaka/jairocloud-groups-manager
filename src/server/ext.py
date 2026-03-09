@@ -20,7 +20,7 @@ from .db.base import db
 from .db.utils import load_models
 from .exc import ConfigurationError
 from .logger import setup_logger
-from .messages import W
+from .messages import E, W
 
 
 if t.TYPE_CHECKING:
@@ -129,7 +129,7 @@ class JAIROCloudGroupsManager:
             ConfigurationError: If the configuration has not been initialized.
         """
         if isinstance(self._config, str):
-            error = "Configuration has not been initialized."
+            error = E.UNINIT_SERVER_CONFIG
             raise ConfigurationError(error)
 
         return self._config

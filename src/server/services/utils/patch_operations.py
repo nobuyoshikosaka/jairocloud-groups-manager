@@ -14,6 +14,7 @@ from server.entities.patch_request import (
     RemoveOperation,
     ReplaceOperation,
 )
+from server.messages import E
 
 
 def build_patch_operations[T: BaseModel](
@@ -37,8 +38,11 @@ def build_patch_operations[T: BaseModel](
     Raises:
         TypeError: If `original` and `updated` are not of the same type.
     """
-    if type(original) is not type(updated):
-        error = "Original and updated models must be of the same type."
+    if (type_o := type(original)) is not (type_u := type(updated)):
+        error = E.CANNOT_RESOLVE_DIFFERENCE % {
+            "original": type_o.__name__,
+            "updated": type_u.__name__,
+        }
         raise TypeError(error)
 
     gen = original.model_config.get("alias_generator")

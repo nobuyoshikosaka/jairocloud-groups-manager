@@ -7,114 +7,183 @@
 from .base import LogMessage
 
 
-DATABASE_NOT_EXIST = LogMessage(
+UNINIT_SERVER_CONFIG = LogMessage(
     "E000",
+    "Server configuration has not been initialized.",
+)
+
+INVALID_SERVER_CONFIG = LogMessage(
+    "E001",
+    "Server configuration is invalid or incomplete.",
+)
+
+UNSUPPORTED_EXPRESSION = LogMessage(
+    "E002",
+    "Unsupported expression in server configuration; "
+    "supported: 1. int / flaot literal, 2. literal str for len, "
+    "3. +, -, *, / operators, 4. len, max, min functions.",
+)
+
+INVALID_EXPRESSION = LogMessage(
+    "E003",
+    "Invalid syntax in expression in server configuration.",
+)
+
+
+DATABASE_NOT_EXIST = LogMessage(
+    "E010",
     "Database does not exist.",
 )
 
 
 INVALID_REDIS_CONFIG = LogMessage(
-    "E010",
+    "E020",
     "Failed to connect to Redis due to invalid configuration.",
 )
 
 FAILED_CONNECT_REDIS = LogMessage(
-    "E011",
+    "E021",
     "Failed to connect to Redis: %(error)s",
 )
 
 
 FAILED_ISSUE_CREDENTIALS = LogMessage(
-    "E020",
+    "E030",
     "Failed to issue client credentials.",
 )
 
 FAILED_ISSUE_TOKEN = LogMessage(
-    "E021",
+    "E031",
     "Failed to issue access token.",
 )
 
 FAILED_CHECK_TOKEN = LogMessage(
-    "E022",
+    "E032",
     "Failed to check the validity of the access token.",
 )
 
 FAILED_REFRESH_TOKEN = LogMessage(
-    "E023",
+    "E033",
     "Failed to refresh access token.",
 )
 
 CREDENTIALS_NOT_STORED = LogMessage(
-    "E024",
+    "E034",
     "Client credentials are not stored on the server.",
 )
 
 ACCESS_TOKEN_NOT_STORED = LogMessage(
-    "E025",
+    "E035",
     "Access token is not stored on the server.",
 )
 
 REFRESH_TOKEN_NOT_STORED = LogMessage(
-    "E026",
+    "E036",
     "Refresh token is not stored on the server.",
 )
 
 ACCESS_TOKEN_NOT_AVAILABLE = LogMessage(
-    "E027",
+    "E037",
     "Access token is invalid or expired.",
 )
 
 FAILED_GET_TOKEN_OWNER = LogMessage(
-    "E028",
+    "E038",
     "Failed to get token owner's User resource from mAP Core API.",
+)
+
+FAILED_GET_CLIENT_CREDENTIALS = LogMessage(
+    "E040",
+    "Failed to get client credentials from database.",
+)
+
+FAILED_PARSE_CLIENT_CREDENTIALS = LogMessage(
+    "E041",
+    "Failed to parse client credentials from database.",
+)
+
+FAILED_SAVE_CLIENT_CREDENTIALS = LogMessage(
+    "E042",
+    "Failed to save client credentials to database.",
+)
+
+FAILED_DUMP_CLIENT_CREDENTIALS = LogMessage(
+    "E043",
+    "Failed to dump client credentials for saving to database.",
+)
+
+FAILED_GET_OAUTH_TOKEN = LogMessage(
+    "E044",
+    "Failed to get OAuth token from database.",
+)
+
+FAILED_PARSE_OAUTH_TOKEN = LogMessage(
+    "E045",
+    "Failed to parse OAuth token from database.",
+)
+
+FAILED_SAVE_OAUTH_TOKEN = LogMessage(
+    "E046",
+    "Failed to save OAuth token to database.",
+)
+
+FAILED_DUMP_OAUTH_TOKEN = LogMessage(
+    "E047",
+    "Failed to dump OAuth token for saving to database.",
 )
 
 
 RECEIVE_RESPONSE_MESSAGE = LogMessage(
-    "E030",
+    "E050",
     "Received error from mAP Core API: %(message)s",
 )
 
 RECEIVE_UNEXPECTED_RESPONSE = LogMessage(
-    "E031",
+    "E051",
     "Received unexpected response from mAP Core API.",
 )
 
 FAILED_DECODE_RESPONSE = LogMessage(
-    "E032",
+    "E052",
     "Failed to decode response from mAP Core API.",
 )
 
 FAILED_COMMUNICATE_API = LogMessage(
-    "E033",
+    "E053",
     "Failed to communicate with mAP Core API.",
 )
 
 FAILED_PARSE_RESPONSE = LogMessage(
-    "E034",
+    "E054",
     "Failed to parse response from mAP Core API.",
 )
 
 
-INVALID_SERVER_CONFIG = LogMessage(
-    "E040",
-    "Server configuration is invalid or incomplete.",
+FAILED_SET_LOGIN_SESSION = LogMessage(
+    "E060",
+    "Failed to set login session for user (ePPN: %(eppn)s).",
 )
 
 
+UNINIT_RESOURCE_CACHE = LogMessage(
+    "E080",
+    "Function (name: %(name)s) is not initialized for resource caching.",
+)
+
 UNSUPPORTED_SEARCH_FILTER = LogMessage(
-    "E050",
+    "E090",
     "Unsupported search filter or combination of filters.",
 )
 
 UNRECOGNIZED_SEARCH_CRITERIA = LogMessage(
-    "E051",
+    "E091",
     "Unrecognized search criteria.",
 )
 
-UNINIT_RESOURCE_CACHE = LogMessage(
-    "E070",
-    "Function (name: %(name)s) is not initialized for resource caching.",
+CANNOT_RESOLVE_DIFFERENCE = LogMessage(
+    "E092",
+    "Cannot resolve differences between different types "
+    "(original: %(original)s, updated: %(updated)s).",
 )
 
 
@@ -207,6 +276,16 @@ REPOSITORY_REQUIRES_ENTITY_ID = LogMessage(
 UNCHANGEABLE_REPOSITORY_URL = LogMessage(
     "E150",
     "Service URL of Repository cannot be updated.",
+)
+
+REPOSITORY_REQUIRES_FQDN_OR_SERVICE_ID = LogMessage(
+    "E151",
+    "Either 'fqdn' or 'service_id' must be provided.",
+)
+
+RESOURCE_REQUIRES_FQDN_OR_REPOSITORY_ID = LogMessage(
+    "E152",
+    "Either 'fqdn' or 'repository_id' must be provided.",
 )
 
 
@@ -480,6 +559,12 @@ UNAUTHORIZED = LogMessage(
     "E401",
     "Login required to access this resource.",
 )
+
+FILE_TOO_LARGE = LogMessage(
+    "E440",
+    "Uploaded file is too large; maximum allowed size is %(max)s bytes.",
+)
+
 
 UNEXPECTED_SERVER_ERROR = LogMessage(
     "E500",

@@ -359,7 +359,7 @@ def put_by_id(
 
 def patch_by_id(
     user_id: str,
-    operations: list[PatchOperation],
+    operations: list[PatchOperation[MapUser]],
     /,
     include: set[str] | None = None,
     exclude: set[str] | None = None,

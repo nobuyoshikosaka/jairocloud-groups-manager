@@ -308,7 +308,7 @@ def put_by_id(
 
 def patch_by_id(
     group_id: str,
-    operations: list[PatchOperation],
+    operations: list[PatchOperation[MapGroup]],
     /,
     include: set[str] | None = None,
     exclude: set[str] | None = None,

@@ -17,10 +17,10 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from server.api.helpers import validate_files
 from server.api.schemas import (
     BulkBody,
+    BulkFileForm,
     ErrorResponse,
     ExcuteRequest,
-    TargetRepository,
-    UploadFiles,
+    TargetRepositoryForm,
     UploadQuery,
 )
 from server.config import config
@@ -37,13 +37,13 @@ bp = Blueprint("bulk", __name__)
 @validate_files
 @validate(response_by_alias=True)
 def upload_file(
-    form: TargetRepository, files: UploadFiles
+    form: TargetRepositoryForm, files: BulkFileForm
 ) -> tuple[BulkBody | ErrorResponse, int]:
     """Upload a file for bulk processing.
 
     Args:
-        form (TargetRepository): Target repository ID for upload.
-        files (UploadFiles): File to upload.
+        form (TargetRepositoryForm): Target repository ID for upload.
+        files (BulkFileForm): File to upload.
 
     Returns:
         BulkBody: The response containing task ID
@@ -67,7 +67,7 @@ def upload_file(
         (operator_id, operator_name, temp_id),
         session_required=True,  # pyright: ignore[reportCallIssue]
     )
-    return BulkBody(task_id=task.id, temp_file_id=temp_id), 200
+    return BulkBody(task_id=task.id, temp_file_id=temp_id), 202
 
 
 @bp.get("/validate/status/<string:task_id>")

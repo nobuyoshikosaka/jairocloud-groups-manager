@@ -40,7 +40,6 @@ from server.exc import (
     UnexpectedResponseError,
 )
 from server.messages import E, I
-from server.services.utils.transformers import prepare_user, validate_user_to_map_user
 from server.signals import user_deleted, user_updated
 
 from .token import get_access_token, get_client_secret
@@ -50,6 +49,8 @@ from .utils import (
     build_search_query,
     is_current_user_system_admin,
     make_criteria_object,
+    prepare_user,
+    validate_user_to_map_user,
 )
 
 

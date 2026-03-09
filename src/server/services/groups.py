@@ -38,7 +38,6 @@ from server.exc import (
     UnexpectedResponseError,
 )
 from server.messages import E, I
-from server.services.utils import validate_group_to_map_group
 
 from . import users
 from .token import get_access_token, get_client_secret
@@ -49,6 +48,7 @@ from .utils import (
     build_update_member_operations,
     detect_repository,
     prepare_group,
+    validate_group_to_map_group,
 )
 
 
@@ -331,7 +331,7 @@ def update(group: GroupDetail) -> GroupDetail:  # noqa: C901
         operations: list[PatchOperation[MapGroup]] = build_patch_operations(
             current.to_map_group(),
             validated,
-            include={"display_name", "public", "description", "member_list_visibility"},
+            include={"display_name", "description"},
         )
         access_token = get_access_token()
         client_secret = get_client_secret()

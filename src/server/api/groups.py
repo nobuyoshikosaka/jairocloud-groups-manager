@@ -33,7 +33,7 @@ from server.services.utils import (
 )
 
 from .schemas import (
-    DeleteGroupsRequest,
+    DeleteGroupsBody,
     ErrorResponse,
     GroupPatchRequest,
     GroupsQuery,
@@ -282,12 +282,12 @@ def id_delete(group_id: str) -> tuple[t.Literal[""], int] | tuple[ErrorResponse,
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
 def delete_post(
-    body: DeleteGroupsRequest,
+    body: DeleteGroupsBody,
 ) -> tuple[t.Literal[""], int] | tuple[ErrorResponse, int]:
     """The multiple group deletion endpoint.
 
     Args:
-        body (DeleteGroupsRequest): Group ids to delete.
+        body (DeleteGroupsBody): Group ids to delete.
 
     Returns:
         - If any of groups failed to delete,
