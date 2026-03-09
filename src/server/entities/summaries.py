@@ -4,6 +4,8 @@
 
 """Models for Summary entities for client side."""
 
+import typing as t
+
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, HttpUrl
@@ -11,7 +13,7 @@ from pydantic import BaseModel, EmailStr, HttpUrl
 from server.const import USER_ROLES
 
 from .common import camel_case_config, forbid_extra_config
-from .map_group import MapGroup, Visibility
+from .map_group import Visibility
 from .map_user import MapUser
 
 
@@ -21,18 +23,17 @@ class RepositorySummary(BaseModel):
     id: str
     """The unique identifier for the repository."""
 
-    display_name: str | None = None
-    """The name of the repository. Alias to 'displayName'."""
+    service_name: str | None = None
+    """The name of the repository. Alias to 'serviceName'."""
 
     service_url: HttpUrl | None = None
     """The URL of the service. Alias for 'serviceUrl'."""
 
-    sp_connector_id: str | None = None
-    """The SP Connector ID of the repository. Alias to 'spConnectorId'."""
+    service_id: str | None = None
+    """The service ID of the repository. Alias to 'serviceId'."""
 
-    user_role: USER_ROLES | None = None
-    """The role of the user in the repository if this is used in UserDetail.
-    Alias to 'userRole'."""
+    entity_ids: list[str] | None = None
+    """The entity IDs of the repository. Alias to 'entityIds'."""
 
     model_config = camel_case_config | forbid_extra_config
     """Configure to use camelCase aliasing and forbid extra fields."""
@@ -47,6 +48,9 @@ class GroupSummary(BaseModel):
     display_name: str | None = None
     """The display name of the group. Alias to 'displayName'."""
 
+    repository_name: str | None = None
+    """The name of the repository the group belongs to. Alias to 'repositoryName'."""
+
     public: bool | None = None
     """Whether the group is public or private."""
 
@@ -58,24 +62,6 @@ class GroupSummary(BaseModel):
 
     model_config = camel_case_config | forbid_extra_config
     """Configure to use camelCase aliasing and forbid extra fields."""
-
-    @classmethod
-    def from_map_group(cls, group: MapGroup) -> GroupSummary:
-        """Create a GroupSummary instance from a MapGroup instance.
-
-        Args:
-            group (MapGroup): The MapGroup instance to convert.
-
-        Returns:
-            GroupSummary: The created GroupSummary instance.
-        """
-        return cls(
-            id=group.id,
-            display_name=group.display_name,
-            public=group.public,
-            member_list_visibility=group.member_list_visibility,
-            users_count=len(group.members) if group.members else 0,
-        )
 
 
 class UserSummary(BaseModel):
@@ -109,13 +95,11 @@ class UserSummary(BaseModel):
         Returns:
             UserSummary: The created UserSummary instance.
         """
-        from server.services.permissions import (  # noqa: PLC0415
-            get_permitted_repository_ids,
-            is_current_user_system_admin,
-        )
         from server.services.utils import (  # noqa: PLC0415
             detect_affiliations,
             get_highest_role,
+            get_permitted_repository_ids,
+            is_current_user_system_admin,
         )
 
         highest_role: USER_ROLES | None = None
@@ -130,7 +114,7 @@ class UserSummary(BaseModel):
             highest_role = get_highest_role([repo.role for repo in roles])
 
         return cls(
-            id=user.id,
+            id=t.cast("str", user.id),
             user_name=user.user_name,
             role=highest_role,
             emails=[email.value for email in user.emails or []],

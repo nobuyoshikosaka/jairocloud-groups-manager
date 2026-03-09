@@ -9,6 +9,8 @@ Provides validation, loading, and global access to runtime configuration.
 
 # ruff: noqa: S105, N802
 
+import ast
+import operator
 import typing as t
 
 from datetime import timedelta
@@ -19,6 +21,7 @@ from pydantic import (
     Field,
     StringConstraints,
     computed_field,
+    field_validator,
 )
 from pydantic_settings import (
     BaseSettings,
@@ -29,7 +32,13 @@ from pydantic_settings import (
 from sqlalchemy.engine import URL, make_url
 from werkzeug.local import LocalProxy
 
-from .const import HAS_REPO_ID_AND_USER_DEFINED_ID_PATTERN, HAS_REPO_ID_PATTERN
+from .const import (
+    HAS_REPO_ID_AND_USER_DEFINED_ID_PATTERN,
+    HAS_REPO_ID_PATTERN,
+    HAS_REPO_NAME_PATTERN,
+    USER_ROLES,
+)
+from .messages import E
 
 
 class RuntimeConfig(BaseSettings):
@@ -56,6 +65,11 @@ class RuntimeConfig(BaseSettings):
         default_factory=lambda: ApiConfig(),  # noqa: PLW0108
     )
     """API configuration."""
+
+    STORAGE: StorageConfig = Field(
+        default_factory=lambda: StorageConfig(),  # noqa: PLW0108
+    )
+    """Storage configuration."""
 
     MAP_CORE: MapCoreConfig
     """mAP Core service configuration."""
@@ -84,6 +98,8 @@ class RuntimeConfig(BaseSettings):
     CACHE_GROUPS: CacheGroupsConfig
     """Cache groups task configuration values."""
 
+    DEVELOP: DevelopConfig | None = None
+
     @computed_field
     @property
     def CACHE_DB(self) -> dict[str, t.Any]:
@@ -108,7 +124,7 @@ class RuntimeConfig(BaseSettings):
             "REDIS_SENTINEL_MASTER": self.REDIS.sentinel.master_name
             if self.REDIS.cache_type == "RedisSentinelCache"
             else "",
-            "SENTINELS": self.REDIS.sentinel.sentinels
+            "SENTINELS": self.REDIS.sentinel.nodes
             if self.REDIS.cache_type == "RedisSentinelCache"
             else [],
         }
@@ -141,7 +157,7 @@ class RuntimeConfig(BaseSettings):
         elif cache_type == "RedisSentinelCache" and self.REDIS.sentinel:
             sentinels = [
                 f"sentinel://{node.host}:{node.port}"
-                for node in self.REDIS.sentinel.sentinels
+                for node in self.REDIS.sentinel.nodes
             ]
             master_name = self.REDIS.sentinel.master_name
             config["result_backend"] = f"{';'.join(sentinels)}/{database}"
@@ -189,7 +205,11 @@ class RuntimeConfig(BaseSettings):
                 "REMEMBER_COOKIE_DURATION",
                 "REMEMBER_COOKIE_REFRESH_EACH_REQUEST",
             }
-        ) | {"SQLALCHEMY_DATABASE_URI": self.SQLALCHEMY_DATABASE_URI}
+        ) | {
+            "SQLALCHEMY_DATABASE_URI": self.SQLALCHEMY_DATABASE_URI,
+            "SESSION_COOKIE_SECURE": True,
+            "SESSION_COOKIE_SAMESITE": "Lax",
+        }
 
     @t.override
     @classmethod
@@ -263,8 +283,33 @@ class ApiConfig(BaseModel):
     """Maximum allowed file upload size (in bytes)."""
 
 
+class StorageConfig(BaseModel):
+    """Schema for storage configuration."""
+
+    type: t.Literal["local"] = "local"
+    """Type of storage backend to use."""
+
+    local: LocalStorageConfig = Field(
+        default_factory=lambda: LocalStorageConfig(),  # noqa: PLW0108
+    )
+    """Configuration for local storage backend."""
+
+
+class LocalStorageConfig(BaseModel):
+    """Schema for local storage configuration."""
+
+    temporary: str = "/var/tmp/jcgroups"  # noqa: S108
+    """Path to the temporary directory."""
+
+    storage: str = "/var/tmp/jcgroups"  # noqa: S108
+    """Path to the storage directory."""
+
+
 class SpConfig(BaseModel):
     """Schema for Service Provider configuration."""
+
+    connector_id: str
+    """SP Connecter ID for this application."""
 
     entity_id: str
     """Entity ID of the Service Provider."""
@@ -282,12 +327,36 @@ class RepositoriesConfig(BaseModel):
     id_patterns: RepositoriesIdPatternsConfig
     """Patterns for repository-related IDs."""
 
+    max_url_length: t.Annotated[int, "expression"] = 50
+    """Maximum allowed length for repository URL, expressed as a Python expression."""
+
+    @field_validator("max_url_length", mode="before")
+    @classmethod
+    def validate_max_url_length(cls, value: str) -> int:
+        """Validate and evaluate the max_url_length expression.
+
+        Args:
+            value (str): The expression to evaluate for max_url_length.
+
+        Returns:
+            int|str: The evaluated max_url_length value.
+
+        Raises:
+            ValueError: If the expression is invalid or does not evaluate to an integer.
+        """
+        try:
+            pursed = safe_eval(value)
+        except SyntaxError as exc:
+            error = E.INVALID_EXPRESSION
+            raise ValueError(error) from exc
+        return t.cast("int", pursed)
+
 
 class RepositoriesIdPatternsConfig(BaseModel):
     """Schema for repository-related ID patterns."""
 
-    sp_connecter: HasRepoId
-    """SP Connecter ID pattern. It should include `{repository_id}` placeholder."""
+    sp_connector: HasRepoId
+    """SP Connector ID pattern. It should include `{repository_id}` placeholder."""
 
 
 class GroupsConfig(BaseModel):
@@ -295,6 +364,33 @@ class GroupsConfig(BaseModel):
 
     id_patterns: GroupIdPatternsConfig
     """Patterns for Group resource IDs."""
+
+    name_patterns: GroupNamePatternsConfig
+    """Patterns for Group resource names."""
+
+    max_id_length: t.Annotated[int, "expression"] = 50
+    """Maximum allowed length for group ID, expressed as a Python expression."""
+
+    @field_validator("max_id_length", mode="before")
+    @classmethod
+    def validate_max_id_length(cls, value: str) -> int:
+        """Validate and evaluate the max_id_length expression.
+
+        Args:
+            value (str): The expression to evaluate for max_id_length.
+
+        Returns:
+            int: The evaluated max_id_length value.
+
+        Raises:
+            ValueError: If the expression is invalid or does not evaluate to an integer.
+        """
+        try:
+            pursed = safe_eval(value)
+        except SyntaxError as exc:
+            error = E.INVALID_EXPRESSION
+            raise ValueError(error) from exc
+        return t.cast("int", pursed)
 
 
 class GroupIdPatternsConfig(BaseModel):
@@ -318,6 +414,31 @@ class GroupIdPatternsConfig(BaseModel):
     user_defined: HasRepoAndUserDefinedId
     """Pattern for user-defined group IDs."""
 
+    def __getitem__(self, key: USER_ROLES | t.Literal["user_defined"]) -> str:  # noqa: D105
+        return getattr(self, key)
+
+
+class GroupNamePatternsConfig(BaseModel):
+    """Schema for Group resource name patterns."""
+
+    system_admin: str
+    """Name of the system administrator group."""
+
+    repository_admin: HasRepoName
+    """Name pattern for repository administrator groups."""
+
+    community_admin: HasRepoName
+    """Name pattern for community administrator groups."""
+
+    contributor: HasRepoName
+    """Name pattern for contributor groups."""
+
+    general_user: HasRepoName
+    """Name pattern for general user groups."""
+
+    def __getitem__(self, key: USER_ROLES) -> str:  # noqa: D105
+        return getattr(self, key)
+
 
 class MapCoreConfig(BaseModel):
     """Schema for mAP Core service configuration."""
@@ -327,6 +448,12 @@ class MapCoreConfig(BaseModel):
 
     timeout: t.Annotated[int, "seconds"] = 10
     """Timeout (in seconds) for requests to mAP Core service."""
+
+    update_strategy: t.Literal["put", "patch"] = "patch"
+    """Update strategy for mAP Core service."""
+
+    user_editable: bool = True
+    """Whether the user information is editable via this application."""
 
 
 class PostgresConfig(BaseModel):
@@ -357,7 +484,10 @@ class RedisConfig(BaseModel):
     Possible values are 'RedisCache' and 'RedisSentinelCache'.
     """
 
-    default_timeout: t.Annotated[int, "seconds"] = 300
+    socket_timeout: float = 1.0
+    """Socket timeout (in seconds) for Redis connections."""
+
+    cache_timeout: t.Annotated[int, "seconds"] = 300
     """Default timeout (in seconds) for cached items."""
 
     key_prefix: str = "jcgroups_"
@@ -367,10 +497,14 @@ class RedisConfig(BaseModel):
         default_factory=lambda: RedisDatabaseConfig(),  # noqa: PLW0108
     )
 
-    single: RedisSingleConfig
+    single: RedisSingleConfig = Field(
+        default_factory=lambda: RedisSingleConfig(),  # noqa: PLW0108
+    )
     """Configuration for single Redis server, when cache_type is "RedisCache"."""
 
-    sentinel: RedisSentinelCacheConfig
+    sentinel: RedisSentinelCacheConfig = Field(
+        default_factory=lambda: RedisSentinelCacheConfig(),  # noqa: PLW0108
+    )
     """Configuration for Redis Sentinel, when cache_type is "RedisSentinelCache"."""
 
 
@@ -405,7 +539,7 @@ class RedisSentinelCacheConfig(BaseModel):
     master_name: str = "mymaster"
     """Name of the Redis Sentinel master node."""
 
-    sentinels: list[SentinelNodeConfig] = Field(default_factory=list)
+    nodes: list[SentinelNodeConfig] = Field(default_factory=list)
 
 
 class SentinelNodeConfig(BaseModel):
@@ -453,6 +587,12 @@ type HasRepoId = t.Annotated[str, StringConstraints(pattern=HAS_REPO_ID_PATTERN)
 It should include `{repository_id}` placeholder.
 """
 
+type HasRepoName = t.Annotated[str, StringConstraints(pattern=HAS_REPO_NAME_PATTERN)]
+"""Pattern for role-based group names.
+
+It should include `{repository_name}` placeholder.
+"""
+
 
 type HasRepoAndUserDefinedId = t.Annotated[
     str, StringConstraints(pattern=HAS_REPO_ID_AND_USER_DEFINED_ID_PATTERN)
@@ -461,6 +601,76 @@ type HasRepoAndUserDefinedId = t.Annotated[
 
 It should include `{repository_id}` followed by `{user_defined_id}` placeholders.
 """
+
+
+class DevelopConfig(BaseModel):
+    """Schema for development environment configuration."""
+
+    developer_login: bool = False
+    """Whether to enable developer login in development mode."""
+
+    accounts: list[DevAccountConfig] = Field(default_factory=list)
+    """List of development accounts."""
+
+
+class DevAccountConfig(BaseModel):
+    """Schema for development account configuration."""
+
+    id: str
+    """mAP Core ID of the development account."""
+
+    eppn: str
+    """EPPN of the development account."""
+
+    is_member_of: str
+    """isMemberOf attribute of the development account."""
+
+    user_name: str
+    """User name of the development account."""
+
+
+def safe_eval(expr: str) -> int | str:
+    """Safely evaluate a restricted arithmetic expression.
+
+    Supported:
+        - int / float literals
+        - str literals (for len)
+        - +, -, *, /
+        - len, max, min
+
+    Args:
+        expr (str): The expression to evaluate.
+
+    Returns:
+        int|str: The result of the evaluated expression.
+    """
+    ops = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.FloorDiv: operator.floordiv,
+    }
+
+    def _eval(node: ast.AST) -> int | str:
+        if isinstance(node, ast.Constant):
+            return node.value  # type: ignore[return-value]
+
+        if isinstance(node, ast.BinOp) and type(node.op) in ops:
+            return ops[type(node.op)](_eval(node.left), _eval(node.right))  # type: ignore[arg-type]
+
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            args = [_eval(a) for a in node.args]
+            if node.func.id == "len":
+                return len(args[0])  # type: ignore[arg-type]
+            if node.func.id == "max":
+                return max(args)
+            if node.func.id == "min":
+                return min(args)
+
+        error = E.UNSUPPORTED_EXPRESSION % {"exp": expr}
+        raise ValueError(error)
+
+    return _eval(ast.parse(expr, mode="eval").body)
 
 
 def setup_config(path_or_obj: str | RuntimeConfig) -> RuntimeConfig:

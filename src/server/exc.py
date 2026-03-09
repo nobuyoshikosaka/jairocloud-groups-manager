@@ -4,9 +4,33 @@
 
 """Custom exceptions for the server application."""
 
+from server.messages.base import LogMessage
+
 
 class JAIROCloudGroupsManagerError(Exception):
     """Base exception for the server application."""
+
+    def __init__(self, message: str) -> None:
+        """Initialize the exception instance.
+
+        Args:
+            message (str | LogMessage): The error message.
+
+        """
+        self.code = None
+        self.message = message
+        if isinstance(message, LogMessage):
+            self.code = message.code
+            message = message.data
+        super().__init__(message)
+
+        self.string = message
+
+    def __str__(self) -> str:
+        """Return the string representation of the exception."""
+        if self.code:
+            return f"{self.code} | {self.string}"
+        return self.string
 
 
 class ConfigurationError(JAIROCloudGroupsManagerError):
@@ -38,17 +62,59 @@ class OAuthTokenError(ServiceSettingsError):
     """
 
 
-class DatabaseError(JAIROCloudGroupsManagerError):
+class UnsafeOperationError(JAIROCloudGroupsManagerError):
+    """Exception for unsafe operations.
+
+    Errors caused by operations that are considered unsafe.
+    """
+
+
+class SystemAdminNotFound(JAIROCloudGroupsManagerError):  # noqa: N818
+    """Exception for system administrator not found.
+
+    Errors caused by the absence of a system administrator in the system.
+    """
+
+
+class InfrastructureError(JAIROCloudGroupsManagerError):
+    """Exception for infrastructure errors.
+
+    Errors caused by issues in the underlying infrastructure.
+    """
+
+
+class DatabaseError(InfrastructureError):
     """Exception for database errors.
 
     Errors caused by database operation issues.
     """
 
 
-class DatastoreError(JAIROCloudGroupsManagerError):
+class DatastoreError(InfrastructureError):
     """Exception for datastore errors.
 
     Errors caused by datastore operation issues.
+    """
+
+
+class TaskExcutionError(DatastoreError):
+    """Exception for task execution errors.
+
+    Errors caused by issues during task execution.
+    """
+
+
+class RecordNotFound(JAIROCloudGroupsManagerError):  # noqa: N818
+    """Exception for record not found errors.
+
+    Errors caused by requests for non-existing records.
+    """
+
+
+class InvalidRecordError(JAIROCloudGroupsManagerError):
+    """Exception for invalid record errors.
+
+    Errors caused by invalid record data or structure.
     """
 
 
@@ -80,8 +146,50 @@ class UnexpectedResponseError(ApiClientError):
     """
 
 
-class InvalidQueryError(JAIROCloudGroupsManagerError):
+class ApiRequestError(JAIROCloudGroupsManagerError):
+    """Exception for the server application API errors.
+
+    Errors caused by API request issues.
+    """
+
+
+class RequestConflict(ApiRequestError):  # noqa: N818
+    """Exception for the request conflict errors.
+
+    Errors caused by conflicts in the request content.
+    """
+
+
+class InvalidQueryError(ApiRequestError):
     """Exception for unexpected query construction errors.
 
     Errors caused by unexpected query structure or data during query construction.
+    """
+
+
+class InvalidFormError(ApiRequestError):
+    """Exception for invalid form data errors.
+
+    Errors caused by invalid form data in API requests.
+    """
+
+
+class ImmutableError(JAIROCloudGroupsManagerError):
+    """Exception for immutable attribute modification errors.
+
+    Errors caused by attempts to modify immutable attributes.
+    """
+
+
+class BulkOperationError(JAIROCloudGroupsManagerError):
+    """Exception for bulk operation errors.
+
+    Errors caused by issues during bulk operations.
+    """
+
+
+class FileValidationError(BulkOperationError):
+    """Exception for validation errors in bulk operations.
+
+    Errors caused by validation failures during bulk operations.
     """

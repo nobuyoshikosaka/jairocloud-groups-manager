@@ -2,24 +2,37 @@
 # Copyright (C) 2025 National Institute of Informatics.
 #
 
-"""API router for managing user management endpoints."""
+"""API endpoints for user-related operations."""
 
-from flask import Blueprint, url_for
+import inspect
+import sys
+import traceback
+import typing as t
+
+from flask import Blueprint, current_app, url_for
+from flask_login import current_user, login_required
 from flask_pydantic import validate
 
-from server.entities.search_request import SearchResult
-from server.entities.summaries import RepositorySummary
+from server.const import USER_ROLES
+from server.entities.login_user import LoginUser
+from server.entities.search_request import FilterOption, SearchResult
 from server.entities.user_detail import UserDetail
 from server.exc import (
+    InvalidFormError,
+    InvalidQueryError,
+    RequestConflict,
     ResourceInvalid,
     ResourceNotFound,
 )
+from server.messages import E
 from server.services import users
-from server.services.permissions import (
-    get_permitted_repository_ids,
+from server.services.utils import (
     is_current_user_system_admin,
+    search_users_options,
 )
 
+from .auth import logout
+from .helpers import roles_required
 from .schemas import ErrorResponse, UsersQuery
 
 
@@ -28,22 +41,32 @@ bp = Blueprint("users", __name__)
 
 @bp.get("")
 @bp.get("/")
+@login_required
+@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
-def get(query: UsersQuery) -> tuple[SearchResult, int]:
+def get(query: UsersQuery) -> tuple[SearchResult | ErrorResponse, int]:
     """Get a list of users based on query parameters.
 
     Args:
         query (UsersQuery): Query parameters for filtering users.
 
     Returns:
-        tuple[dict, int]: A tuple containing the list of users and the HTTP status code.
+        - If succeeded in getting users, search result and status code 200
+        - If query is invalid, error message and status code 400
     """
-    results = users.search(query)
+    try:
+        results = users.search(query)
+    except InvalidQueryError as exc:
+        traceback.print_exc()
+        return ErrorResponse(message=exc.message), 400
+
     return results, 200
 
 
 @bp.post("")
 @bp.post("/")
+@login_required
+@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
 def post(
     body: UserDetail,
@@ -61,27 +84,24 @@ def post(
         - If other error, status code 500
 
     """
-    user = users.get_by_id(body.id)
-    if user is not None:
-        return ErrorResponse(code="", message="id already exist"), 409
+    # permission will be checked in validation process.
+    try:
+        created = users.create(body)
+    except InvalidFormError as exc:
+        return ErrorResponse(message=exc.message), 400
+    except ResourceInvalid as exc:
+        traceback.print_exc()
+        return ErrorResponse(message=exc.message), 409
 
-    if body.eppns is not None:
-        for eppn in body.eppns:
-            user = users.get_by_eppn(eppn)
-            if user is not None:
-                return ErrorResponse(code="", message="eppn already exist"), 409
-
-    if not has_permission(body.repositories):
-        return ErrorResponse(code="", message="not has permmision"), 403
-
-    created = users.create(body)
     header = {
         "Location": url_for("api.users.id_get", user_id=created.id, _external=True)
     }
-    return (created, 201, header)
+    return created, 201, header
 
 
 @bp.get("/<string:user_id>")
+@login_required
+@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
 def id_get(user_id: str) -> tuple[UserDetail | ErrorResponse, int]:
     """Get information of user endpoint.
@@ -95,17 +115,21 @@ def id_get(user_id: str) -> tuple[UserDetail | ErrorResponse, int]:
         - If user not found, status code 404
         - If other error, status code 500
     """
-    user = users.get_by_id(user_id)
+    user = users.get_by_id(user_id, more_detail=True)
     if user is None:
-        return ErrorResponse(code="", message="user not found"), 404
+        current_app.logger.error(E.USER_NOT_FOUND, {"id": user_id})
+        return ErrorResponse(message=E.USER_NOT_FOUND % {"id": user_id}), 404
 
-    if not has_permission(user.repositories):
-        return ErrorResponse(code="", message="not has permmision"), 403
+    if not has_permission(user):
+        current_app.logger.error(E.USER_FORBIDDEN, {"id": user_id})
+        return ErrorResponse(message=E.USER_FORBIDDEN % {"id": user_id}), 403
 
     return user, 200
 
 
 @bp.put("/<string:user_id>")
+@login_required
+@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
 def id_put(user_id: str, body: UserDetail) -> tuple[UserDetail | ErrorResponse, int]:
     """Update user information endpoint.
@@ -123,30 +147,37 @@ def id_put(user_id: str, body: UserDetail) -> tuple[UserDetail | ErrorResponse, 
         - If other error, status code 500
 
     """
-    if user_id != body.id:
-        return ErrorResponse(code="", message="user id mismatch"), 409
+    body.id = user_id
 
-    if not has_permission(body.repositories):
-        return ErrorResponse(code="", message="not has permmision"), 403
-
+    # permission will be checked in validation process.
     try:
         updated = users.update(body)
-    except ResourceNotFound as e:
-        return ErrorResponse(code="", message=str(e)), 404
-    except ResourceInvalid as e:
-        return ErrorResponse(code="", message=str(e)), 409
+    except* InvalidFormError as exc:
+        if exc.exceptions[0].message == E.USER_NO_UPDATE_SYSTEM_ADMIN:
+            error = ErrorResponse(message=exc.message), 403
+        else:
+            error = ErrorResponse(message=exc.message), 400
+    except* ResourceNotFound as exc:
+        error = ErrorResponse(message=exc.message), 404
+    except* (ResourceInvalid, RequestConflict) as exc:
+        error = ErrorResponse(message=exc.message), 409
+    else:
+        if t.cast("LoginUser", current_user).map_id == user_id:
+            # user is updating their own information, need to refresh session role.
+            inspect.unwrap(logout)()
+        return updated, 200
+    finally:
+        if sys.exc_info()[0] is not None:
+            traceback.print_exc()
 
-    return updated, 200
+    return error
 
 
-def has_permission(repositories: list[RepositorySummary] | None) -> bool:
-    """Check user controll permmision.
-
-    If the logged-in user is a system administrator or
-    an administrator of the target repository, that user has permission.
+def has_permission(user: UserDetail) -> bool:
+    """Check permmision to access user information.
 
     Args:
-       repositories (list | None): Repositories list of request body
+        user (UserDetail): User information.
 
     Returns:
         bool:
@@ -156,5 +187,21 @@ def has_permission(repositories: list[RepositorySummary] | None) -> bool:
     if is_current_user_system_admin():
         return True
 
-    permitted_repository_ids = get_permitted_repository_ids()
-    return any(repo.id in permitted_repository_ids for repo in repositories or [])
+    if user.is_system_admin:
+        return False
+
+    # check affiliations user can read.
+    return bool(user.repository_roles)
+
+
+@bp.get("/filter-options")
+@login_required
+@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
+@validate(response_many=True)
+def filter_options() -> list[FilterOption]:
+    """Get filter options for searching users.
+
+    Returns:
+        list[FilterOption]: List of filter options for user search.
+    """
+    return search_users_options()

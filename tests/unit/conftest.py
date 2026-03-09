@@ -40,12 +40,19 @@ def instance_path(tmp_path: Path) -> Path:
 @pytest.fixture
 def test_config():
     db_host = "postgres" if is_running_in_docker() else "localhost"
+    redis_host = "redis" if is_running_in_docker() else "localhost"
+    amqp_host = "rabbitmq" if is_running_in_docker() else "localhost"
     return RuntimeConfig.model_validate({
         "SECRET_KEY": "test_secret_key",
+        "LOG": {
+            "level": "DEBUG",
+        },
         "SP": {
+            "connector_id": "jairocloud-groups-manager_test",
             "entity_id": "https://test/shibboleth-sp",
             "crt": "/test/server.crt",
             "key": "/test/server.key",
+            "connecter_id": "test_connecter_id",
         },
         "MAP_CORE": {
             "base_url": "https://mapcore.test.jp",
@@ -53,7 +60,7 @@ def test_config():
         },
         "REPOSITORIES": {
             "id_patterns": {
-                "sp_connecter": "jc_{repository_id}_test",
+                "sp_connector": "jc_{repository_id}_test",
             },
         },
         "GROUPS": {
@@ -64,26 +71,27 @@ def test_config():
                 "contributor": "jc_{repository_id}_roles_contributor_test",
                 "general_user": "jc_{repository_id}_roles_generaluser_test",
                 "user_defined": "jc_{repository_id}_groups_{user_defined_id}_test",
-            }
+            },
+            "name_patterns": {
+                "system_admin": "group_sysadm_{user_defined_id}_test",
+                "repository_admin": "group_repoadm_{repository_name}_{user_defined_id}_test",
+                "community_admin": "group_comadm_{repository_name}_{user_defined_id}_test",
+                "contributor": "group_contributor_{repository_name}_{user_defined_id}_test",
+                "general_user": "group_generaluser_{repository_name}_{user_defined_id}_test",
+            },
         },
         "POSTGRES": {"db": "jctest", "host": db_host},
-        "LOG": {"level": "DEBUG"},
         "REDIS": {
-            "single": {
-                "base_url": "redis://redis-single:6379",
-            },
+            "cache_type": "RedisCache",
+            "single": {"base_url": f"redis://{redis_host}:6379/0"},
             "sentinel": {
-                "sentinels": [
-                    {
-                        "host": "",
-                        "port": 26379,
-                    }
-                ]
+                "nodes": [
+                    {"host", "sentinel-1", "port": 26379},
+                    {"host", "sentinel-2", "port": 26379},
+                ],
             },
         },
-        "RABBITMQ": {
-            "url": "amqp://guest:guest@rabbitmq:5672//",
-        },
+        "RABBITMQ": {"url": f"amqp://guest:guest@{amqp_host}:5672//"},
         "CACHE_GROUPS": {
             "cache_redis_key": "{prefix}cache",
             "gakunin_redis_key": "{fqdn}_gakunin_groups",
@@ -95,7 +103,6 @@ def test_config():
     })
 
 
-@pytest.fixture(autouse=True)
 def mock_redis(mocker: MockerFixture):
     mock_redis = mocker.patch("server.datastore.Redis")
     mock_redis_instance = mock_redis.from_url.return_value
@@ -109,6 +116,30 @@ def unwrap():
         return inspect.unwrap(f)
 
     return _unwrap
+
+
+@pytest.fixture(autouse=True)
+def redis_disable(mocker: MockerFixture):
+    mocker.patch("server.datastore.Redis")
+    mocker.patch("server.datastore.sentinel")
+
+
+@pytest.fixture
+def datastore(mocker: MockerFixture):
+    app_cache = mocker.MagicMock()
+    account_store = mocker.MagicMock()
+    group_cache = mocker.MagicMock()
+
+    def _stores(name):
+        return {
+            "app_cache": app_cache,
+            "account_store": account_store,
+            "group_cache": group_cache,
+        }[name]
+
+    mocker.patch("server.datastore._stores", side_effect=_stores)
+
+    return app_cache, account_store, group_cache
 
 
 @pytest.fixture

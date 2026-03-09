@@ -40,7 +40,7 @@ class MapService(BaseModel):
     """Metadata about the service."""
 
     entity_ids: list[ServiceEntityID] | None = None
-    """The entity IDs associated with the service. Alias for 'entityIDs'."""
+    """The entity IDs associated with the service. Alias for 'entityIds'."""
 
     administrators: list[Administrator] | None = None
     """The administrators of the service."""
@@ -87,7 +87,7 @@ class Administrator(BaseModel):
             ...,
             # NOTE: not using `alias` because it changes the constructor arguments.
             validation_alias="$ref",
-            exclude=True,
+            serialization_alias="$ref",
         ),
     ] = None
     """URI of the corresponding User resource. Alias for '$ref'."""
@@ -111,7 +111,7 @@ class Group(BaseModel):
             ...,
             # NOTE: not using `alias` because it changes the constructor arguments.
             validation_alias="$ref",
-            exclude=True,
+            serialization_alias="$ref",
         ),
     ] = None
     """URI of the corresponding Group resource. Alias for '$ref'."""
