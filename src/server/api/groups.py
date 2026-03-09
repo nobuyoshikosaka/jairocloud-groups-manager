@@ -43,8 +43,7 @@ from .schemas import (
 bp = Blueprint("groups", __name__)
 
 
-@bp.get("")
-@bp.get("/")
+@bp.get("/", strict_slashes=False)
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
@@ -67,8 +66,7 @@ def get(query: GroupsQuery) -> tuple[SearchResult | ErrorResponse, int]:
     return results, 200
 
 
-@bp.post("")
-@bp.post("/")
+@bp.get("/", strict_slashes=False)
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)

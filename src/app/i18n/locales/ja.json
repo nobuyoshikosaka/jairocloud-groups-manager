@@ -204,6 +204,7 @@
         "public": "グループの公開状態",
         "users-count": "ユーザー数"
       },
+      "no-groupss-description": "あなたのリポジトリにはグループがありません。まずはグループを作成してください。",
       "search-placeholder": "検索...",
       "title": "グループ一覧"
     },

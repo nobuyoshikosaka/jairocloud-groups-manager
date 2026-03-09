@@ -218,6 +218,7 @@
         "public": "Public Status",
         "users-count": "Users"
       },
+      "no-groupss-description": "Your repository does not have any groups. Please create a group first.",
       "search-placeholder": "Seach...",
       "title": "Groups List"
     },
@@ -562,13 +563,13 @@
     "new-description": "You can create new users in your repository.",
     "new-title": "Create new user",
     "placeholder": {
-      "emails": "information.taro{'@'}university.ac.jp",
-      "eppns": "information.taro{'@'}idp.university.ac.jp",
+      "emails": "joho.taro{'@'}university.ac.jp",
+      "eppns": "joho.taro{'@'}idp.university.ac.jp",
       "group-name": "Select a group.",
       "preferred-language": "Select a language.",
       "repository-name": "Select a repository.",
       "role": "Select a user role.",
-      "userName": "Information Taro"
+      "userName": "Joho Taro"
     },
     "preferred-language": "Preferred Language",
     "preferred-language-en": "English",

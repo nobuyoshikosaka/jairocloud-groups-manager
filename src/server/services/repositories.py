@@ -38,8 +38,8 @@ from server.exc import (
 )
 from server.messages import E, I
 
+from . import users
 from .token import get_access_token, get_client_secret
-from .users import get_system_admins
 from .utils import (
     RepositoriesCriteria,
     build_patch_operations,
@@ -247,7 +247,7 @@ def create(repository: RepositoryDetail) -> RepositoryDetail:
         SystemAdminNotFound: If no system administrators are found in the system.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
-    admins = get_system_admins()
+    admins = users.get_system_admins()
 
     try:
         service, repository_id = prepare_service(repository, admins)
