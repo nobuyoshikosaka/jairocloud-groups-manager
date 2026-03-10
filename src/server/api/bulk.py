@@ -64,16 +64,18 @@ def upload_file(
         ErrorResponse: The response containing task ID or error message.
     """
     if repositories.get_by_id(form.repository_id) is None:
-        error = E.REPOSITORY_NOT_FOUND % {"id": form.repository_id}
-        current_app.logger.error(error)
-        return ErrorResponse(message=error), 404
+        current_app.logger.error(E.REPOSITORY_NOT_FOUND, {"id": form.repository_id})
+        return ErrorResponse(
+            message=E.REPOSITORY_NOT_FOUND % {"id": form.repository_id}
+        ), 404
     if (
         not current_user.is_system_admin
         and form.repository_id not in get_permitted_repository_ids()
     ):
-        error = E.REPOSITORY_FORBIDDEN % {"id": form.repository_id}
-        current_app.logger.error(error)
-        return ErrorResponse(message=error), 403
+        current_app.logger.error(E.REPOSITORY_FORBIDDEN, {"id": form.repository_id})
+        return ErrorResponse(
+            message=E.REPOSITORY_FORBIDDEN % {"id": form.repository_id}
+        ), 403
     temp_file_id = bulks.upload_file(form.repository_id, files.bulk_file)
     task = bulks.validate_upload_data.apply_async(
         (current_user.map_id, current_user.user_name, temp_file_id),
@@ -97,11 +99,10 @@ def validate_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
         BulkBody: The response containing task status
         ErrorResponse: The response containing task status or error message
     """
-    res = bulks.get_validate_task_result(task_id)
-    if not res:
-        error = E.TASK_NOT_FOUND % {"task_id": task_id}
-        current_app.logger.error(error)
-        return ErrorResponse(message=error), 404
+    try:
+        res = bulks.get_validate_task_result(task_id)
+    except TaskExcutionError as exc:
+        return ErrorResponse(message=exc.message), 404
     return BulkBody(status=res.state), 200
 
 
@@ -142,9 +143,8 @@ def validate_result(
         if not is_user_logged_in(
             current_user
         ) or not bulks.chack_permission_to_operation(history_id, current_user.map_id):
-            error = E.OPERATION_FORBIDDEN
-            current_app.logger.error(error)
-            return ErrorResponse(message=error), 403
+            current_app.logger.error(E.OPERATION_FORBIDDEN)
+            return ErrorResponse(message=E.OPERATION_FORBIDDEN), 403
         result = bulks.get_validate_result(
             history_id=history_id, status_filter=status_filter, offset=offset, size=size
         )
@@ -175,9 +175,8 @@ def execute(body: ExcuteRequest) -> tuple[BulkBody | ErrorResponse, int]:
         if not is_user_logged_in(
             current_user
         ) or not bulks.chack_permission_to_operation(history_id, current_user.map_id):
-            error = E.OPERATION_FORBIDDEN
-            current_app.logger.error(error)
-            return ErrorResponse(message=error), 403
+            current_app.logger.error(E.OPERATION_FORBIDDEN)
+            return ErrorResponse(message=E.OPERATION_FORBIDDEN), 403
         task = bulks.update_users.apply_async(
             kwargs={
                 "history_id": history_id,
@@ -236,9 +235,8 @@ def result(
     size = query.l or DEFAULT_SEARCH_COUNT
     try:
         if not bulks.chack_permission_to_view(history_id):
-            error = E.OPERATION_FORBIDDEN
-            current_app.logger.error(error)
-            return ErrorResponse(message=error), 403
+            current_app.logger.error(E.OPERATION_FORBIDDEN)
+            return ErrorResponse(message=E.OPERATION_FORBIDDEN), 403
         result = bulks.get_upload_result(
             history_id=history_id, status_filter=status_filter, offset=offset, size=size
         )

@@ -135,9 +135,8 @@ def files(file_id: UUID) -> Response | tuple[ErrorResponse, int]:
     except RecordNotFound as exc:
         return ErrorResponse(message=exc.message), 404
     if not file_path.exists():
-        error = E.FILE_NOT_FOUND % {"path": file_path}
-        current_app.logger.error(error)
-        return ErrorResponse(message=error), 404
+        current_app.logger.error(E.FILE_NOT_FOUND, {"path": file_path})
+        return ErrorResponse(message=E.FILE_NOT_FOUND % {"path": file_path}), 404
     return send_file(path_or_file=file_path)
 
 
