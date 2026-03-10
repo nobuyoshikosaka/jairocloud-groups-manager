@@ -8,6 +8,10 @@ import typing as t
 
 from functools import wraps
 
+from flask import abort
+
+from server.config import config
+
 
 def session_required[**P, R](func: t.Callable[P, R]) -> t.Callable[..., R]:
     """Decorator to ensure that a valid session exists.
@@ -24,3 +28,18 @@ def session_required[**P, R](func: t.Callable[P, R]) -> t.Callable[..., R]:
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def require_enabled[**P, R](setting: t.Literal["enable_bulk_operation"]):  # noqa: ANN201, D103
+
+    def decorator(func):  # noqa: ANN001, ANN202
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+            if not getattr(config.FEATURES, setting, False):
+                abort(404)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

@@ -14,7 +14,10 @@ const emit = defineEmits<{
   'cancel': []
 }>()
 
-const { table: { pageSize } } = useAppConfig()
+const {
+  table: { pageSize },
+  features: { repositories: { 'server-search': serverSearch } },
+} = useAppConfig()
 const { schema, getMaxIdLength } = useGroupSchema(() => properties.mode)
 const { handleFormError } = useFormError()
 
@@ -51,6 +54,7 @@ const {
     label: repository.serviceName,
     value: repository.id,
   }),
+  server: serverSearch,
 })
 setupRepoScroll(repositorySelect)
 
@@ -96,7 +100,8 @@ const onCancel = () => {
         v-model="state.repository as { label: string, value: string }"
         v-model:search-term="repoSearchTerm" size="xl"
         :placeholder="$t('group.placeholder.repository')"
-        :items="repositoryNames" :loading="repoSearchStatus === 'pending'" ignore-filter
+        :items="repositoryNames" :loading="repoSearchStatus === 'pending'"
+        :ignore-filter="serverSearch"
         :ui="{ base: 'w-full' }" :disabled="mode !== 'new'"
         @update:open="onRepoOpen"
       />

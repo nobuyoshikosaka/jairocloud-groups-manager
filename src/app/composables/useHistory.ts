@@ -381,7 +381,10 @@ const useHistory = () => {
 }
 
 const useHistoryFilter = () => {
-  const { table: { pageSize: pageSizeConfig } } = useAppConfig()
+  const {
+    table: { pageSize: pageSizeConfig },
+    features: { repositories: { 'server-search': serverSearch } },
+  } = useAppConfig()
   const { t: $t } = useI18n()
 
   const { query, updateQuery, tab } = useHistory()
@@ -416,6 +419,7 @@ const useHistoryFilter = () => {
     } = useSelectMenuInfiniteScroll<RepositorySummary>({
       url: repositorySelect.url,
       limit: pageSizeConfig.repositories[0],
+      server: serverSearch,
       transform: repository => ({
         label: repository.serviceName,
         value: repository.id,

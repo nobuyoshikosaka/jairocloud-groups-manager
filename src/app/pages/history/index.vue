@@ -6,11 +6,18 @@ const {
   tab, uploadColumns, downloadColumns, isFileAvailable,
 } = useHistory()
 
-const tabItems = computed<TabsItem[]>(() => [
-  { label: $t('history.tab.download'), icon: 'i-lucide-download', slot: 'download',
-    value: 'download' },
-  { label: $t('history.tab.upload'), icon: 'i-lucide-upload', slot: 'upload', value: 'upload' },
-])
+const { features: { history: { upload: fileUpload } } } = useAppConfig()
+
+const tabItems = computed<TabsItem[]>(() => fileUpload
+  ? [
+      { label: $t('history.tab.download'), icon: 'i-lucide-download', slot: 'download',
+        value: 'download' },
+      { label: $t('history.tab.upload'), icon: 'i-lucide-upload', slot: 'upload', value: 'upload' },
+    ]
+  : [
+      { label: $t('history.tab.download'), icon: 'i-lucide-download', slot: 'download',
+        value: 'download' },
+    ])
 
 const { handleFetchError } = useErrorHandling()
 const { data } = useFetch<DownloadApiModel | UploadApiModel>(`/api/history/${tab.value}`, {
@@ -75,7 +82,7 @@ const handleAction = async (action: string, row: ActionRow) => {
   <UPageHeader
     :title="$t('history.title')"
     :description="$t('history.description')"
-    :ui="{ root: 'py-2', description: 'mt-2' }"
+    :ui="{ root: 'py-2 mb-6', description: 'mt-2' }"
   />
   <UTabs
     v-model="activeTab"
@@ -85,7 +92,7 @@ const handleAction = async (action: string, row: ActionRow) => {
     :ui="{ trigger: 'min-w-50' }"
   >
     <template #download>
-      <div class="container mx-auto px-4">
+      <div class="container mx-auto px-4  space-y-4">
         <HistoryFilter target="download" />
 
         <div v-if="loading" class="text-center text-sm text-muted">
@@ -108,7 +115,7 @@ const handleAction = async (action: string, row: ActionRow) => {
     </template>
 
     <template #upload>
-      <div class="container mx-auto px-4">
+      <div class="container mx-auto px-4  space-y-4">
         <HistoryFilter target="upload" />
 
         <div v-if="loading" class="text-center text-sm text-muted">

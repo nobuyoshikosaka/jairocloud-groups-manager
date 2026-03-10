@@ -8,12 +8,18 @@ const {
   toggleSelection, selectedCount, getSelected, clearSelection, selectedUsersActions,
   columns, columnNames, columnVisibility,
   makeAttributeFilters, dateFilter: { dateRange, formattedDateRange }, makePageInfo, modals,
+  isRoleFilterActive, isGroupFilterActive,
 } = useUsersTable()
 
 const { searchTerm, pageNumber, pageSize } = criteria
 
 const table = useTemplateRef('table')
-const { table: { pageSize: { users: pageOptions } } } = useAppConfig()
+const { table: { pageSize: { users: pageOptions } },
+  features: { users: { 'filter-by-last-modified': filterByLastModified,
+    'filter-by-both-role-group': filterByBoth,
+    'search-only-username': sercheOnlyUserName },
+  repositories: { 'server-search': serverSearch } },
+} = useAppConfig()
 
 const { handleFetchError } = useErrorHandling()
 const { data: searchResult, status, refresh } = useFetch<UsersSearchResult>('/api/users', {
@@ -217,7 +223,12 @@ const onRemove = async (event: FormSubmitEvent<typeof userOpState>) => {
 
   <div class="grid grid-cols-3 gap-4 my-4 h-8">
     <UInput
-      v-model="searchTerm" :placeholder="$t('users.table.search-placeholder')"
+      v-model="searchTerm"
+      :placeholder="
+        sercheOnlyUserName
+          ? $t('users.table.search-placeholder-username-only')
+          : $t('users.table.search-placeholder')
+      "
       icon="i-lucide-search" :ui="{ trailing: 'pe-1.5' }"
       @keydown.enter="() => updateQuery({ q: searchTerm, p: 1 })"
     >
@@ -286,33 +297,74 @@ const onRemove = async (event: FormSubmitEvent<typeof userOpState>) => {
     <template #content>
       <USelectMenu
         ref="repositorySelect"
-        v-model:search-term="repositoryFilter.searchTerm.value" ignore-filter
+        v-model:search-term="repositoryFilter.searchTerm.value"
+        :ignore-filter="serverSearch"
         :placeholder="repositoryFilter.placeholder"
         :icon="repositoryFilter.icon" :items="repositoryFilter.items"
         :multiple="repositoryFilter.multiple" :loading="repositoryFilter.loading"
         @update:open="repositoryFilter.onOpen" @update:model-value="repositoryFilter.onUpdated"
       />
-      <USelectMenu
-        :search-input="false"
-        :placeholder="roleFilter.placeholder"
-        :icon="roleFilter.icon" :items="roleFilter.items"
-        :multiple="roleFilter.multiple" :loading="filterOptionsStatus === 'pending'"
-        @update:model-value="roleFilter.onUpdated"
-      />
-      <USelectMenu
-        ref="groupSelect"
-        v-model:search-term="groupFilter.searchTerm.value" ignore-filter
-        :placeholder="groupFilter.placeholder"
-        :icon="groupFilter.icon" :items="groupFilter.items"
-        :multiple="groupFilter.multiple" :loading="groupFilter.loading"
-        @update:open="groupFilter.onOpen" @update:model-value="groupFilter.onUpdated"
-      />
+      <UPopover
+        :mode="filterByBoth ? undefined : 'hover'"
+        :content="{
+          align: 'center',
+          side: 'bottom',
+        }"
+      >
+        <USelectMenu
+          :search-input="false"
+          :placeholder="roleFilter.placeholder"
+          :icon="roleFilter.icon" :items="roleFilter.items"
+          :multiple="roleFilter.multiple" :loading="filterOptionsStatus === 'pending'"
+          :disabled="isGroupFilterActive && !filterByBoth"
+          @update:model-value="roleFilter.onUpdated"
+        />
+        <template #content>
+          <UAlert
+            v-if="isGroupFilterActive && !filterByBoth"
+            :title="$t('users.alert.filter-by-both-role-group-disabled')"
+            color="warning" variant="soft" class="w-full" icon="i-lucide-triangle-alert"
+          />
+        </template>
+      </UPopover>
+      <UPopover
+        :mode="filterByBoth ? undefined : 'hover'"
+        :content="{
+          align: 'end',
+          side: 'bottom',
+        }"
+      >
+        <USelectMenu
+          ref="groupSelect"
+          v-model:search-term="groupFilter.searchTerm.value" ignore-filter
+          :placeholder="groupFilter.placeholder"
+          :icon="groupFilter.icon" :items="groupFilter.items"
+          :multiple="groupFilter.multiple" :loading="groupFilter.loading"
+          :disabled="isRoleFilterActive && !filterByBoth"
+          @update:open="groupFilter.onOpen" @update:model-value="groupFilter.onUpdated"
+        />
+        <template #content>
+          <UAlert
+            v-if="isRoleFilterActive && !filterByBoth"
+            :title="$t('users.alert.filter-by-both-role-group-disabled')"
+            color="warning" variant="soft" class="w-full" icon="i-lucide-triangle-alert"
+          />
+        </template>
+      </UPopover>
 
-      <UPopover>
+      <UPopover
+        :mode="filterByLastModified ? undefined : 'hover'"
+        :content="{
+          align: 'start',
+          side: 'bottom',
+        }"
+      >
         <UInput
+          id="last-modefied" name="last-modefied"
           icon="i-lucide-calendar"
           :placeholder="$t('users.table.column.last-modified')"
           :model-value="formattedDateRange"
+          :disabled="!filterByLastModified"
           :ui="{ base: `text-left ${dateRange.start ? '' : 'text-dimmed'}` }" readonly
         >
           <template #trailing>
@@ -330,10 +382,16 @@ const onRemove = async (event: FormSubmitEvent<typeof userOpState>) => {
         </UInput>
         <template #content>
           <UCalendar
+            v-if="filterByLastModified"
             v-model="dateRange" :number-of-months="2" class="p-2" range
             @update:valid-model-value="() => updateQuery(
               { s: dateRange.start?.toString(), e: dateRange.end?.toString(), p: 1 },
             )"
+          />
+          <UAlert
+            v-else
+            :title="$t('users.alert.filter-by-last-modified-disabled')"
+            color="warning" variant="soft" class="w-full" icon="i-lucide-triangle-alert"
           />
         </template>
       </UPopover>
@@ -360,6 +418,7 @@ const onRemove = async (event: FormSubmitEvent<typeof userOpState>) => {
     <div class="flex-1 text-gray-500 text-sm">
       {{ pageInfo }}
     </div>
+
     <div class="flex-2 flex justify-center">
       <UPagination
         v-model:page="pageNumber"
@@ -368,6 +427,7 @@ const onRemove = async (event: FormSubmitEvent<typeof userOpState>) => {
         @update:page="(value) => updateQuery({ p: value })"
       />
     </div>
+
     <div class="flex-1" />
   </div>
 
