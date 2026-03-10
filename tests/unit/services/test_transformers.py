@@ -10,7 +10,6 @@ from server.const import USER_ROLES
 from server.entities.group_detail import (
     GroupDetail,
     Repository as GroupRepository,
-    Service as GroupService_,
 )
 from server.entities.map_group import (
     Administrator as GroupAdministrator,
@@ -28,9 +27,10 @@ from server.entities.map_service import (
 from server.entities.map_user import EPPN, Email, Group as UserGroup, MapUser, Meta as UserMeta
 from server.entities.repository_detail import RepositoryDetail
 from server.entities.search_request import SearchResult
-from server.entities.summaries import GroupSummary, RepositorySummary, UserSummary
+from server.entities.summaries import GroupSummary, RepositorySummary
 from server.entities.user_detail import RepositoryRole, UserDetail
 from server.exc import InvalidFormError, SystemAdminNotFound
+from server.messages import E
 from server.services.utils import transformers
 from server.services.utils.affiliations import Affiliations, _Group, _RoleGroup
 
@@ -90,7 +90,9 @@ def test_prepare_service(app, mocker: MockerFixture):
     expected_repository_id = "repo1"
     mocker.patch("server.services.utils.transformers.resolve_repository_id", return_value=expected_repository_id)
     administrators = {"admin1", "admin2"}
-    map_service, repository_id = transformers.prepare_service(RepositoryDetail(), administrators)
+    map_service, repository_id = transformers.prepare_service(
+        RepositoryDetail(id=expected_repository_id), administrators
+    )
     assert repository_id == expected_repository_id
     assert map_service.id == expected.id
     assert map_service.service_name == expected.service_name
@@ -120,7 +122,7 @@ def test_prepare_service_no_administrators(app, mocker: MockerFixture):
     administrators = set()
     with pytest.raises(SystemAdminNotFound) as exc:
         transformers.prepare_service(RepositoryDetail(), administrators)
-    assert str(exc.value) == "At least one administrator is required to create a repository."
+    assert str(exc.value) == str(E.REPOSITORY_REQUIRES_SYSTEM_ADMIN)
 
 
 def test_prepare_role_groups(app, test_config, mocker: MockerFixture):
@@ -185,7 +187,7 @@ def test_prepare_role_groups_no_administrators(app, mocker: MockerFixture):
     mocker.patch("server.services.utils.transformers.resolve_service_id", return_value="jc_repo1_test")
     with pytest.raises(SystemAdminNotFound) as exc:
         transformers.prepare_role_groups(repository_id, service_name, administrators)
-    assert str(exc.value) == "At least one administrator is required to create a repository."
+    assert str(exc.value) == str(E.REPOSITORY_REQUIRES_SYSTEM_ADMIN)
 
 
 def test_make_repository_detail(app, mocker: MockerFixture):
@@ -290,14 +292,14 @@ def test_make_repository_detail_more(app, mocker: MockerFixture):
                 service_url=HttpUrl("https://FQDN/example.com/"),
                 entity_ids=["https://<FQDN>/shibboleth-sp"],
             ),
-            "Service name is required to create a repository.",
+            str(E.REPOSITORY_REQUIRES_SERVICE_NAME),
             InvalidFormError,
         ),
         (
             RepositoryDetail(
                 id="test", service_name="test", entity_ids=["https://<FQDN>/shibboleth-sp"], service_url=None
             ),
-            "Service URL is required to create a repository.",
+            str(E.REPOSITORY_REQUIRES_SERVICE_URL),
             InvalidFormError,
         ),
         (
@@ -307,7 +309,7 @@ def test_make_repository_detail_more(app, mocker: MockerFixture):
                 service_url=HttpUrl("https://FQDN/example.com/"),
                 entity_ids=["https://<FQDN>/shibboleth-sp"],
             ),
-            "Service URL must contain a valid host.",
+            str(E.REPOSITORY_INVALID_SERVICE_URL),
             InvalidFormError,
         ),
         (
@@ -317,14 +319,14 @@ def test_make_repository_detail_more(app, mocker: MockerFixture):
                 service_url=HttpUrl("https://example.com/very/very/very/very/very/very/very/long/url"),
                 entity_ids=["https://<FQDN>/shibboleth-sp"],
             ),
-            "Service URL is too long.",
+            str(E.REPOSITORY_TOO_LONG_URL % {"max": 50}),
             InvalidFormError,
         ),
         (
             RepositoryDetail(
                 id="test", service_name="test", service_url=HttpUrl("https://FQDN/example.com/"), entity_ids=[]
             ),
-            "At least one entity ID is required to create a repository.",
+            str(E.REPOSITORY_REQUIRES_ENTITY_ID),
             InvalidFormError,
         ),
     ],
@@ -384,11 +386,11 @@ def test_prepare_group(app, test_config, mocker: MockerFixture):
 def test_prepare_group_no_administrators(app, mocker: MockerFixture):
     detail = GroupDetail(type="group")
     administrators = set()
-    expected = "At least one administrator is required to create a repository."
+    expected = E.GROUP_REQUIRES_SYSTEM_ADMIN
     mocker.patch("server.services.utils.transformers.validate_group_to_map_group", return_value=(MapGroup(), "repo1"))
     with pytest.raises(SystemAdminNotFound) as exc:
         transformers.prepare_group(detail, administrators)
-    assert str(exc.value) == expected
+    assert str(exc.value) == str(expected)
 
 
 def test_make_group_detail(app, mocker: MockerFixture):
@@ -412,9 +414,9 @@ def test_make_group_detail(app, mocker: MockerFixture):
         created=datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC),
         last_modified=datetime(2026, 1, 2, 0, 0, 0, tzinfo=UTC),
     )
-    expected._users = [UserSummary(id="user1"), UserSummary(id="user2")]  # noqa: SLF001
-    expected._admins = [UserSummary(id="admin1"), UserSummary(id="admin2")]  # noqa: SLF001
-    expected._services = [GroupService_(id="jc_repo1_test")]  # noqa: SLF001
+    expected._users = ["user1", "user2"]  # noqa: SLF001
+    expected._admins = ["admin1", "admin2"]  # noqa: SLF001
+    expected._services = ["jc_repo1_test"]  # noqa: SLF001
     group_detail = transformers.make_group_detail(group)
     assert group_detail == expected
 
@@ -478,10 +480,15 @@ def test_make_group_detail_more(app, mocker: MockerFixture, group, affiliation, 
     ("group", "mode", "expected", "expectedarg"),
     [
         (
-            GroupDetail(display_name="Test Group", id="jc_repo1_gr_test_group", type="group"),
+            GroupDetail(display_name="Test Group", id="jc_repo1_gr_test_group_test", type="group"),
             "update",
             MapGroup(),
-            GroupDetail(display_name="Test Group", id="jc_repo1_gr_test_group", type="group"),
+            GroupDetail(
+                display_name="Test Group",
+                id="jc_repo1_gr_test_group_test",
+                repository=GroupRepository(id="repo1"),
+                type="group",
+            ),
         ),
         (
             GroupDetail(
@@ -529,6 +536,7 @@ def test_make_group_detail_more(app, mocker: MockerFixture, group, affiliation, 
 )
 def test_validate_group_to_map_group(app, mocker: MockerFixture, group, mode, expected, expectedarg):
     mocker.patch("server.services.repositories.get_by_id", return_value=RepositoryDetail(id="repo1"))
+    mocker.patch("server.services.utils.transformers.get_permitted_repository_ids", return_value={"repo1"})
     mock_make_map_group = mocker.patch("server.services.utils.transformers.make_map_group", return_value=MapGroup())
     assert transformers.validate_group_to_map_group(group=group, mode=mode) == expected
     mock_make_map_group.assert_called_once_with(expectedarg)
@@ -537,24 +545,24 @@ def test_validate_group_to_map_group(app, mocker: MockerFixture, group, mode, ex
 @pytest.mark.parametrize(
     ("group", "mode", "repository_exist", "expected"),
     [
-        (GroupDetail(display_name=None, type="group"), "create", False, "Display name is required to create a group."),
+        (GroupDetail(display_name=None, type="group"), "create", False, E.GROUP_REQUIRES_DISPLAY_NAME),
         (
             GroupDetail(display_name="Test Group", id=None, type="group"),
             "update",
             False,
-            "Group ID is required to update a group.",
+            E.GROUP_REQUIRES_ID,
         ),
         (
             GroupDetail(display_name="Test Group", repository=None, type="group"),
             "create",
             False,
-            "Repository ID is required to create a group.",
+            E.GROUP_REQUIRES_REPOSITORY,
         ),
         (
             GroupDetail(display_name="Test Group", repository=GroupRepository(id="repo1"), type="group"),
             "create",
             False,
-            "Repository with ID 'repo1' does not exist.",
+            E.GROUP_REQUIRES_EXISTING_REPOSITORY % {"rid": "repo1"},
         ),
         (
             GroupDetail(
@@ -562,7 +570,7 @@ def test_validate_group_to_map_group(app, mocker: MockerFixture, group, mode, ex
             ),
             "create",
             True,
-            "Group ID is required to create a group.",
+            E.GROUP_REQUIRES_USER_DEFINED_ID,
         ),
         (
             GroupDetail(
@@ -573,16 +581,17 @@ def test_validate_group_to_map_group(app, mocker: MockerFixture, group, mode, ex
             ),
             "create",
             True,
-            "Group ID is too long.",
+            E.GROUP_TOO_LONG_ID % {"rid": "repo1", "max": 50 - len("jc_") - len("_gr_") - len("repo1")},
         ),
     ],
 )
 def test_validate_group_to_map_group_error(app, mocker: MockerFixture, group, mode, repository_exist, expected):
     repository = RepositoryDetail(id="repo1") if repository_exist else None
     mocker.patch("server.services.repositories.get_by_id", return_value=repository)
+    mocker.patch("server.services.utils.transformers.get_permitted_repository_ids", return_value={"repo1"})
     with pytest.raises(InvalidFormError) as exc:
         transformers.validate_group_to_map_group(group=group, mode=mode)
-    assert str(exc.value) == expected
+    assert str(exc.value) == str(expected)
 
 
 @pytest.mark.parametrize(
@@ -602,7 +611,7 @@ def test_validate_group_to_map_group_error(app, mocker: MockerFixture, group, mo
             ),
         ),
         (
-            ([UserSummary(id="user1")], [UserSummary(id="admin1")], [GroupService_(id="service1")]),
+            (["user1"], ["admin1"], ["service1"]),
             MapGroup(
                 id="jc_repo1_gr_test_group_test",
                 display_name="Test Group",
@@ -701,7 +710,7 @@ def test_prepare_user(app, mocker: MockerFixture):
 def test_make_user_detail(app, mocker: MockerFixture, map_user, affiliations, is_system_admin, expected):
     mocker.patch("server.services.utils.transformers.get_permitted_repository_ids", return_value={"repo1"})
     mocker.patch("server.services.utils.transformers.detect_affiliations", return_value=affiliations)
-    mocker.patch("server.services.utils.transformers.is_current_user_system_admin", return_value=is_system_admin)
+    mocker.patch("server.services.utils.transformers.is_super", return_value=is_system_admin)
     mocker.patch("server.services.utils.transformers.make_criteria_object", return_value=None)
     user_detail = transformers.make_user_detail(map_user)
     assert user_detail == expected
@@ -743,7 +752,7 @@ def test_make_user_detail_more(app, mocker: MockerFixture, map_user, permitted_r
         "server.services.utils.transformers.get_permitted_repository_ids", return_value=permitted_repository_ids
     )
     mocker.patch("server.services.utils.transformers.detect_affiliations", return_value=affiliations)
-    mocker.patch("server.services.utils.transformers.is_current_user_system_admin", return_value=False)
+    mocker.patch("server.services.utils.transformers.is_super", return_value=False)
     mocker.patch("server.services.utils.transformers.make_criteria_object", return_value=None)
     mocker.patch(
         "server.services.groups.search",
@@ -766,17 +775,17 @@ def test_make_user_detail_more(app, mocker: MockerFixture, map_user, permitted_r
     [
         (
             UserDetail(id="user1", user_name=""),
-            "Username is required to create a user.",
+            E.USER_REQUIRES_USERNAME,
             InvalidFormError,
         ),
         (
             UserDetail(id=None, user_name="Test User", eppns=[]),
-            "At least one eduPersonPrincipalName is required to create a user.",
+            E.USER_REQUIRES_EPPN,
             InvalidFormError,
         ),
         (
             UserDetail(id="user1", user_name="Test User", eppns=["test_eppn"], emails=[]),
-            "At least one email is required to create a user.",
+            E.USER_REQUIRES_EMAIL,
             InvalidFormError,
         ),
         (
@@ -787,7 +796,7 @@ def test_make_user_detail_more(app, mocker: MockerFixture, map_user, permitted_r
                 emails=["test@email.com"],
                 groups=[GroupSummary(id="jc_not_repo_gr_test_group")],
             ),
-            "Cannot specify groups that do not exist.",
+            E.USER_REQUIRES_REPOSITORY,
             InvalidFormError,
         ),
         (
@@ -800,7 +809,7 @@ def test_make_user_detail_more(app, mocker: MockerFixture, map_user, permitted_r
                 is_system_admin=True,
                 repository_roles=[RepositoryRole(id="repo1", user_role=USER_ROLES.REPOSITORY_ADMIN)],
             ),
-            "System administrator cannot be affiliated with any repository.",
+            E.USER_NO_CREATE_SYSTEM_ADMIN,
             InvalidFormError,
         ),
     ],
@@ -814,7 +823,7 @@ def test_validate_user_to_map_user_create(app, mocker: MockerFixture, user_detai
     )
     with pytest.raises(expected_exception) as exc:
         transformers.validate_user_to_map_user(user_detail, mode="create")
-    assert str(exc.value) == expectedarg
+    assert str(exc.value) == str(expectedarg)
 
 
 @pytest.mark.parametrize(
@@ -827,11 +836,11 @@ def test_validate_user_to_map_user_create(app, mocker: MockerFixture, user_detai
                 eppns=["test_eppn"],
                 emails=["test@email.com"],
                 groups=[],
-                is_system_admin=False,
-                repository_roles=None,
+                is_system_admin=True,
+                repository_roles=[RepositoryRole(id="repo1", user_role=USER_ROLES.REPOSITORY_ADMIN)],
             ),
             None,
-            "At least one repository and role is required.",
+            str(E.USER_REQUIRES_NO_REPOSITORY),
             InvalidFormError,
         ),
         (
@@ -840,12 +849,12 @@ def test_validate_user_to_map_user_create(app, mocker: MockerFixture, user_detai
                 user_name="Test User",
                 eppns=["test_eppn"],
                 emails=["test@email.com"],
-                groups=[],
-                is_system_admin=False,
-                repository_roles=[RepositoryRole(id="repo1", user_role=USER_ROLES.REPOSITORY_ADMIN)],
+                groups=[GroupSummary(id="jc_repo1_gr_test_group")],
+                is_system_admin=True,
+                repository_roles=None,
             ),
             None,
-            "Cannot specify repositories that do not exist.",
+            str(E.USER_REQUIRES_NO_GROUP),
             InvalidFormError,
         ),
         (
@@ -889,7 +898,7 @@ def test_validate_user_to_map_user_create(app, mocker: MockerFixture, user_detai
                 user_name="Test User",
                 eppns=["test_eppn"],
                 emails=["test@email.com"],
-                groups=[GroupSummary(id="jc_repo1_ro_radm_test")],
+                groups=[GroupSummary(id="jc_repo1_gr_test_group")],
                 is_system_admin=False,
                 repository_roles=[
                     RepositoryRole(id="repo1", user_role=USER_ROLES.REPOSITORY_ADMIN),
@@ -907,6 +916,16 @@ def test_validate_user_to_map_user_update(
         "server.services.repositories.get_by_id",
         return_value=exist_repository,
     )
+    mocker.patch("server.services.utils.transformers.get_permitted_repository_ids", return_value={"repo1"})
+    mocker.patch(
+        "server.services.utils.transformers.validate_user_roles",
+        return_value=[],
+    )
+    mocker.patch(
+        "server.services.utils.transformers.is_super",
+        return_value=True,
+    )
+    mocker.patch("server.services.utils.transformers.validate_user_groups", return_value=["jc_repo1_gr_test_group"])
     if expected_exception:
         with pytest.raises(expected_exception) as exc:
             transformers.validate_user_to_map_user(user_detail, mode="update")

@@ -605,6 +605,11 @@ OPERATION_FORBIDDEN = LogMessage(
     "Logged-in user does not have permission to perform this operation.",
 )
 
+VALIDATION_ERROR_BLOCK = LogMessage(
+    "E603",
+    "Execution is not allowed because there is one or more validation errors.",
+)
+
 FAILED_GET_UPLOAD_HISTORY_RECORD = LogMessage(
     "E610",
     "Failed to get upload history (id: %(history_id)s) from database.",
@@ -672,6 +677,11 @@ FILE_FORMAT_UNSUPPORTED = LogMessage(
 FILE_VALIDATION_ERROR = LogMessage(
     "E624",
     "File validation failed for task: %(task_id)s. Please check the file.",
+)
+
+FILE_NOT_ACTIVE_SHEET = LogMessage(
+    "E625",
+    "No active sheet found in the Excel file (path: %(path)s).",
 )
 
 TASK_NOT_FOUND = LogMessage(

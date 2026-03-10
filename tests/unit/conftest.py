@@ -74,6 +74,18 @@ def test_config():
             "max_id_length": "50 - len('jc_') - len('_gr_')",
         },
         "POSTGRES": {"db": "jctest", "host": db_host},
+        "USERS": {
+            "export_fields": [
+                "id",
+                "user_name",
+                "groups[].id",
+                "groups[].name",
+                "role",
+                "edu_person_principal_names[]",
+                "preferred_language",
+                "emails[]",
+            ]
+        },
         "REDIS": {
             "cache_type": "RedisCache",
             "single": {"base_url": f"redis://{redis_host}:6379/0"},
@@ -81,6 +93,7 @@ def test_config():
         },
         "RABBITMQ": {"url": f"amqp://guest:guest@{amqp_host}:5672//"},
         "STORAGE": {"local": {"temporary": "/var/tmp/jcgroups"}},  # noqa: S108
+        "FEATURES": {"search_only_username": False, "enable_bulk_operation": True},
     })
 
 

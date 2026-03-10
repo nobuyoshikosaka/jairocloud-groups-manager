@@ -402,11 +402,11 @@ def validate_group_to_map_group(
     from server.services import repositories  # noqa: PLC0415
 
     if repositories.get_by_id(repository_id) is None:
-        error = E.GROUP_REQUIRES_EXISTING_REPOSITORY % {"id": repository_id}
+        error = E.GROUP_REQUIRES_EXISTING_REPOSITORY % {"rid": repository_id}
         raise InvalidFormError(error)
 
     if not is_super() and repository_id not in get_permitted_repository_ids():
-        error = E.GROUP_FORBIDDEN_REPOSITORY % {"id": repository_id}
+        error = E.GROUP_FORBIDDEN_REPOSITORY % {"rid": repository_id}
         raise InvalidFormError(error)
 
     user_defined_id = group.user_defined_id

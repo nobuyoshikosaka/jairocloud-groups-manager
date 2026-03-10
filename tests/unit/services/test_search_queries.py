@@ -9,7 +9,8 @@ from pydantic import AliasGenerator, BaseModel, ConfigDict
 
 from server.api.schemas import GroupsQuery, RepositoriesQuery, UsersQuery
 from server.entities.search_request import SearchRequestParameter
-from server.exc import InvalidQueryError
+from server.exc import ConfigurationError, InvalidQueryError
+from server.messages import E
 from server.services.utils import search_queries
 from server.services.utils.affiliations import Affiliations, _Group
 
@@ -38,7 +39,7 @@ def test_build_search_query_invalid_query(app, mocker: MockerFixture):
 
     with pytest.raises(InvalidQueryError) as exc:
         search_queries.build_search_query(DummyCriteria())  # pyright: ignore[reportArgumentType]
-    assert str(exc.value) == f"Unsupported criteria type: {type(DummyCriteria())}"
+    assert str(exc.value) == str(E.UNRECOGNIZED_SEARCH_CRITERIA)
 
 
 @pytest.mark.parametrize(
@@ -67,7 +68,7 @@ def test_build_search_query_invalid_query(app, mocker: MockerFixture):
             SearchRequestParameter(
                 filter='(groups.value eq "jc_roles_sysadm_test") and (groups.value eq "jc_repo1_ro_radm_test")',
                 start_index=None,
-                count=None,
+                count=20,
                 sort_by="entityIds.value",
                 sort_order="descending",
             ),
@@ -110,7 +111,7 @@ def test_build_repositories_search_query(
 
 
 @pytest.mark.parametrize(
-    ("search_query", "is_system_admin", "permitted", "affiliations", "expected"),
+    ("search_query", "is_system_admin", "permitted", "affiliations", "affiliation", "expected"),
     [
         (
             GroupsQuery(
@@ -128,6 +129,7 @@ def test_build_repositories_search_query(
             False,
             set(),
             Affiliations(roles=[], groups=[]),
+            _Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1"),
             SearchRequestParameter(
                 filter=(
                     '((displayName co "test")) and (id eq "") and '
@@ -148,6 +150,7 @@ def test_build_repositories_search_query(
                 roles=[],
                 groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
+            _Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1"),
             SearchRequestParameter(
                 filter='(id eq "jc_repo1_gr_test1") and (public eq false) and (memberListVisibility eq Private)',
                 start_index=None,
@@ -157,13 +160,25 @@ def test_build_repositories_search_query(
             ),
         ),
         (
-            GroupsQuery(q=None, i=["jc_repo1_gr_test1"], r=None, u=None, s=None, v=2, k=None, d=None, p=None, l=None),
+            GroupsQuery(
+                q=None,
+                i=["jc_repo1_gr_test1"],
+                r=None,
+                u=None,
+                s=None,
+                v=2,
+                k=None,
+                d=None,
+                p=None,
+                l=None,
+            ),
             True,
             {"repo1"},
             Affiliations(
                 roles=[],
                 groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
+            _Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1"),
             SearchRequestParameter(
                 filter='(id eq "jc_repo1_gr_test1") and (memberListVisibility eq Hidden)',
                 start_index=None,
@@ -173,15 +188,16 @@ def test_build_repositories_search_query(
             ),
         ),
         (
-            GroupsQuery(q=None, i=None, r=None, u=None, s=None, v=None, k=None, d=None, p=None, l=None),
+            GroupsQuery(q=None, i=None, r=None, u=None, s=None, v=None, k=None, d=None, p=-1, l=-1),
             False,
             {"repo1"},
             Affiliations(
                 roles=[],
                 groups=[_Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1")],
             ),
+            _Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1"),
             SearchRequestParameter(
-                filter='id sw "jc_repo1"', start_index=None, count=20, sort_by=None, sort_order=None
+                filter='id sw "jc_repo1"', start_index=None, count=None, sort_by=None, sort_order=None
             ),
         ),
         (
@@ -189,20 +205,22 @@ def test_build_repositories_search_query(
             True,
             set(),
             Affiliations(roles=[], groups=[]),
+            _Group(repository_id="repo1", group_id="jc_repo1_gr_test1", user_defined_id="test1"),
             SearchRequestParameter(filter='id sw "jc_"', start_index=None, count=20, sort_by=None, sort_order=None),
         ),
     ],
 )
 def test_build_groups_search_query(
-    app, mocker: MockerFixture, search_query, is_system_admin, permitted, affiliations, expected
+    app, mocker: MockerFixture, search_query, is_system_admin, permitted, affiliations, affiliation, expected
 ):
     mocker.patch("server.services.utils.search_queries.is_current_user_system_admin", return_value=is_system_admin)
     mocker.patch("server.services.utils.search_queries.get_permitted_repository_ids", return_value=permitted)
     mocker.patch("server.services.utils.search_queries.detect_affiliations", return_value=affiliations)
+    mocker.patch("server.services.utils.search_queries.detect_affiliation", return_value=affiliation)
     assert search_queries.build_groups_search_query(search_query) == expected
 
 
-def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
+def test_build_groups_search_query_invalid_query(app, mocker: MockerFixture):
     mocker.patch("server.services.utils.search_queries.is_current_user_system_admin", return_value=False)
     mocker.patch("server.services.utils.search_queries.get_permitted_repository_ids", return_value={"repo1"})
     mocker.patch(
@@ -210,7 +228,7 @@ def test_build_users_search_query_invalid_query(app, mocker: MockerFixture):
     )
     with pytest.raises(InvalidQueryError) as exc:
         search_queries.build_groups_search_query(GroupsQuery(i=["jc_repo1_gr_test1"]))
-    assert str(exc.value) == "Invalid group filter criteria"
+    assert str(exc.value) == str(E.UNRECOGNIZED_SEARCH_CRITERIA)
 
 
 @pytest.mark.parametrize(
@@ -585,6 +603,6 @@ def test__path_generator(app, mocker: MockerFixture, model, expected):
 def test__get_id_prefix_not_match(app, test_config, mocker: MockerFixture):
     mocker.patch("server.config.config.REPOSITORIES.id_patterns.sp_connector", "invalid_pattern")
     test_func = inspect.unwrap(search_queries._get_id_prefix)  # noqa: SLF001
-    with pytest.raises(InvalidQueryError) as exc:
+    with pytest.raises(ConfigurationError) as exc:
         test_func()
-    assert str(exc.value) == "Invalid user-defined group ID pattern"
+    assert str(exc.value) == str(E.INVALID_SERVER_CONFIG)

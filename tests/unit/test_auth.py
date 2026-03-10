@@ -1,6 +1,6 @@
 import typing as t
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from flask import session
 from flask_login import current_user, login_user
@@ -36,19 +36,9 @@ def test_refresh_session_not_logged_in(app, datastore):
     _, account_store, _ = datastore
     with app.test_request_context("/"):
         res = auth.refresh_session()
-        assert res is None
-        account_store.expire.assert_not_called()
-        account_store.delete.assert_not_called()
-
-
-def test_refresh_session_no_data(app, datastore):
-    _, account_store, _ = datastore
-    with app.test_request_context("/"):
-        login_user(mock_repoadmin_login_user)
-        res = auth.refresh_session()
-        assert res is None
-        account_store.expire.assert_not_called()
-        account_store.delete.assert_not_called()
+    assert res is None
+    account_store.expire.assert_not_called()
+    account_store.delete.assert_not_called()
 
 
 def test_refresh_session(app, datastore, mocker: MockerFixture):
@@ -60,45 +50,42 @@ def test_refresh_session(app, datastore, mocker: MockerFixture):
         login_user(mock_repoadmin_login_user)
         session["_id"] = test_session_id
         res = auth.refresh_session()
-        assert res is None
-        account_store.expire.assert_called_once()
+    assert res is None
+    account_store.expire.assert_called_once()
 
 
 def test_refresh_session_over(app, datastore, mocker: MockerFixture):
     _, account_store, _ = datastore
     test_session_id = "test_session_id"
-    expired_login_date = (datetime.now(UTC) - timedelta(seconds=60 * 60 * 24)).isoformat()
-    account_store.hget.return_value = expired_login_date.encode("utf-8")
     with app.test_request_context("/"):
+        mocker.patch("server.config.config.SESSION.absolute_lifetime", 0)
         login_user(mock_repoadmin_login_user)
         session["_id"] = test_session_id
         res = auth.refresh_session()
-        assert res is None
-        account_store.delete.assert_called_once()
+    assert res is None
+    account_store.delete.assert_called_once()
 
 
 def test_refresh_session_absolute(app, datastore, mocker: MockerFixture):
-    mocker.patch("server.config.config.SESSION.strategy", "absolute")
     _, account_store, _ = datastore
     with app.test_request_context("/"):
+        mocker.patch("server.config.config.SESSION.strategy", "absolute")
         res = auth.refresh_session()
-        assert res is None
-        account_store.expire.assert_not_called()
-        account_store.delete.assert_not_called()
+    assert res is None
+    account_store.expire.assert_not_called()
+    account_store.delete.assert_not_called()
 
 
 def test_refresh_session_invalid_ttl(app, datastore, mocker: MockerFixture):
     _, account_store, _ = datastore
     test_session_id = "test_session_id"
-    test_login_date = datetime.now(UTC).isoformat()
-    account_store.hget.return_value = test_login_date.encode("utf-8")
-    mocker.patch("server.config.config.SESSION.sliding_lifetime", -1)
     with app.test_request_context("/"):
+        mocker.patch("server.config.config.SESSION.sliding_lifetime", -1)
         login_user(mock_repoadmin_login_user)
         session["_id"] = test_session_id
         res = auth.refresh_session()
-        assert res is None
-        account_store.expire.assert_not_called()
+    assert res is None
+    account_store.expire.assert_not_called()
 
 
 def test_load_user_not_eppn():
@@ -121,7 +108,7 @@ def test_load_user_invalid_eppn(app, mocker: MockerFixture):
         mocker.patch("server.auth.get_user_from_store", return_value=mock_repoadmin_login_user)
         session["_id"] = test_session_id
         user = auth.load_user(test_invalid_eppn)
-        assert user is None
+    assert user is None
 
 
 def test_load_user(app, mocker: MockerFixture):
@@ -131,7 +118,7 @@ def test_load_user(app, mocker: MockerFixture):
         mocker.patch("server.auth.get_user_from_store", return_value=mock_repoadmin_login_user)
         session["_id"] = test_session_id
         user = auth.load_user(test_eppn)
-        assert user == mock_repoadmin_login_user
+    assert user == mock_repoadmin_login_user
 
 
 def test_get_user_from_store_valid(app, datastore):
@@ -146,9 +133,9 @@ def test_get_user_from_store_valid(app, datastore):
     account_store.hgetall.return_value = user_dict
     with app.test_request_context("/"):
         user = auth.get_user_from_store(test_session_id)
-        assert isinstance(user, LoginUser)
-        assert user.eppn == "test_eppn"
-        assert user.session_id == test_session_id
+    assert isinstance(user, LoginUser)
+    assert user.eppn == "test_eppn"
+    assert user.session_id == test_session_id
 
 
 def test_get_user_from_store_none(app, datastore):
@@ -157,12 +144,12 @@ def test_get_user_from_store_none(app, datastore):
     account_store.hgetall.return_value = None
     with app.test_request_context("/"):
         user = auth.get_user_from_store(test_session_id)
-        assert user is None
+    assert user is None
 
 
 def test_build_account_store_key(app, test_config):
     session_id = "test_session_id"
     with app.test_request_context("/"):
         key = auth.build_account_store_key(session_id)
-        prefix = test_config.REDIS.key_prefix
-        assert key == f"{prefix}login-{session_id}"
+    prefix = test_config.REDIS.key_prefix
+    assert key == f"{prefix}login-{session_id}"
