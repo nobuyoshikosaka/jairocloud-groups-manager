@@ -214,10 +214,6 @@ def post(
             alias_generator(name) for name in exclude
         ])
 
-    from contrib import dump
-
-    dump({"request": auth_params} | payload, "service_post_payload")
-
     response = requests.post(
         f"{config.MAP_CORE.base_url}{MAP_SERVICES_ENDPOINT}",
         params=attributes_params,
@@ -227,8 +223,6 @@ def post(
         json={"request": auth_params} | payload,
         timeout=config.MAP_CORE.timeout,
     )
-
-    dump(response.text, "service_post_response")
 
     status_code = response.status_code
     if status_code not in {HTTPStatus.BAD_REQUEST, HTTPStatus.CONFLICT}:

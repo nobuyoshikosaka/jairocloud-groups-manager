@@ -15,7 +15,7 @@ from server.const import MAP_GROUPS_ENDPOINT
 from server.entities.login_user import LoginUser
 from server.entities.map_error import MapError
 from server.entities.map_group import MapGroup
-from server.entities.patch_request import PatchRequestPayload, ReplaceOperation
+from server.entities.patch_request import PatchOperation, PatchRequestPayload, ReplaceOperation
 from server.entities.search_request import SearchRequestParameter, SearchResponse
 from tests.helpers import load_json_data
 
@@ -42,9 +42,9 @@ def test_search_success(app: Flask, mocker: MockerFixture, group_data) -> None:
     time_stamp = str(int(time.time()))
     signature = hashlib.sha256(b"hash").hexdigest()
     response = SearchResponse[MapGroup](total_results=1, items_per_page=1, start_index=1, resources=[group])
-    expected_requests_url = f"{groups.config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}"
+    expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}"
     expected_headers = {"Authorization": f"Bearer {access_token}"}
-    expected_timeout = groups.config.MAP_CORE.timeout
+    expected_timeout = config.MAP_CORE.timeout
 
     mock_get = mocker.patch("server.clients.groups.requests.get")
     mocker.patch("server.clients.groups.compute_signature", return_value=signature)
@@ -94,9 +94,9 @@ def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:
     }
     time_stamp = str(int(time.time()))
     signature = hashlib.sha256(b"hash").hexdigest()
-    expected_requests_url = f"{groups.config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}"
+    expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}"
     expected_headers = {"Authorization": f"Bearer {access_token}"}
-    expected_timeout = groups.config.MAP_CORE.timeout
+    expected_timeout = config.MAP_CORE.timeout
     expected_attributes = set(include | {"id"})
     mocker.patch("server.clients.groups.get_time_stamp", return_value=time_stamp)
     mocker.patch("server.clients.groups.compute_signature", return_value=signature)
@@ -145,9 +145,9 @@ def test_search_with_exclude(app: Flask, mocker: MockerFixture) -> None:
     }
     time_stamp = str(int(time.time()))
     signature = hashlib.sha256(b"hash").hexdigest()
-    expected_requests_url = f"{groups.config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}"
+    expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}"
     expected_headers = {"Authorization": f"Bearer {access_token}"}
-    expected_timeout = groups.config.MAP_CORE.timeout
+    expected_timeout = config.MAP_CORE.timeout
     expected_excluded = set(exclude)
     mocker.patch("server.clients.groups.get_time_stamp", return_value=time_stamp)
     mocker.patch("server.clients.groups.compute_signature", return_value=signature)
@@ -198,9 +198,9 @@ def test_search_groups_with_all_params(app: Flask, mocker: MockerFixture) -> Non
     }
     time_stamp = str(int(time.time()))
     signature = hashlib.sha256(b"hash").hexdigest()
-    expected_requests_url = f"{groups.config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}"
+    expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_GROUPS_ENDPOINT}"
     expected_headers = {"Authorization": f"Bearer {access_token}"}
-    expected_timeout = groups.config.MAP_CORE.timeout
+    expected_timeout = config.MAP_CORE.timeout
     expected_excluded = set(exclude)
     expected_attributes = set(include | {"id"})
     mocker.patch("server.clients.groups.get_time_stamp", return_value=time_stamp)
@@ -826,9 +826,7 @@ def test_patch_by_id_success(app: Flask, mocker: MockerFixture, group_data) -> N
     json_data, _ = group_data
 
     group_id: str = json_data["id"]
-    operations: list[groups.PatchOperation[MapGroup]] = [
-        ReplaceOperation(op="replace", path="displayName", value="NewName")
-    ]
+    operations: list[PatchOperation[MapGroup]] = [ReplaceOperation(op="replace", path="displayName", value="NewName")]
     expected_result: MapGroup = MapGroup.model_validate(json_data)
     expected_payload = PatchRequestPayload(operations=operations).model_dump(
         mode="json", by_alias=True, exclude_unset=False
@@ -1125,7 +1123,7 @@ def test__get_alias_generator_with_serialization_alias_groups(monkeypatch):
         def __init__(self):
             self.serialization_alias = lambda x: f"alias_{x}"
 
-    monkeypatch.setitem(groups.MapGroup.model_config, "alias_generator", Dummy())
+    monkeypatch.setitem(MapGroup.model_config, "alias_generator", Dummy())
     importlib.reload(groups)
     result = groups.alias_generator
     assert callable(result)
@@ -1135,7 +1133,7 @@ def test__get_alias_generator_with_serialization_alias_groups(monkeypatch):
 def test__get_alias_generator_with_none_groups(monkeypatch):
     """Covers the branch where generator is None and falls back to lambda x: x for groups."""
 
-    monkeypatch.setitem(groups.MapGroup.model_config, "alias_generator", None)
+    monkeypatch.setitem(MapGroup.model_config, "alias_generator", None)
     importlib.reload(groups)
     result = groups.alias_generator
     assert callable(result)
@@ -1145,8 +1143,8 @@ def test__get_alias_generator_with_none_groups(monkeypatch):
 @pytest.mark.parametrize(
     ("is_logged_in", "is_admin", "permitted", "expected"),
     [
-        (False, False, [], "anonymous"),
-        (True, True, [], "system_admin"),
+        (False, False, [], "by_anonymous"),
+        (True, True, [], "by_system_admin"),
         (True, False, ["repo1", "repo2"], "repo1,repo2"),
         (True, False, [], ""),
     ],
