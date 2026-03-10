@@ -2,8 +2,8 @@
   "bulk": {
     "about": "一括操作について",
     "about-description": "ファイルに含まれるユーザーは新規登録または更新されます。",
-    "about-description2": "既存ユーザーはidで照合し、一致する場合は更新されます",
-    "about-description3": "ファイルに含まれていないユーザーの削除を選択できます",
+    "about-description2": "既存ユーザーはidで照合し、一致する場合は更新されます。",
+    "about-description3": "ファイルに含まれていないユーザーの削除を選択できます。",
     "about-description4": "対応形式: TSV, CSV, Excel",
     "column": {
       "email": "E-maile",
@@ -20,13 +20,13 @@
     "excute": {
     },
     "execute": {
-      "failed": "ユーザーの更新に失敗しました",
-      "result_failed": "実行結果の取得に失敗しました",
-      "timeout": "一括更新処理がタイムアウトしました"
+      "failed": "ユーザーの更新に失敗しました。",
+      "result_failed": "実行結果の取得に失敗しました。",
+      "timeout": "一括更新処理がタイムアウトしました。"
     },
     "file-format-error": "対応していないファイル形式です。TSV、CSV、またはExcelファイルを選択してください。",
-    "file-required": "ファイルを選択してください",
-    "file-validate-error": "ファイルの検証に失敗しました",
+    "file-required": "ファイルを選択してください。",
+    "file-validate-error": "ファイルの検証に失敗しました。",
     "filter": "フィルター",
     "import": {
     },
@@ -37,10 +37,10 @@
       "select": "削除するユーザーを選択してください。"
     },
     "missing_user": "ファイルに含まれていないユーザー",
-    "no-results": "データが見つかりません",
+    "no-results": "データが見つかりません。",
     "operator": "実行ユーザー",
-    "repository-required": "リポジトリを選択してください",
-    "select-repository": "リポジトリを選択してください",
+    "repository-required": "リポジトリを選択してください。",
+    "select-repository": "リポジトリを選択してください。",
     "select_all": "すべて選択",
     "start-at": "開始日時",
     "status": {
@@ -67,13 +67,13 @@
     "upload-file": "アップロードファイル",
     "upload-file-info": "一括操作結果",
     "validation": {
-      "error": "不正なデータが検出されました",
+      "error": "不正なデータが検出されました。",
       "error-detail": "ファイルを修正して再度アップロードしてください。",
-      "failed": "ファイルの検証に失敗しました",
-      "fetch_failed": "検証結果の取得に失敗しました",
-      "fix_error": "エラーを修正してください",
+      "failed": "ファイルの検証に失敗しました。",
+      "fetch_failed": "検証結果の取得に失敗しました。",
+      "fix_error": "エラーを修正してください。",
       "results": "データプレビュー",
-      "timeout": "ファイルの検証がタイムアウトしました"
+      "timeout": "ファイルの検証がタイムアウトしました。"
     },
     "view-all": "すべて表示"
   },
@@ -228,15 +228,15 @@
     "download": {
       "date": "ダウンロード日時"
     },
-    "empty": "検索条件に一致するデータが見つかりませんでした",
-    "empty-data": "データがありません",
+    "empty": "検索条件に一致するデータが見つかりませんでした。",
+    "empty-data": "データがありません。",
     "expired": "期限切れ",
     "failed": "失敗",
     "failed-count": "失敗件数",
     "file": "ファイル",
-    "file_not_available": "ファイルのダウンロードに失敗しました",
+    "file_not_available": "ファイルのダウンロードに失敗しました。",
     "filter": {
-      "options_not_found": "フィルターの取得に失敗しました",
+      "options_not_found": "フィルターの取得に失敗しました。",
       "title": "フィルター"
     },
     "first-download": "初回ダウンロード",
@@ -272,7 +272,7 @@
     "table-title": "履歴一覧",
     "target": "ダウンロード対象 | アップロード対象",
     "title": "履歴",
-    "toggle_public_status_failed": "公開状態の更新に失敗しました",
+    "toggle_public_status_failed": "公開状態の更新に失敗しました。",
     "unavailable": "期限切れ",
     "upload": {
       "date": "アップロード日時"

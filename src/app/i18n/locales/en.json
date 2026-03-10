@@ -1,10 +1,10 @@
 {
   "bulk": {
     "about": "About bulk operations",
-    "about-description": "Users included in the file are newly registered or updated",
-    "about-description2": "Existing users are matched by id and updated if they match",
-    "about-description3": "You can choose to delete users who are not included in the file",
-    "about-description4": "Supported formats: TSV, CSV, Excel",
+    "about-description": "Users included in the file are newly registered or updated.",
+    "about-description2": "Existing users are matched by id and updated if they match.",
+    "about-description3": "You can choose to delete users who are not included in the file.",
+    "about-description4": "Supported formats: TSV, CSV, Excel.",
     "column": {
       "email": "E-mail",
       "eppn": "ePPN",
@@ -20,13 +20,13 @@
     "excute": {
     },
     "execute": {
-      "failed": "User update failed",
-      "result_failed": "Failed to get execution results",
-      "timeout": "Bulk update process timed out"
+      "failed": "User update failed.",
+      "result_failed": "Failed to get execution results.",
+      "timeout": "Bulk update process timed out."
     },
     "file-format-error": "The file format is not supported. \nChoose TSV, CSV, or Excel file.",
-    "file-required": "Please select file",
-    "file-validate-error": "File validation failed",
+    "file-required": "Please select file.",
+    "file-validate-error": "File validation failed.",
     "filter": "filter",
     "import": {
     },
@@ -37,10 +37,10 @@
       "select": "Please select the user to delete."
     },
     "missing_user": "User not included in file",
-    "no-results": "data not found",
+    "no-results": "Data not found.",
     "operator": "Execution user",
-    "repository-required": "Please select a repository",
-    "select-repository": "Please select a repository",
+    "repository-required": "Please select a repository.",
+    "select-repository": "Please select a repository.",
     "select_all": "Select all",
     "start-at": "Start date and time",
     "status": {
@@ -67,13 +67,13 @@
     "upload-file": "upload file",
     "upload-file-info": "Batch operation results",
     "validation": {
-      "error": "Invalid data detected",
+      "error": "Invalid data detected.",
       "error-detail": "Please correct the file and upload it again.",
-      "failed": "File validation failed",
-      "fetch_failed": "Failed to obtain verification results",
-      "fix_error": "Please fix the error",
+      "failed": "File validation failed.",
+      "fetch_failed": "Failed to obtain verification results.",
+      "fix_error": "Please fix the error.",
       "results": "data preview",
-      "timeout": "File validation timed out"
+      "timeout": "File validation timed out."
     },
     "view-all": "Show all"
   },
@@ -243,15 +243,15 @@
     "download": {
       "date": "Download date and time"
     },
-    "empty": "No data matching your search criteria was found",
-    "empty-data": "No data",
+    "empty": "No data matching your search criteria was found.",
+    "empty-data": "No data.",
     "expired": "Expired",
     "failed": "failure",
     "failed-count": "Number of failures",
     "file": "file",
-    "file_not_available": "File download failed",
+    "file_not_available": "File download failed.",
     "filter": {
-      "options_not_found": "Failed to get filter",
+      "options_not_found": "Failed to get filter.",
       "title": "filter"
     },
     "first-download": "First download",
@@ -287,7 +287,7 @@
     "table-title": "History list",
     "target": "Download target | Upload target",
     "title": "History",
-    "toggle_public_status_failed": "Failed to update publishing status",
+    "toggle_public_status_failed": "Failed to update publishing status.",
     "unavailable": "Expired",
     "upload": {
       "date": "Upload date and time"
