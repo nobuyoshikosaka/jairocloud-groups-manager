@@ -36,8 +36,9 @@ def create_api_blueprint() -> Blueprint:
 
     for _, module_name, _ in iter_modules([str(Path(__file__).parent)]):
         module = import_module(f"{__package__}.{module_name}")
+        url_prefix = f"/{module_name}".replace("_", "-")
         if hasattr(module, "bp") and isinstance(module.bp, Blueprint):
-            bp_api.register_blueprint(module.bp, url_prefix=f"/{module_name}")
+            bp_api.register_blueprint(module.bp, url_prefix=url_prefix)
 
     @bp_api.errorhandler(JAIROCloudGroupsManagerError)
     @validate()

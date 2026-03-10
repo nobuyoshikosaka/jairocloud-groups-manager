@@ -20,7 +20,7 @@ INVALID_SERVER_CONFIG = LogMessage(
 UNSUPPORTED_EXPRESSION = LogMessage(
     "E002",
     "Unsupported expression in server configuration; "
-    "supported: 1. int / flaot literal, 2. literal str for len, "
+    "supported: 1. int / float literal, 2. literal str for len, "
     "3. +, -, *, / operators, 4. len, max, min functions.",
 )
 
@@ -574,6 +574,32 @@ UNEXPECTED_SERVER_ERROR = LogMessage(
 SERVER_UNAVAILABLE = LogMessage(
     "E503",
     "The server application is currently unavailable.",
+)
+
+
+GROUP_CACHE_UPDATE_CONFLICT = LogMessage(
+    "E800",
+    "The cache update operation is already in progress.",
+)
+
+FAILED_ENQUEUE_CACHE_UPDATE_TASK = LogMessage(
+    "E801",
+    "Failed to enqueue cache update task.",
+)
+
+FAILED_FETCH_UPDATE_TASK_STATUS = LogMessage(
+    "E802",
+    "Failed to fetch cache update task status.",
+)
+
+FAILED_PARSE_UPDATE_TASK_STATUS = LogMessage(
+    "E803",
+    "Failed to parse cache update task status.",
+)
+
+UPDATE_TASK_NOT_RUNNING = LogMessage(
+    "E804",
+    "No cache update task is currently running.",
 )
 
 

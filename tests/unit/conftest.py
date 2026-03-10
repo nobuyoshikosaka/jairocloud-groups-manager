@@ -1,7 +1,6 @@
 import inspect
 import typing as t
 
-from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -17,6 +16,8 @@ from server.factory import create_app
 
 
 if t.TYPE_CHECKING:
+    from datetime import datetime
+
     from flask import Flask
     from pytest_mock import MockerFixture
 
@@ -86,19 +87,16 @@ def test_config():
             "single": {"base_url": f"redis://{redis_host}:6379/0"},
             "sentinel": {
                 "nodes": [
-                    {"host", "sentinel-1", "port": 26379},
-                    {"host", "sentinel-2", "port": 26379},
+                    {"host": "sentinel-1", "port": 26379},
+                    {"host": "sentinel-2", "port": 26379},
                 ],
             },
         },
         "RABBITMQ": {"url": f"amqp://guest:guest@{amqp_host}:5672//"},
         "CACHE_GROUPS": {
-            "cache_redis_key": "{prefix}cache",
-            "gakunin_redis_key": "{fqdn}_gakunin_groups",
-            "map_groups_api_endpoint": "https://sample.gakunin.jp/api/groups/",
-            "toml_path": "cache_db_config.toml",
-            "directory_path": "./cache_db/tls",
-            "fqdn_list_file": "fqdn_list.toml",
+            "cache_key_suffix": "_gakunin_groups",
+            "api_endpoint": "https://sample.gakunin.jp/api/groups/",
+            "directory_path": "/var/mnt",
         },
     })
 
@@ -158,28 +156,24 @@ def app(base_app: Flask):
 
 
 @pytest.fixture
-def repository_summaries():
+def gen_summaries():
     def _data(num: int) -> SearchResult[RepositorySummary]:
-        return SearchResult(
-            resources=[
-                RepositorySummary(
-                    id=f"repo_{i}",
-                    display_name=f"Repository {i}",
-                    service_url=HttpUrl(f"https://repo{i}.example.jp"),
-                    sp_connector_id=f"jc_repo_{i}_sp",
-                )
-                for i in range(1, num + 1)
-            ],
-            total=num,
-            page_size=20,
-            offset=1,
-        )
+        resources = [
+            RepositorySummary(
+                id=f"repo_{i}",
+                service_name=f"Repository {i}",
+                service_url=HttpUrl(f"https://repo{i}.example.jp"),
+                service_id=f"jc_repo_{i}_sp",
+            )
+            for i in range(1, num + 1)
+        ]
+        return SearchResult(resources=resources, total=num, page_size=20, offset=1)
 
     return _data
 
 
 @pytest.fixture
-def cache_redis_key():
+def cache_keys():
     def _keys(fqdn_list: list[str]) -> list[bytes]:
         return [f"{fqdn.replace('-', '_').replace('.', '_')}_gakunin_groups".encode() for fqdn in fqdn_list]
 
@@ -187,13 +181,18 @@ def cache_redis_key():
 
 
 @pytest.fixture
-def repository_caches():
-    def _data(repositories: list[RepositorySummary], now: datetime, every_other: bool) -> list[RepositoryCache]:
+def cached_data():
+    def _data(
+        repositories: list[RepositorySummary],
+        now: datetime,
+        *,
+        every_other: bool,
+    ) -> list[RepositoryCache]:
         return [
             RepositoryCache(
                 id=repositories[i].id,
-                name=repositories[i].display_name,  # pyright: ignore[reportArgumentType],
-                url=str(repositories[i].service_url),
+                service_name=repositories[i].service_name,  # pyright: ignore[reportArgumentType],
+                service_url=repositories[i].service_url,
                 updated=now if not every_other or i % 2 == 0 else None,
             )
             for i in range(len(repositories))

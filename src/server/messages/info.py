@@ -177,3 +177,9 @@ SUCCESS_UPDATE_USER_AFFILIATIONS = LogMessage(
     "I321",
     "Successfully updated affiliations of User resource (id: %(id)s, ePPN: %(eppn)s).",
 )
+
+
+GROUP_CACHE_UPDATE_STARTED = LogMessage(
+    "I800",
+    "Group cache update task started (operation: %(op)s, task: %(task_id)s).",
+)

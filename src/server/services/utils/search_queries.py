@@ -912,3 +912,32 @@ def make_criteria_object(resource_type: str, **kwargs: t.Any) -> Criteria:  # py
         attrs[key] = value
 
     return t.cast("Criteria", SimpleNamespace(**attrs))
+
+
+class GroupCacheCriteria(t.Protocol):
+    """Schema for cache query parameters."""
+
+    q: t.Annotated[str | None, "term"] = None
+    """Search term for querying cache entries."""
+
+    f: t.Annotated[list[GroupCacheFilter] | None, "filter"] = None
+    """Filter expression for querying cache entries."""
+
+    p: t.Annotated[int | None, "page"] = None
+    """Page number for pagination."""
+
+    l: t.Annotated[int | None, "per"] = None  # noqa: E741
+    """Number of items per page for pagination."""
+
+
+type GroupCacheFilter = t.Literal["e", "n"]
+"""Group cache filter options:
+    - “e”: Filter existing cache entries.
+    - “n”: Filter non-existent cache entries.
+"""
+
+type GroupCacheOperation = t.Literal["all", "id-specified"]
+"""Group cache operation options:
+    - “all”: Update all cache entries.
+    - “id-specified”: Update cache entries by specified IDs.
+"""

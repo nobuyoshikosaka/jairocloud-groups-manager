@@ -17,6 +17,7 @@ from datetime import timedelta
 
 from flask import current_app
 from pydantic import (
+    AnyUrl,
     BaseModel,
     Field,
     StringConstraints,
@@ -30,6 +31,10 @@ from pydantic_settings import (
     TomlConfigSettingsSource,
 )
 from sqlalchemy.engine import URL, make_url
+from weko_group_cache_db.config import (
+    Sentinel,
+    Settings as CacheDbSettings,
+)
 from werkzeug.local import LocalProxy
 
 from .const import (
@@ -102,32 +107,27 @@ class RuntimeConfig(BaseSettings):
 
     @computed_field
     @property
-    def CACHE_DB(self) -> dict[str, t.Any]:
+    def CACHE_DB(self) -> CacheDbSettings:
         """Cache database configuration values."""
-        return {
-            "CACHE_KEY_SUFFIX": self.CACHE_GROUPS.gakunin_redis_key,
-            "MAP_GROUPS_API_ENDPOINT": self.CACHE_GROUPS.map_groups_api_endpoint,
-            "REDIS_TYPE": "redis"
-            if self.REDIS.cache_type == "RedisCache"
-            else "sentinel",
-            "REDIS_HOST": self.REDIS.single.base_url.replace("redis://", "").split(":")[
-                0
-            ]
-            if self.REDIS.cache_type == "RedisCache"
-            else "",
-            "REDIS_PORT": int(
-                self.REDIS.single.base_url.replace("redis://", "").split(":")[1]
-            )
-            if self.REDIS.cache_type == "RedisCache"
-            else 0,
-            "REDIS_DB_INDEX": self.REDIS.database.group_cache,
-            "REDIS_SENTINEL_MASTER": self.REDIS.sentinel.master_name
-            if self.REDIS.cache_type == "RedisSentinelCache"
-            else "",
-            "SENTINELS": self.REDIS.sentinel.nodes
-            if self.REDIS.cache_type == "RedisSentinelCache"
-            else [],
-        }
+        endpoint = (
+            self.MAP_CORE.base_url.rstrip("/")
+            + "/"
+            + self.CACHE_GROUPS.api_endpoint.lstrip("/")
+        )
+
+        return self.CACHE_GROUPS.model_copy(
+            update={
+                "LOG_LEVEL": self.LOG.level,
+                "SP_CONNECTOR_ID_PREFIX": self.SP.connector_id,
+                "MAP_GROUPS_API_ENDPOINT": endpoint,
+                "REDIS_TYPE": self.REDIS.cache_type,
+                "REDIS_HOST": self.REDIS.single.base_url.host,
+                "REDIS_PORT": self.REDIS.single.base_url.port,
+                "REDIS_DB_INDEX": self.REDIS.database.group_cache,
+                "REDIS_SENTINEL_MASTER": self.REDIS.sentinel.master_name,
+                "SENTINELS": t.cast("list[Sentinel]", self.REDIS.sentinel.nodes),
+            }
+        )
 
     @computed_field
     @property
@@ -148,10 +148,10 @@ class RuntimeConfig(BaseSettings):
         """
         cache_type = self.REDIS.cache_type
         database = self.REDIS.database.result_backend
-        config: dict[str, t.Any] = {"broker_url": self.RABBITMQ.url}
+        config: dict[str, t.Any] = {"broker_url": str(self.RABBITMQ.url)}
 
         if cache_type == "RedisCache" and self.REDIS.single:
-            base_url = self.REDIS.single.base_url.rstrip("/")
+            base_url = self.REDIS.single.base_url
             config["result_backend"] = f"{base_url}/{database}"
 
         elif cache_type == "RedisSentinelCache" and self.REDIS.sentinel:
@@ -490,7 +490,7 @@ class RedisConfig(BaseModel):
     cache_timeout: t.Annotated[int, "seconds"] = 300
     """Default timeout (in seconds) for cached items."""
 
-    key_prefix: str = "jcgroups_"
+    key_prefix: str = "jcgroups-"
     """Prefix for cache keys used by the application."""
 
     database: RedisDatabaseConfig = Field(
@@ -530,7 +530,7 @@ class RedisDatabaseConfig(BaseModel):
 class RedisSingleConfig(BaseModel):
     """Schema for single Redis server configuration."""
 
-    base_url: str = "redis://localhost:6379"
+    base_url: AnyUrl = AnyUrl("redis://localhost:6379")
 
 
 class RedisSentinelCacheConfig(BaseModel):
@@ -555,30 +555,18 @@ class SentinelNodeConfig(BaseModel):
 class RabbitmqConfig(BaseModel):
     """Schema for RabbitMQ configuration."""
 
-    url: str = "amqp://guest:guest@localhost:5672//"
+    url: AnyUrl = AnyUrl("amqp://guest:guest@localhost:5672//")
     """Hostname or IP address of the RabbitMQ server for Celery broker."""
 
 
-class CacheGroupsConfig(BaseModel):
+class CacheGroupsConfig(CacheDbSettings):
     """Schema for cache groups configuration."""
 
-    cache_redis_key: str
-    """Redis key for cache groups."""
-
-    gakunin_redis_key: str
-    """Redis key pattern for caching GakuNin group data."""
-
-    map_groups_api_endpoint: str
+    api_endpoint: str
     """Map groups API endpoint."""
-
-    toml_path: str
-    """Path to the TOML file with cache database configuration."""
 
     directory_path: str
     """Path to the directory containing institution TLS files."""
-
-    fqdn_list_file: str
-    """Path to the file containing FQDN list."""
 
 
 type HasRepoId = t.Annotated[str, StringConstraints(pattern=HAS_REPO_ID_PATTERN)]

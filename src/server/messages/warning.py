@@ -65,3 +65,15 @@ FAILED_DELETE_CACHE = LogMessage(
     "W083",
     "Failed to delete cache (func %(func)s, id: %(id)s).",
 )
+
+
+FAILED_UPDATE_TASK_PROGRESS = LogMessage(
+    "W800",
+    "Failed to update current task progress (done: %(done)s, total: %(total)s).",
+)
+
+FAILED_UPDATE_TASK_EXECUT_STATUS = LogMessage(
+    "W801",
+    "Failed to update current task execution status "
+    "(repository: %(rid)s, status: %(status)s, retries: %(retries)s).",
+)
