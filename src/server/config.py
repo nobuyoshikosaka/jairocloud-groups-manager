@@ -83,6 +83,9 @@ class RuntimeConfig(BaseSettings):
     GROUPS: GroupsConfig
     """Group related configuration values."""
 
+    USERS: UsersConfig
+    """Users related configuration values."""
+
     POSTGRES: PostgresConfig = Field(
         default_factory=lambda: PostgresConfig(),  # noqa: PLW0108
         exclude=True,
@@ -96,6 +99,12 @@ class RuntimeConfig(BaseSettings):
     """RabbitMQ configuration values."""
 
     DEVELOP: DevelopConfig | None = None
+
+    FEATURES: FeaturesConfig
+    """Feature flags for enabling/disabling application features.
+
+        These are due to temporary constraints
+        in the future, all features will be enabled and the settings will be deleted."""
 
     @computed_field
     @property
@@ -408,6 +417,22 @@ class GroupNamePatternsConfig(BaseModel):
         return getattr(self, key)
 
 
+class UsersConfig(BaseModel):
+    """Schema for user export file configuration."""
+
+    export_fields: list[str] = [
+        "id",
+        "user_name",
+        "groups[].id",
+        "groups[].name",
+        "role",
+        "edu_person_principal_names[]",
+        "preferred_language",
+        "emails[]",
+    ]
+    """List of fields to include in the exported user details."""
+
+
 class MapCoreConfig(BaseModel):
     """Schema for mAP Core service configuration."""
 
@@ -573,6 +598,18 @@ class DevAccountConfig(BaseModel):
 
     user_name: str
     """User name of the development account."""
+
+
+class FeaturesConfig(BaseModel):
+    """Schema for feature flags configuration."""
+
+    search_only_username: bool = True
+    """Whether user search by user name only in users.
+    If false, Enable search by username, email, or ePPN.
+    """
+
+    enable_bulk_operation: bool = False
+    """Whether mAP Core API bulk operation is enabled or disabled."""
 
 
 def safe_eval(expr: str) -> int | str:

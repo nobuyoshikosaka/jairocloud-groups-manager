@@ -25,7 +25,7 @@ from server.entities.map_group import (
     Service as GroupService,
 )
 from server.entities.map_service import (
-    Administrator,
+    Administrator as ServiceAdministrator,
     Group as MapServiceGroup,
     MapService,
     ServiceEntityID,
@@ -69,7 +69,7 @@ def prepare_service(
         raise SystemAdminNotFound(error)
 
     service.administrators = [
-        Administrator(value=user_id) for user_id in administrators
+        ServiceAdministrator(value=user_id) for user_id in administrators
     ]
     service.groups = [
         MapServiceGroup(
@@ -357,7 +357,7 @@ def validate_group_to_map_group(
 ) -> MapGroup: ...
 
 
-def validate_group_to_map_group(  # noqa: C901, PLR0912
+def validate_group_to_map_group(
     group: GroupDetail, *, mode: t.Literal["create", "update"]
 ) -> tuple[MapGroup, str] | MapGroup:
     """Validate the GroupDetail instance and convert it to a MapGroup instance.
@@ -420,10 +420,10 @@ def validate_group_to_map_group(  # noqa: C901, PLR0912
             error = E.GROUP_TOO_LONG_ID % {"rid": repository_id, "max": max_id_length}
             raise InvalidFormError(error)
 
-        id_pattern = config.GROUPS.id_patterns.user_defined
-        group.id = id_pattern.format(
-            repository_id=repository_id, user_defined_id=user_defined_id
-        )
+    id_pattern = config.GROUPS.id_patterns.user_defined
+    group.id = id_pattern.format(
+        repository_id=repository_id, user_defined_id=user_defined_id
+    )
 
     if group.public is None:
         group.public = GROUP_DEFAULT_PUBLIC

@@ -46,6 +46,9 @@ class DownloadHistoryData(BaseModel):
     file_path: str
     """Path of the downloaded file."""
 
+    file_exists: bool = False
+    """Indicates if the downloaded file still exists."""
+
     repository_count: int
     """Number of repositories involved in the download."""
 

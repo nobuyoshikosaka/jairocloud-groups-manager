@@ -6,7 +6,8 @@
 
 import typing as t
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from flask import current_app
 from sqlalchemy import cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import aliased
 
 from server.const import DEFAULT_SEARCH_COUNT
 from server.db.history import DownloadHistory, Files, UploadHistory
@@ -25,6 +27,7 @@ from server.entities.history_detail import (
 from server.entities.search_request import SearchResult
 from server.entities.summaries import UserSummary
 from server.exc import DatabaseError, InvalidQueryError, RecordNotFound
+from server.messages import E, I
 
 from .utils import (
     get_permitted_repository_ids,
@@ -49,25 +52,30 @@ def get_upload_history_data(
     Returns:
         SearchResult: upload history data with pagination.
 
+    Raises:
+        DatabaseError: If a database operation fails.
     """
     filters = _build_filters_for_history(criteria, history_type="upload")
 
     base_stmt = select(UploadHistory, Files).join(UploadHistory.file).filter(*filters)
     count_stmt = select(func.count()).select_from(base_stmt.subquery())
+    try:
+        total = db.session.execute(count_stmt).scalar_one()
 
-    total = db.session.execute(count_stmt).scalar_one()
+        if criteria.d == "desc":
+            stmt = base_stmt.order_by(UploadHistory.timestamp.desc())
+        else:
+            stmt = base_stmt.order_by(UploadHistory.timestamp.asc())
 
-    if criteria.d == "desc":
-        stmt = base_stmt.order_by(UploadHistory.timestamp.desc())
-    else:
-        stmt = base_stmt.order_by(UploadHistory.timestamp.asc())
+        page = criteria.p or 1
+        page_size = criteria.l or DEFAULT_SEARCH_COUNT
+        offset = (page - 1) * page_size
+        stmt = stmt.limit(page_size).offset(offset)
 
-    page = criteria.p or 1
-    page_size = criteria.l or DEFAULT_SEARCH_COUNT
-    offset = (page - 1) * page_size
-    stmt = stmt.limit(page_size).offset(offset)
-
-    rows = db.session.execute(stmt).all()
+        rows = db.session.execute(stmt).all()
+    except SQLAlchemyError as exc:
+        current_app.logger.error(str(exc))
+        raise DatabaseError(E.FAILED_GET_HISTORY_RECORDS % {"table": "upload"}) from exc
     data = [
         {
             **history.__dict__,
@@ -138,7 +146,7 @@ def _build_filters_for_history(
 
     if criteria.s and criteria.e:
         start = criteria.s
-        end = datetime.combine(criteria.e, time.max)
+        end = criteria.e + timedelta(days=1)
         filters.extend((
             history_model.timestamp >= start,
             history_model.timestamp < end,
@@ -151,7 +159,8 @@ def _build_filters_for_history(
             history_model.timestamp < end,
         ))
     elif criteria.e and not criteria.s:
-        filters.append(history_model.timestamp <= criteria.e)
+        end = criteria.e + timedelta(days=1)
+        filters.append(history_model.timestamp < end)
 
     if history_type == "download":
         if not criteria.i:
@@ -174,6 +183,8 @@ def get_download_history_data(
     Returns:
         SearchResult: download history data with pagination.
 
+    Raises:
+        DatabaseError: If a database operation fails.
     """
     filters = _build_filters_for_history(criteria, history_type="download")
 
@@ -181,26 +192,34 @@ def get_download_history_data(
         select(DownloadHistory, Files).join(DownloadHistory.file).filter(*filters)
     )
     count_stmt = select(func.count()).select_from(base_stmt.subquery())
-    total = db.session.execute(count_stmt).scalar_one()
+    try:
+        total = db.session.execute(count_stmt).scalar_one()
 
-    subq = (
-        select(func.count(DownloadHistory.id))
-        .where(DownloadHistory.parent_id == DownloadHistory.id)
-        .scalar_subquery()
-    )
-    stmt = base_stmt.add_columns(subq)
+        child = aliased(DownloadHistory)
+        subq = (
+            select(func.count(child.id))
+            .where(child.parent_id == DownloadHistory.id)
+            .correlate(DownloadHistory)
+            .scalar_subquery()
+        )
+        stmt = base_stmt.add_columns(subq)
 
-    if criteria.d == "desc":
-        stmt = stmt.order_by(DownloadHistory.timestamp.desc())
-    else:
-        stmt = stmt.order_by(DownloadHistory.timestamp.asc())
+        if criteria.d == "desc":
+            stmt = stmt.order_by(DownloadHistory.timestamp.desc())
+        else:
+            stmt = stmt.order_by(DownloadHistory.timestamp.asc())
 
-    page = criteria.p or 1
-    page_size = criteria.l or DEFAULT_SEARCH_COUNT
-    offset = (page - 1) * page_size
-    stmt = stmt.limit(page_size).offset(offset)
+        page = criteria.p or 1
+        page_size = criteria.l or DEFAULT_SEARCH_COUNT
+        offset = (page - 1) * page_size
+        stmt = stmt.limit(page_size).offset(offset)
 
-    rows = db.session.execute(stmt).all()
+        rows = db.session.execute(stmt).all()
+    except SQLAlchemyError as exc:
+        current_app.logger.error(str(exc))
+        raise DatabaseError(
+            E.FAILED_GET_HISTORY_RECORDS % {"table": "download"}
+        ) from exc
     data = [
         {
             **history.__dict__,
@@ -211,6 +230,7 @@ def get_download_history_data(
             "group_count": len(file.file_content.get("groups", [])),
             "user_count": len(file.file_content.get("users", [])),
             "children_count": children_count,
+            "file_exists": Path(file.file_path).exists(),
         }
         for history, file, children_count in t.cast(
             "t.Sequence[tuple[DownloadHistory, Files, int]]", rows
@@ -219,7 +239,7 @@ def get_download_history_data(
     return SearchResult[DownloadHistoryData].model_validate(
         {
             "total": total,
-            "pageSize": page_size,
+            "page_size": page_size,
             "offset": offset,
             "resources": data,
         },
@@ -242,6 +262,7 @@ def get_filter_items(
 
     Raises:
         InvalidQueryError: If the filter key is invalid.
+        DatabaseError: If a database operation fails.
     """
     table = UploadHistory if tab == "upload" else DownloadHistory
     if key == "o":
@@ -250,8 +271,11 @@ def get_filter_items(
         page_size = criteria.l or DEFAULT_SEARCH_COUNT
         offset = (page - 1) * page_size
         stmt = stmt.limit(page_size).offset(offset)
-
-        results = db.session.execute(stmt).all()
+        try:
+            results = db.session.execute(stmt).all()
+        except SQLAlchemyError as exc:
+            current_app.logger.error(str(exc))
+            raise DatabaseError(E.FAILED_GET_HISTORY_RECORDS % {"table": tab}) from exc
         items = [
             UserSummary(id=operator_id, user_name=operator_name)
             for operator_id, operator_name in results
@@ -260,9 +284,8 @@ def get_filter_items(
             resources=items, total=0, page_size=page_size, offset=offset
         )
 
-    error = f"Unsupported criteria type: {type(criteria)}"
-    current_app.logger.error(error)
-    raise InvalidQueryError(error)
+    current_app.logger.error(E.FAILED_GET_FILTER_ITEMS, {"key": key})
+    raise InvalidQueryError(E.FAILED_GET_FILTER_ITEMS % {"key": key})
 
 
 def update_public_status(
@@ -287,14 +310,18 @@ def update_public_status(
 
         record = db.session.get(table, history_id)
         if record is None:
-            error = f"{history_id} is not found"
-            raise RecordNotFound(error)
+            raise RecordNotFound(
+                E.FAILED_GET_HISTORY_RECORD % {"history_id": history_id, "table": tab}
+            )
 
         record.public = public
     except SQLAlchemyError as exc:
-        error = "Failed to update the public status due to a database error."
-        raise DatabaseError(error) from exc
+        current_app.logger.error(str(exc))
+        raise DatabaseError(
+            E.FAILED_UPDATE_PUBLIC % {"history_id": history_id}
+        ) from exc
     db.session.commit()
+    current_app.logger.info(I.SUCCESS_UPDATE_PUBLIC_STATUS)
     return record.public
 
 
@@ -314,12 +341,11 @@ def get_file_path(file_id: UUID) -> str:
     try:
         file = db.session.get(Files, file_id)
     except SQLAlchemyError as exc:
-        error = "Failed to retrieve the file path due to a database error."
-        raise DatabaseError(error) from exc
+        current_app.logger.error(str(exc))
+        raise DatabaseError(E.FAILED_GET_FILE_PATH % {"file_id": file_id}) from exc
 
     if not file:
-        error = f"File with ID {file_id} not found."
-        raise RecordNotFound(error)
+        raise RecordNotFound(E.FAILED_GET_FILE_PATH % {"file_id": file_id})
 
     return file.file_path
 

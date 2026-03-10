@@ -62,6 +62,7 @@ jobs:
       - name: Run Task
         run: |
           export PYTHONPATH=$(pwd)
+          FLASK_ENV=development uv run flask -A server.app --debug app version
           uv run ${{ matrix.task.command }}
 
       - name: Minimize uv cache

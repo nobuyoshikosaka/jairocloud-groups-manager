@@ -2,27 +2,36 @@
 import type { TabsItem } from '@nuxt/ui'
 
 const {
-  loading, query, makePageInfo, updateQuery, loadChildren, togglePublicStatus,
+  query, makePageInfo, updateQuery,
   tab, uploadColumns, downloadColumns, isFileAvailable,
 } = useHistory()
 
-const tabItems = computed<TabsItem[]>(() => [
-  { label: $t('history.tab.download'), icon: 'i-lucide-download', slot: 'download',
-    value: 'download' },
-  { label: $t('history.tab.upload'), icon: 'i-lucide-upload', slot: 'upload', value: 'upload' },
-])
+const childData = ref<DownloadApiModel>()
+const { features: { history: { upload: fileUpload } } } = useAppConfig()
+
+const tabItems = computed<TabsItem[]>(() => fileUpload
+  ? [
+      { label: $t('history.tab.download'), icon: 'i-lucide-download', slot: 'download',
+        value: 'download' },
+      { label: $t('history.tab.upload'), icon: 'i-lucide-upload', slot: 'upload', value: 'upload' },
+    ]
+  : [
+      { label: $t('history.tab.download'), icon: 'i-lucide-download', slot: 'download',
+        value: 'download' },
+    ])
 
 const { handleFetchError } = useErrorHandling()
-const { data } = useFetch<DownloadApiModel | UploadApiModel>(`/api/history/${tab.value}`, {
-  method: 'GET',
-  query,
-  onResponseError: async ({ response }) => {
-    handleFetchError({ response })
-  },
-  lazy: true,
-  server: false,
-})
-const pageInfo = makePageInfo(data)
+const { data, execute, status } = useFetch<DownloadApiModel | UploadApiModel>(
+  `/api/history/${tab.value}`, {
+    method: 'GET',
+    query,
+    onResponseError: async ({ response }) => {
+      handleFetchError({ response })
+    },
+    lazy: true,
+    server: false,
+  })
+const pageInfo = computed(() => makePageInfo(data))
 const offset = computed(() => (data.value?.offset ?? 1))
 const activeTab = computed<'download' | 'upload'>({
   get() {
@@ -30,6 +39,7 @@ const activeTab = computed<'download' | 'upload'>({
   },
   set(tab) {
     updateQuery({ tab: tab })
+    execute()
   },
 })
 
@@ -37,37 +47,30 @@ const toggleSort = () => {
   updateQuery({ d: query.value.d === 'asc' ? 'desc' : 'asc' })
 }
 
-const handleLoadMoreChildren = async (parentId: string) => {
-  await loadChildren(parentId)
-}
-
-const handleAction = async (action: string, row: ActionRow) => {
-  const isDownload = 'parent' in row
-  const data = isDownload ? row.parent : row
-
-  switch (action) {
-    case 'toggle-public': {
-      const result = await togglePublicStatus(
-        data.id,
-        data.public,
-      )
-      if (result !== undefined) {
-        data.public = result
+const handleLoadMoreChildren = async (row: DownloadHistoryData) => {
+  const { data } = await useFetch<DownloadApiModel>('/api/history/download', {
+    method: 'GET',
+    query: {
+      i: [row.id],
+    },
+    onResponseError({ response }) {
+      switch (response.status) {
+        case 400: {
+          showError({
+            status: 400,
+            statusText: 'Bad Request',
+            message: $t('error-page.failed.load-more'),
+          })
+          break
+        }
+        default:{
+          handleFetchError({ response })
+          break
+        }
       }
-      break
-    }
-    case 'redownload': {
-      if (data.fileId) {
-        const url = `/api/history/files/${data.fileId}`
-        window.open(url, '_blank')
-      }
-      break
-    }
-    case 'show-detail': {
-      navigateTo(`/bulk/${data.id}`)
-      break
-    }
-  }
+    },
+  })
+  childData.value = data.value
 }
 </script>
 
@@ -75,7 +78,7 @@ const handleAction = async (action: string, row: ActionRow) => {
   <UPageHeader
     :title="$t('history.title')"
     :description="$t('history.description')"
-    :ui="{ root: 'py-2', description: 'mt-2' }"
+    :ui="{ root: 'py-2 mb-6', description: 'mt-2' }"
   />
   <UTabs
     v-model="activeTab"
@@ -85,22 +88,20 @@ const handleAction = async (action: string, row: ActionRow) => {
     :ui="{ trigger: 'min-w-50' }"
   >
     <template #download>
-      <div class="container mx-auto px-4">
+      <div class="container mx-auto px-4  space-y-4">
         <HistoryFilter target="download" />
 
-        <div v-if="loading" class="text-center text-sm text-muted">
-          {{ $t('common.loading') }}
-        </div>
-        <div v-else>
+        <div>
           <HistoryTable
             key="download-table" :data="(data?.resources ?? []) as DownloadHistoryData[]"
             :total="data?.total ?? 0"
             :table-config="{ enableExpand: true, showStatus: false }"
             :file-availability-check="isFileAvailable"
-            :page-info="pageInfo" :offset="offset"
+            :page-info="pageInfo.value" :offset="offset"
+            :child-data="childData?.resources ?? []"
             :columns="downloadColumns"
+            :status="status"
             @sort-change="toggleSort"
-            @action="handleAction"
             @load-more-children="handleLoadMoreChildren"
           />
         </div>
@@ -108,21 +109,17 @@ const handleAction = async (action: string, row: ActionRow) => {
     </template>
 
     <template #upload>
-      <div class="container mx-auto px-4">
+      <div class="container mx-auto px-4  space-y-4">
         <HistoryFilter target="upload" />
 
-        <div v-if="loading" class="text-center text-sm text-muted">
-          {{ $t('common.loading') }}
-        </div>
-        <div v-else>
+        <div>
           <HistoryTable
             key="upload-table" :data="(data?.resources ?? []) as UploadHistoryData[]"
             :total="data?.total ?? 0"
             :table-config="{ enableExpand: false, showStatus: true }"
-            :file-availability-check="isFileAvailable"
-            :page-info="pageInfo" :offset="offset"
+            :page-info="pageInfo.value" :offset="offset"
             :columns="uploadColumns"
-            @action="handleAction"
+            :status="status"
             @sort-change="toggleSort"
           />
         </div>

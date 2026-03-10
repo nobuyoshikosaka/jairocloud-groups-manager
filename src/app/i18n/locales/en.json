@@ -1,10 +1,10 @@
 {
   "bulk": {
     "about": "About bulk operations",
-    "about-description": "Users included in the file are newly registered or updated",
-    "about-description2": "Existing users are matched by id and updated if they match",
-    "about-description3": "You can choose to delete users who are not included in the file",
-    "about-description4": "Supported formats: TSV, CSV, Excel",
+    "about-description": "Users included in the file are newly registered or updated.",
+    "about-description2": "Existing users are matched by id and updated if they match.",
+    "about-description3": "You can choose to delete users who are not included in the file.",
+    "about-description4": "Supported formats: TSV, CSV, Excel.",
     "column": {
       "email": "E-mail",
       "eppn": "ePPN",
@@ -20,12 +20,13 @@
     "excute": {
     },
     "execute": {
-      "failed": "User update failed",
-      "result_failed": "Failed to get execution results"
+      "failed": "User update failed.",
+      "result_failed": "Failed to get execution results.",
+      "timeout": "Bulk update process timed out."
     },
     "file-format-error": "The file format is not supported. \nChoose TSV, CSV, or Excel file.",
-    "file-required": "Please select file",
-    "file-validate-error": "File validation failed",
+    "file-required": "Please select file.",
+    "file-validate-error": "File validation failed.",
     "filter": "filter",
     "import": {
     },
@@ -36,9 +37,10 @@
       "select": "Please select the user to delete."
     },
     "missing_user": "User not included in file",
+    "no-results": "Data not found.",
     "operator": "Execution user",
-    "repository-required": "Please select a repository",
-    "select-repository": "Please select a repository",
+    "repository-required": "Please select a repository.",
+    "select-repository": "Please select a repository.",
     "select_all": "Select all",
     "start-at": "Start date and time",
     "status": {
@@ -65,11 +67,13 @@
     "upload-file": "upload file",
     "upload-file-info": "Batch operation results",
     "validation": {
-      "error": "Invalid data detected",
+      "error": "Invalid data detected.",
       "error-detail": "Please correct the file and upload it again.",
-      "fetch_failed": "Failed to obtain verification results",
-      "fix_error": "Please fix the error",
-      "results": "data preview"
+      "failed": "File validation failed.",
+      "fetch_failed": "Failed to obtain verification results.",
+      "fix_error": "Please fix the error.",
+      "results": "data preview",
+      "timeout": "File validation timed out."
     },
     "view-all": "Show all"
   },
@@ -104,7 +108,13 @@
     }
   },
   "error-page": {
+    "failed": {
+      "bulk-validation": "File validation failed",
+      "load-more": "Failed to retrieve download history again"
+    },
     "forbidden": {
+      "bulk-edit": "You do not have permission to work with users of this repository.",
+      "bulk-result": "You do not have permission to view upload history.",
       "group-access": "You do not have permission to access this group.",
       "group-create": "You do not have permission to create groups in the selected repository.",
       "group-delete": "You do not have permission to delete this group.",
@@ -118,6 +128,8 @@
       "user-edit": "You do not have permission to change this user's information."
     },
     "not-found": {
+      "bulk-result": "No matching upload history was found.",
+      "bulk-validation": "File verification results not found",
       "group": "No such group found.",
       "repository": "No such repository found.",
       "user": "No such user found."
@@ -206,8 +218,8 @@
         "public": "Public Status",
         "users-count": "Users"
       },
+      "search-placeholder": "Search by group name...",
       "no-groupss-description": "Your repository does not have any groups. Please create a group first.",
-      "search-placeholder": "Seach...",
       "title": "Groups List"
     },
     "title": "Groups"
@@ -231,14 +243,15 @@
     "download": {
       "date": "Download date and time"
     },
-    "empty": "No data matching your search criteria was found",
-    "empty-data": "No data",
+    "empty": "No data matching your search criteria was found.",
+    "empty-data": "No data.",
     "expired": "Expired",
     "failed": "failure",
     "failed-count": "Number of failures",
     "file": "file",
+    "file_not_available": "File download failed.",
     "filter": {
-      "options_not_found": "Failed to get filter",
+      "options_not_found": "Failed to get filter.",
       "title": "filter"
     },
     "first-download": "First download",
@@ -250,7 +263,7 @@
     "progress": "Processing",
     "public": "Make it public",
     "re-download": "re-download",
-    "re-download-count": "Re-DL",
+    "re-download-count": "Re-DL: {count} times",
     "reset": "reset",
     "show-detail": "Show details",
     "status": "status",
@@ -274,6 +287,7 @@
     "table-title": "History list",
     "target": "Download target | Upload target",
     "title": "History",
+    "toggle_public_status_failed": "Failed to update publishing status.",
     "unavailable": "Expired",
     "upload": {
       "date": "Upload date and time"
@@ -332,6 +346,8 @@
       },
       "no-repositories-description": "you have no repositories to manage",
       "no-repositories-title": "No repositories found",
+      "search-placeholder": "Search by repository name, URL, EntityID...",
+      "search-placeholder-service-name-only": "Search by repository name...",
       "title": "Repositories List"
     },
     "title": "Repositories",
@@ -598,6 +614,10 @@
     }
   },
   "users": {
+    "alert": {
+      "filter-by-both-role-group-disabled": "Currently, due to limited functionality, it is not possible to select role and group filters at the same time.",
+      "filter-by-last-modified-disabled": "Due to limited functionality, filtering by last updated time is currently not available."
+    },
     "all-users-actions": "All users",
     "button": {
       "all-users-download": "Download all users",
@@ -626,7 +646,8 @@
       },
       "no-users-description": "Your repository does not have any users. Please create a user or upload a file first.",
       "no-users-title": "No users found",
-      "search-placeholder": "Search...",
+      "search-placeholder": "Search by username, email, ePPN...",
+      "search-placeholder-username-only": "Search by username...",
       "title": "Users List"
     },
     "title": "Users"

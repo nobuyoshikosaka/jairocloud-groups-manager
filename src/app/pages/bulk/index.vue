@@ -4,15 +4,22 @@ const selectedRepository = ref<string | undefined>(undefined)
 provide('selectedRepository', selectedRepository)
 const taskId = ref<string | undefined>(undefined)
 provide('taskId', taskId)
+const temporaryFileId = ref<string | undefined>(undefined)
+provide('temporaryFileId', temporaryFileId)
 
-const onValidateComplete = (taskIdValue: string) => {
-  taskId.value = taskIdValue
+const onValidateComplete = (data: BulkProcessingStatus) => {
+  taskId.value = data.taskId
+  temporaryFileId.value = data.tempFileId
   currentStep.value = 'validate'
 }
 
 const onUploadComplete = ({ taskId: taskIdValue, historyId }: ExcuteResponse) => {
   taskId.value = taskIdValue
   navigateTo(`/bulk/${historyId}?taskId=${taskIdValue}`)
+}
+
+const onSelectRepository = (repositoryId: string) => {
+  selectedRepository.value = repositoryId
 }
 
 const goBackToUpload = () => {
@@ -45,6 +52,7 @@ const goBackToUpload = () => {
     <BulkUploadStep
       v-else
       @next="onValidateComplete"
+      @update="onSelectRepository"
     />
   </div>
 </template>

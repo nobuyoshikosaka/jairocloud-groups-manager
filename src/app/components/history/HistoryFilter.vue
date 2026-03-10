@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { features: { repositories: { 'server-search': serverSearch } } } = useAppConfig()
+
 const {
   tab,
   criteria: {
@@ -14,7 +16,6 @@ const {
   updateQuery,
   isFiltered,
   makeHistoryFilters,
-  loading,
 } = useHistoryFilter()
 
 const { handleFetchError } = useErrorHandling()
@@ -70,10 +71,6 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
     />
   </div>
 
-  <div v-if="loading" class="text-sm text-muted mb-2">
-    {{ $t('common.loading') }}
-  </div>
-
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
     <UPopover :popper="{ placement: 'bottom-start' }">
       <UInput
@@ -106,7 +103,8 @@ const { repositoryFilter, groupFilter, userFilter, operatorFilter }
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
     <USelectMenu
       ref="repositorySelect"
-      v-model:search-term="repositoryFilter.searchTerm.value" ignore-filter
+      v-model:search-term="repositoryFilter.searchTerm.value"
+      :ignore-filter="serverSearch"
       :placeholder="repositoryFilter.placeholder"
       :icon="repositoryFilter.icon" :items="repositoryFilter.items"
       :multiple="repositoryFilter.multiple" :loading="repositoryFilter.loading" clear

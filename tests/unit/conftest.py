@@ -45,7 +45,6 @@ def test_config():
             "entity_id": "https://test/shibboleth-sp",
             "crt": "/test/server.crt",
             "key": "/test/server.key",
-            "connecter_id": "test_connecter_id",
         },
         "MAP_CORE": {
             "base_url": "https://mapcore.test.jp",
@@ -59,26 +58,29 @@ def test_config():
         "GROUPS": {
             "id_patterns": {
                 "system_admin": "jc_roles_sysadm_test",
-                "repository_admin": "jc_{repository_id}_roles_repoadm_test",
-                "community_admin": "jc_{repository_id}_roles_comadm_test",
-                "contributor": "jc_{repository_id}_roles_contributor_test",
-                "general_user": "jc_{repository_id}_roles_generaluser_test",
-                "user_defined": "jc_{repository_id}_groups_{user_defined_id}_test",
+                "repository_admin": "jc_{repository_id}_ro_radm_test",
+                "community_admin": "jc_{repository_id}_ro_cadm_test",
+                "contributor": "jc_{repository_id}_ro_cont_test",
+                "general_user": "jc_{repository_id}_ro_user_test",
+                "user_defined": "jc_{repository_id}_gr_{user_defined_id}_test",
             },
             "name_patterns": {
-                "system_admin": "group_sysadm_{user_defined_id}_test",
-                "repository_admin": "group_repoadm_{repository_name}_{user_defined_id}_test",
-                "community_admin": "group_comadm_{repository_name}_{user_defined_id}_test",
-                "contributor": "group_contributor_{repository_name}_{user_defined_id}_test",
-                "general_user": "group_generaluser_{repository_name}_{user_defined_id}_test",
+                "system_admin": "ジャイロクラウドシステム管理者_テスト",
+                "repository_admin": "{repository_name}管理者_テスト",
+                "community_admin": "{repository_name}コミュニティ管理者_テスト",
+                "contributor": "{repository_name}投稿ユーザー_テスト",
+                "general_user": "{repository_name}一般ユーザー_テスト",
             },
+            "max_id_length": "50 - len('jc_') - len('_gr_')",
         },
         "POSTGRES": {"db": "jctest", "host": db_host},
         "REDIS": {
             "cache_type": "RedisCache",
             "single": {"base_url": f"redis://{redis_host}:6379/0"},
+            "key_prefix": "jcgroups-test",
         },
         "RABBITMQ": {"url": f"amqp://guest:guest@{amqp_host}:5672//"},
+        "STORAGE": {"local": {"temporary": "/var/tmp/jcgroups"}},  # noqa: S108
     })
 
 

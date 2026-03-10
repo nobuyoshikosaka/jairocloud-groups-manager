@@ -554,6 +554,20 @@ USER_NO_PROMOTE_SYSTEM_ADMIN = LogMessage(
     "System Administrator.",
 )
 
+USER_CANNOT_EXPORT_SYSTEM_ADMIN = LogMessage(
+    "E361",
+    "System Administrator user is not allowed to be exported.",
+)
+
+USER_FORBIDDEN_EXPORT = LogMessage(
+    "E362",
+    "Logged-in user does not have permission to export a User.",
+)
+
+FAILED_CREATE_DOWNLOAD_HISTORY_RECORD = LogMessage(
+    "E363",
+    "Failed to create download history for file (id: %(file_id)s) in database.",
+)
 
 UNAUTHORIZED = LogMessage(
     "E401",
@@ -576,6 +590,125 @@ SERVER_UNAVAILABLE = LogMessage(
     "The server application is currently unavailable.",
 )
 
+FAILED_BULK_OPERATION = LogMessage(
+    "E600",
+    "Failed to perform bulk operation.",
+)
+
+FAILED_SAVE_UPLOADED_FILE = LogMessage(
+    "E601",
+    "Failed to save uploaded file (path: %(file_path)s).",
+)
+
+OPERATION_FORBIDDEN = LogMessage(
+    "E602",
+    "Logged-in user does not have permission to perform this operation.",
+)
+
+FAILED_GET_UPLOAD_HISTORY_RECORD = LogMessage(
+    "E610",
+    "Failed to get upload history (id: %(history_id)s) from database.",
+)
+
+FAILED_GET_UPLOAD_HISTORY_RECORD_BY_FILE_ID = LogMessage(
+    "E611",
+    "Failed to get upload history by file ID (file_id: %(file_id)s) from database.",
+)
+
+FAILED_CREATE_UPLOAD_HISTORY_RECORD = LogMessage(
+    "E612",
+    "Failed to create upload history for file (id: %(file_id)s) in database.",
+)
+
+FAILED_UPDATE_HISTORY_RECORD_STATUS = LogMessage(
+    "E613",
+    "Failed to update upload history status (id: %(history_id)s) in database.",
+)
+
+INVALID_UPLOAD_HISTORY_RECORD_ATTRIBUTES = LogMessage(
+    "E614",
+    "Results must include 'summary' and 'results' keys",
+)
+
+UPDATE_HISTORY_RECORD_NOT_FOUND = LogMessage(
+    "E615",
+    "Record (id: %(id)s) not found in database.",
+)
+
+FAILED_GET_FILE_RECORD = LogMessage(
+    "E616",
+    "Failed to get file record(file_id: %(file_id)s) from database.",
+)
+
+FAILED_DELETE_FILE_RECORD = LogMessage(
+    "E617",
+    "Failed to delete file record(file_id: %(file_id)s) from database.",
+)
+
+INVALID_QUERY = LogMessage(
+    "E618",
+    "offset: %(offset)s and size: %(size)s must be non-negative integers.",
+)
+
+FAILED_CREATE_FILE_RECORD = LogMessage(
+    "E620",
+    "Failed to create file record for file (id: %(file_id)s) in database.",
+)
+
+INVALID_FILE_STRUCTURE = LogMessage(
+    "E621",
+    "Invalid file structure. Please check the file and try again.",
+)
+
+FILE_EXPIRED = LogMessage(
+    "E622", " File not found (path: %(path)s). It may have been expired."
+)
+
+FILE_FORMAT_UNSUPPORTED = LogMessage(
+    "E623",
+    "Unsupported file format (suffix: %(suffix)s).",
+)
+
+FILE_VALIDATION_ERROR = LogMessage(
+    "E624",
+    "File validation failed for task: %(task_id)s. Please check the file.",
+)
+
+TASK_NOT_FOUND = LogMessage(
+    "E634",
+    "Task (id: %(task_id)s) not found. It may have been expired.",
+)
+
+FAILED_GET_HISTORY_RECORDS = LogMessage(
+    "E700",
+    "Failed to get history records from table: %(table)s.",
+)
+
+FAILED_GET_HISTORY_RECORD = LogMessage(
+    "E701",
+    "Failed to get history record (id: %(history_id)s) from table: %(table)s.",
+)
+
+FAILED_UPDATE_PUBLIC = LogMessage(
+    "E702",
+    "Failed to update public status of history record (id: %(history_id)s)  in"
+    " database.",
+)
+
+FILE_NOT_FOUND = LogMessage(
+    "E704",
+    "File not found (path: %(path)s).",
+)
+
+FAILED_GET_FILTER_ITEMS = LogMessage(
+    "E705",
+    "Failed to get filter items for history search (key: %(key)s).",
+)
+
+FAILED_GET_FILE_PATH = LogMessage(
+    "E706",
+    "Failed to get file path for file (id: %(file_id)s) from database.",
+)
 
 UNNECESSARY_CONTRIB = LogMessage(
     "E999", "Contrib utilities can only be used in development mode."

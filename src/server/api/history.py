@@ -16,7 +16,8 @@ from flask_pydantic import validate
 from server.const import USER_ROLES
 from server.entities.history_detail import HistoryQuery
 from server.entities.search_request import FilterOption, SearchResult
-from server.exc import DatabaseError, InvalidQueryError, RecordNotFound
+from server.exc import InvalidQueryError, RecordNotFound
+from server.messages import E
 from server.services import history
 from server.services.utils import search_history_filter_options
 
@@ -59,8 +60,8 @@ def filter_options_operators(
     """
     try:
         result = history.get_filter_items(tab, key="o", criteria=query)
-    except InvalidQueryError as ex:
-        return ErrorResponse(code="", message=str(ex)), 400
+    except InvalidQueryError as exc:
+        return ErrorResponse(message=exc.message), 400
     return result, 200
 
 
@@ -81,15 +82,10 @@ def get(
         SearchResult: if successful and status code 200
         ErrorResponse: if a connection error occurs and status code 503
     """
-    try:
-        if tab == "download":
-            result = history.get_download_history_data(query)
-        else:
-            result = history.get_upload_history_data(query)
-    except DatabaseError:
-        error = f"{tab} table connection error"
-        current_app.logger.error(error)
-        return ErrorResponse(code="", message=error), 503
+    if tab == "download":
+        result = history.get_download_history_data(query)
+    else:
+        result = history.get_upload_history_data(query)
     return result, 200
 
 
@@ -115,8 +111,8 @@ def public_status(
         result: bool = history.update_public_status(
             tab=tab, history_id=history_id, public=body.public
         )
-    except RecordNotFound as ex:
-        return ErrorResponse(code="", message=str(ex)), 404
+    except RecordNotFound as exc:
+        return ErrorResponse(message=exc.message), 404
     return HistoryPublic(public=result), 200
 
 
@@ -136,12 +132,11 @@ def files(file_id: UUID) -> Response | tuple[ErrorResponse, int]:
     try:
         path_str = history.get_file_path(file_id)
         file_path = Path(path_str)
-    except RecordNotFound as ex:
-        return ErrorResponse(code="", message=str(ex)), 404
+    except RecordNotFound as exc:
+        return ErrorResponse(message=exc.message), 404
     if not file_path.exists():
-        error = f"File not found: {file_id}"
-        current_app.logger.error(error)
-        return ErrorResponse(code="", message=error), 404
+        current_app.logger.error(E.FILE_NOT_FOUND, {"path": file_path})
+        return ErrorResponse(message=E.FILE_NOT_FOUND % {"path": file_path}), 404
     return send_file(path_or_file=file_path)
 
 
@@ -160,8 +155,8 @@ def is_exist_files(file_id: UUID) -> tuple[bool | ErrorResponse, int]:
     """
     try:
         file_path = Path(history.get_file_path(file_id))
-    except RecordNotFound as ex:
-        return ErrorResponse(code="", message=str(ex)), 404
+    except RecordNotFound as exc:
+        return ErrorResponse(message=exc.message), 404
     if not Path(file_path).exists():
         return False, 200
     return True, 200

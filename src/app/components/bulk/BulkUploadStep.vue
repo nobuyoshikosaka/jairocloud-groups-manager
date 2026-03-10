@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import type { FormError, FormSubmitEvent } from '@nuxt/ui'
+import type { FormError, FormErrorEvent, FormSubmitEvent } from '@nuxt/ui'
 
 const emit = defineEmits<{
-  next: [taskId: string]
+  next: [data: BulkProcessingStatus]
+  error: [event: FormErrorEvent]
+  update: [repositoryId: string]
 }>()
 
 const { isProcessing } = useUserUpload()
 const { table: { pageSize } } = useAppConfig()
+
 const state = reactive<{
   repository: string | undefined
   file: File | undefined
@@ -57,21 +60,44 @@ const handleNext = async (event: FormSubmitEvent<Schema>) => {
   const formData = new FormData()
   formData.append('bulk_file', event.data.file!)
   formData.append('repository_id', event.data.repository!)
+  try {
+    const data = await $fetch<BulkProcessingStatus>('/api/bulk/upload-file', {
+      method: 'POST',
+      body: formData,
+      onResponseError({ response }) {
+        switch (response.status) {
+          case 403: {
+            showError({
+              status: 403,
+              statusText: 'Forbidden',
+              message: $t('error-page.forbidden.bulk-edit'),
+            })
+            break
+          }
+          case 404: {
+            showError({
+              status: 404,
+              statusText: 'Not Found',
+              message: $t('error-page.not-found.repository'),
+            })
+            break
+          }
+          default: {
+            handleFetchError({ response })
+          }
+        }
+        isProcessing.value = false
+      },
+    })
 
-  const { data } = await useFetch<BulkProcessingStatus>('/api/bulk/upload-file', {
-    method: 'POST',
-    body: formData,
-    onResponseError({ response }) {
-      handleFetchError({ response })
-    },
-    server: false,
-  })
-
-  if (data.value?.taskId) {
-    emit('next', data.value.taskId)
+    if (data) {
+      emit('next', data)
+    }
+  }
+  catch {
+    // Error is handled in onResponseError
   }
 }
-
 const repositorySelect = useTemplateRef('repositorySelect')
 const {
   items: repositoryNames,
@@ -88,6 +114,12 @@ const {
   }),
 })
 setupRepoScroll(repositorySelect)
+
+const { handleFormError } = useFormError()
+const onError = (event: FormErrorEvent) => {
+  handleFormError(event)
+  emit('error', event)
+}
 </script>
 
 <template>
@@ -112,8 +144,9 @@ setupRepoScroll(repositorySelect)
       </template>
     </UAlert>
     <UForm
+      class="space-y-6"
       :validate="validateFileFormat" :state="state"
-      @submit="handleNext"
+      @submit="handleNext" @error="onError"
     >
       <UFormField
         :label="$t('bulk.select-repository')"
@@ -126,7 +159,7 @@ setupRepoScroll(repositorySelect)
           :placeholder="$t('group.placeholder.repository')"
           :items="repositoryNames" :loading="repoSearchStatus === 'pending'" ignore-filter
           :ui="{ base: 'w-full' }"
-          @update:open="onRepoOpen"
+          @update:open="onRepoOpen" @update:model-value="emit('update', state.repository!)"
         />
       </UFormField>
 
