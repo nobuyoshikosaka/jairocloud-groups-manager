@@ -472,7 +472,7 @@ def delete_multiple(group_ids: set[str]) -> set[str] | None:
         CredentialsError: If the client credentials are invalid.
         UnexpectedResponseError: If response from mAP Core API is unexpected.
     """
-    if config.FEATURES.enable_bulk_operation:
+    if not config.FEATURES.enable_bulk_operation:
         return delete_multiple_sequentially(group_ids)
     operations = [
         BulkOperation(method="DELETE", path=f"/Groups/{group_id}")
@@ -540,6 +540,8 @@ def delete_multiple_sequentially(group_ids: set[str]) -> set[str] | None:
         OAuthTokenError: If the access token is invalid or expired.
         CredentialsError: If the client credentials are invalid.
     """
+    if config.FEATURES.enable_bulk_operation:
+        return delete_multiple(group_ids)
     failed_list: set[str] = set()
     for group_id in group_ids:
         try:

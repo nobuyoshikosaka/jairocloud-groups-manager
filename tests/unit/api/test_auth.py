@@ -6,12 +6,15 @@ import pytest
 
 from flask import session
 from flask_login import current_user, login_user
+from redis import RedisError
 
 from server.api import auth
 from server.const import USER_ROLES
 from server.entities.login_user import LoginUser
 from server.entities.summaries import GroupSummary
 from server.entities.user_detail import UserDetail
+from server.exc import DatastoreError
+from server.messages import E
 from server.services.utils.affiliations import Affiliations, _RoleGroup
 
 
@@ -79,7 +82,7 @@ def test_login_not_is_member_of(app, mocker: MockerFixture):
     mock_affiliations = Affiliations(
         roles=[_RoleGroup(repository_id="test", role=USER_ROLES.REPOSITORY_ADMIN)], groups=[]
     )
-    excepted_is_member_of = "https://cg.gakunin.jp/gr/jc_test_roles_repoadm;https://cg.gakunin.jp/gr/group1"
+    excepted_is_member_of = "/gr/jc_test_roles_repoadm;/gr/group1"
     with app.test_request_context(
         "/api/auth/login",
         headers={
@@ -171,12 +174,46 @@ def test_login_next(app, mocker: MockerFixture):
         assert resp.location.endswith("/?next=users")
 
 
+def test_login_with_redis_error(app, datastore, mocker: MockerFixture):
+    mock_affiliations = Affiliations(roles=[_RoleGroup(repository_id=None, role=USER_ROLES.SYSTEM_ADMIN)], groups=[])
+    with app.test_request_context(
+        "/api/auth/login?next=users",
+        headers={
+            "eppn": "test_eppn",
+            "IsMemberOf": "https://cg.gakunin.jp/gr/group1;https://cg.gakunin.jp/gr/jc_roles_sysadm",
+            "DisplayName": "Test User",
+        },
+    ):
+        _, account_store, _ = datastore
+        account_store.hset.side_effect = RedisError
+        mocker.patch("server.services.users.get_by_eppn", return_value=mock_repoadmin_user_detail)
+        mocker.patch("server.api.auth.extract_group_ids", return_value=["group1", "jc_roles_sysadm"])
+        mocker.patch("server.api.auth.detect_affiliations", return_value=mock_affiliations)
+        expected_code = (E.FAILED_SET_LOGIN_SESSION % {"eppn": "test_eppn"}).code
+        expected_message = (E.FAILED_SET_LOGIN_SESSION % {"eppn": "test_eppn"}).data
+        with pytest.raises(DatastoreError) as exc_info:
+            auth.login()
+        assert str(exc_info.value.code) == expected_code
+        assert str(exc_info.value.string) == expected_message
+
+
 @pytest.mark.parametrize("session_id", ["test_eppn", None])
 def test_logout(app, session_id):
     app.secret_key = "test-secret"
     with app.test_request_context("/api/auth/logout"):
         login_user(mock_repoadmin_login_user)
         session["_id"] = session_id
+        resp, code = auth.logout()
+    assert resp == ""  # noqa: PLC1901
+    assert code == HTTPStatus.NO_CONTENT
+
+
+def test_logout_with_redis_error(app, datastore, mocker: MockerFixture):
+    _, account_store, _ = datastore
+    account_store.delete.side_effect = RedisError
+    with app.test_request_context("/api/auth/logout"):
+        login_user(mock_repoadmin_login_user)
+        session["_id"] = "test_session_id"
         resp, code = auth.logout()
     assert resp == ""  # noqa: PLC1901
     assert code == HTTPStatus.NO_CONTENT

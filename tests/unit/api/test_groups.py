@@ -237,7 +237,7 @@ def test_id_get_not_found(app: Flask, gen_group_id, mocker: MockerFixture) -> No
     """Tests id_get returns ErrorResponse and 404 when group does not exist."""
     group_id = gen_group_id("g4")
     expected_status = 404
-    not_found_message = "Group resource (id: jc_repo_id_groups_g4_test) not found."
+    not_found_message = "Group resource (id: jc_repo_id_gr_g4_test) not found."
 
     mocker.patch("server.api.groups.has_permission", return_value=True)
     mocker.patch("server.services.groups.get_by_id", return_value=None)
@@ -310,7 +310,7 @@ def test_id_put_forbidden_no_permission(app: Flask, gen_group_id, mocker: Mocker
         type="group",
     )
     expected_status = 403
-    expected_message = "Logged-in user does not have permission to access Group (id: jc_repo_id_groups_g3_test)."
+    expected_message = "Logged-in user does not have permission to access Group (id: jc_repo_id_gr_g3_test)."
     mocker.patch("server.api.groups.has_permission", return_value=False)
     mocker.patch("server.services.groups.update", return_value=group)
 
