@@ -356,7 +356,7 @@ class UploadQuery(BaseModel):
     """Page size (number of items per page)."""
 
 
-class FileQuery(BaseModel):
+class FileQuery(UsersQuery):
     """Query parameters for file export."""
 
     f: t.Annotated[t.Literal["tsv", "csv"], "format"] = "tsv"

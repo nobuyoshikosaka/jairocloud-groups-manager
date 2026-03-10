@@ -746,20 +746,21 @@ def handle_user_updated(
 
 
 def make_export_file(
-    user_ids: list[str], query: FileQuery, operator_id: str, operator_name: str
+    operator_id: str, operator_name: str, query: FileQuery | None = None
 ) -> Path:
     """Generate a file containing user details for the specified user IDs.
 
     Args:
-        user_ids (list[str]): A list of user IDs to include in the export file.
-        query (FileQuery): The file query containing export format and other parameters.
         operator_id (str): The ID of the operator performing the export.
         operator_name (str): The name of the operator performing the export.
+        query (FileQuery | None):
+          The file query containing export format and other parameters.
 
     Returns:
         Path: The path to the generated export file.
     """
-    user_list = search(make_criteria_object("users", i=user_ids), raw=True).resources
+    query = query or FileQuery(f="tsv")
+    user_list = search(make_criteria_object("users", i=query.i), raw=True).resources
     delimiter = "," if query.f == "csv" else "\t"
     file_id = uuid7()
     target_dir = Path(config.STORAGE.local.storage) / datetime.now(UTC).strftime(

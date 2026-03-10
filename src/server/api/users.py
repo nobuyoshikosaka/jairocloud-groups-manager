@@ -34,7 +34,7 @@ from server.services.utils import (
 
 from .auth import logout
 from .helpers import roles_required
-from .schemas import ErrorResponse, ExportBody, FileQuery, UsersQuery
+from .schemas import ErrorResponse, FileQuery, UsersQuery
 
 
 bp = Blueprint("users", __name__)
@@ -207,18 +207,13 @@ def filter_options() -> list[FilterOption]:
 
 
 @bp.get("/export")
-@bp.post("/export")
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
-def user_export(
-    body: ExportBody, query: FileQuery
-) -> Response | tuple[ErrorResponse, int]:
+def export_get(query: FileQuery) -> Response | tuple[ErrorResponse, int]:
     """Export users to a file for bulk processing.
 
     Args:
-        body (ExportBody):
-            The body of the export request containing the IDs of the users to export.
         query (FileQuery): The query parameters for the export.
 
     Returns:
@@ -226,9 +221,28 @@ def user_export(
         ErrorResponse: The response containing an error message if the export fails
     """
     try:
-        files = users.make_export_file(
-            body.user_ids or [], query, current_user.map_id, current_user.name
-        )
+        files = users.make_export_file(current_user.map_id, current_user.name, query)
+    except InvalidExportError as exc:
+        return ErrorResponse(message=exc.message), 403
+    return send_file(files)
+
+
+@bp.post("/export")
+@login_required
+@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
+@validate(response_by_alias=True)
+def export_post(query: FileQuery) -> Response | tuple[ErrorResponse, int]:
+    """Export users to a file for bulk processing.
+
+    Args:
+        query (FileQuery): The query parameters for the export.
+
+    Returns:
+        Response: The response containing the exported file
+        ErrorResponse: The response containing an error message if the export fails
+    """
+    try:
+        files = users.make_export_file(current_user.map_id, current_user.name, query)
     except InvalidExportError as exc:
         return ErrorResponse(message=exc.message), 403
     return send_file(files)
