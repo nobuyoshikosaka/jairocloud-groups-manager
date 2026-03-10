@@ -75,8 +75,7 @@ def get_upload_history_data(
         rows = db.session.execute(stmt).all()
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_GET_HISTORY_RECORDS % {"table": "upload"}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(E.FAILED_GET_HISTORY_RECORDS % {"table": "upload"}) from exc
     data = [
         {
             **history.__dict__,
@@ -218,8 +217,9 @@ def get_download_history_data(
         rows = db.session.execute(stmt).all()
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_GET_HISTORY_RECORDS % {"table": "download"}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_GET_HISTORY_RECORDS % {"table": "download"}
+        ) from exc
     data = [
         {
             **history.__dict__,
@@ -275,8 +275,7 @@ def get_filter_items(
             results = db.session.execute(stmt).all()
         except SQLAlchemyError as exc:
             current_app.logger.error(str(exc))
-            error = E.FAILED_GET_HISTORY_RECORDS % {"table": tab}
-            raise DatabaseError(error) from exc
+            raise DatabaseError(E.FAILED_GET_HISTORY_RECORDS % {"table": tab}) from exc
         items = [
             UserSummary(id=operator_id, user_name=operator_name)
             for operator_id, operator_name in results
@@ -285,9 +284,8 @@ def get_filter_items(
             resources=items, total=0, page_size=page_size, offset=offset
         )
 
-    error = E.FAILED_GET_FILTER_ITEMS % {"key": key}
-    current_app.logger.error(error)
-    raise InvalidQueryError(error)
+    current_app.logger.error(E.FAILED_GET_FILTER_ITEMS, {"key": key})
+    raise InvalidQueryError(E.FAILED_GET_FILTER_ITEMS % {"key": key})
 
 
 def update_public_status(
@@ -312,17 +310,16 @@ def update_public_status(
 
         record = db.session.get(table, history_id)
         if record is None:
-            error = E.FAILED_GET_HISTORY_RECORD % {
-                "history_id": history_id,
-                "table": tab,
-            }
-            raise RecordNotFound(error)
+            raise RecordNotFound(
+                E.FAILED_GET_HISTORY_RECORD % {"history_id": history_id, "table": tab}
+            )
 
         record.public = public
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_UPDATE_PUBLIC % {"history_id": history_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_UPDATE_PUBLIC % {"history_id": history_id}
+        ) from exc
     db.session.commit()
     current_app.logger.info(I.SUCCESS_UPDATE_PUBLIC_STATUS)
     return record.public
@@ -345,12 +342,10 @@ def get_file_path(file_id: UUID) -> str:
         file = db.session.get(Files, file_id)
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_GET_FILE_PATH % {"file_id": file_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(E.FAILED_GET_FILE_PATH % {"file_id": file_id}) from exc
 
     if not file:
-        error = E.FAILED_GET_FILE_PATH % {"file_id": file_id}
-        raise RecordNotFound(error)
+        raise RecordNotFound(E.FAILED_GET_FILE_PATH % {"file_id": file_id})
 
     return file.file_path
 

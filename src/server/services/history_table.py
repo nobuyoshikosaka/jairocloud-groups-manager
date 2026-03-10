@@ -43,8 +43,9 @@ def get_upload_by_id(history_id: UUID) -> UploadHistory | None:
         )
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_GET_UPLOAD_HISTORY_RECORD % {"history_id": history_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_GET_UPLOAD_HISTORY_RECORD % {"history_id": history_id}
+        ) from exc
     return history
 
 
@@ -71,12 +72,12 @@ def get_upload_results(history_id: UUID, attribute: str) -> dict:
         )
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_GET_UPLOAD_HISTORY_RECORD % {"history_id": history_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_GET_UPLOAD_HISTORY_RECORD % {"history_id": history_id}
+        ) from exc
     if result is None:
-        error = E.FAILED_GET_FILE_RECORD % {"file_id": history_id}
-        current_app.logger.error(error)
-        raise RecordNotFound(error)
+        current_app.logger.error(E.FAILED_GET_FILE_RECORD, {"file_id": history_id})
+        raise RecordNotFound(E.FAILED_GET_FILE_RECORD % {"file_id": history_id})
     return result[0]
 
 
@@ -99,9 +100,8 @@ def get_paginated_upload_results(
         DatabaseError: If there is an error querying the database.
     """
     if offset < 1 or size < 1:
-        error = E.INVALID_Query % {"offset": offset, "size": size}
-        current_app.logger.error(error)
-        raise InvalidQueryError(error)
+        current_app.logger.error(E.INVALID_QUERY, {"offset": offset, "size": size})
+        raise InvalidQueryError(E.INVALID_QUERY % {"offset": offset, "size": size})
 
     elements = func.jsonb_array_elements(
         UploadHistory.results["results"]
@@ -122,8 +122,9 @@ def get_paginated_upload_results(
         raw_results = query.limit(size).offset(offset_val).all()
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_GET_UPLOAD_HISTORY_RECORD % {"history_id": history_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_GET_UPLOAD_HISTORY_RECORD % {"history_id": history_id}
+        ) from exc
     return [r[0] for r in raw_results]
 
 
@@ -165,8 +166,9 @@ def create_upload(
         db.session.commit()
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_CREATE_UPLOAD_HISTORY_RECORD % {"file_id": file_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_CREATE_UPLOAD_HISTORY_RECORD % {"file_id": file_id}
+        ) from exc
     return history_record
 
 
@@ -212,8 +214,9 @@ def update_upload_status(
             obj.file_id = file_id
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_UPDATE_HISTORY_RECORD_STATUS % {"history_id": history_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_UPDATE_HISTORY_RECORD_STATUS % {"history_id": history_id}
+        ) from exc
 
 
 def get_history_by_file_id(file_id: UUID) -> UploadHistory:
@@ -235,12 +238,16 @@ def get_history_by_file_id(file_id: UUID) -> UploadHistory:
         )
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_GET_UPLOAD_HISTORY_RECORD_BY_FILE_ID % {"file_id": file_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_GET_UPLOAD_HISTORY_RECORD_BY_FILE_ID % {"file_id": file_id}
+        ) from exc
     if result is None:
-        error = f"History not found for file_id: {file_id}"
-        current_app.logger.error(error)
-        raise RecordNotFound(error)
+        current_app.logger.error(
+            E.FAILED_GET_UPLOAD_HISTORY_RECORD_BY_FILE_ID, {"file_id": file_id}
+        )
+        raise RecordNotFound(
+            E.FAILED_GET_UPLOAD_HISTORY_RECORD_BY_FILE_ID % {"file_id": file_id}
+        )
     return result
 
 
@@ -261,12 +268,10 @@ def get_file_by_id(file_id: UUID) -> Files:
         result = db.session.query(Files).filter_by(id=file_id).one_or_none()
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_GET_FILE_RECORD % {"file_id": file_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(E.FAILED_GET_FILE_RECORD % {"file_id": file_id}) from exc
     if result is None:
-        error = f"File not found for file_id: {file_id}"
-        current_app.logger.error(error)
-        raise RecordNotFound(error)
+        current_app.logger.error(E.FAILED_GET_FILE_RECORD, {"file_id": file_id})
+        raise RecordNotFound(E.FAILED_GET_FILE_RECORD % {"file_id": file_id})
     return result
 
 
@@ -285,8 +290,7 @@ def delete_file_by_id(file_id: UUID) -> None:
         Files.query.filter(Files.id == file_id).delete()
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_DELETE_FILE_RECORD % {"file_id": file_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(E.FAILED_DELETE_FILE_RECORD % {"file_id": file_id}) from exc
 
 
 def create_file(
@@ -320,8 +324,9 @@ def create_file(
         db.session.add(file_record)
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_CREATE_FILE_RECORD % {"file_path": file_path}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_CREATE_FILE_RECORD % {"file_path": file_path}
+        ) from exc
     return file_record
 
 
@@ -359,6 +364,7 @@ def create_download_history(
         db.session.add(download_history)
     except SQLAlchemyError as exc:
         current_app.logger.error(str(exc))
-        error = E.FAILED_CREATE_DOWNLOAD_HISTORY_RECORD % {"file_id": file_id}
-        raise DatabaseError(error) from exc
+        raise DatabaseError(
+            E.FAILED_CREATE_DOWNLOAD_HISTORY_RECORD % {"file_id": file_id}
+        ) from exc
     return download_history

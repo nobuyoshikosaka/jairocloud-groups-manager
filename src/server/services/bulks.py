@@ -97,8 +97,9 @@ def upload_file(repository_id: str, bulk_file: FileStorage) -> UUID:
         bulk_file.save(str(file_path))
     except (PermissionError, FileNotFoundError) as exc:
         db.session.rollback()
-        error = E.FAILED_SAVE_UPLOADED_FILE % {"file_path": file_path}
-        raise FileUploadError(error) from exc
+        raise FileUploadError(
+            E.FAILED_SAVE_UPLOADED_FILE % {"file_path": file_path}
+        ) from exc
     db.session.commit()
     current_app.logger.info(I.SUCCESS_UPLOAD_FILES, {"file_path": file_path})
     delete_temporary_file.apply_async((str(temp_id),), countdown=3600)
@@ -247,8 +248,7 @@ def _read_file(file_path: str) -> t.Generator:
     """
     path = Path(file_path)
     if not path.exists():
-        error = E.FILE_EXPIRED % {"path": path}
-        raise FileNotFound(error)
+        raise FileNotFound(E.FILE_EXPIRED % {"path": path})
 
     iterator = None
     suffix = path.suffix.lower()
@@ -267,8 +267,7 @@ def _read_file(file_path: str) -> t.Generator:
             current_app.logger.error(error)
             raise FileValidationError(E.INVALID_FILE_STRUCTURE)
     if iterator is None:
-        error = E.FILE_FORMAT_UNSUPPORTED % {"suffix": path.suffix}
-        raise FileFormatError(error)
+        raise FileFormatError(E.FILE_FORMAT_UNSUPPORTED % {"suffix": path.suffix})
 
     yield iterator
 
@@ -611,13 +610,11 @@ def get_validate_task_result(task_id: str) -> AsyncResult[UUID]:
     try:
         res = validate_upload_data.AsyncResult(task_id)
     except RedisConnectionError as exc:
-        error = E.FAILED_CONNECT_REDIS % {"error": str(exc)}
-        current_app.logger.error(error)
-        raise DatastoreError(error) from exc
+        current_app.logger.error(E.FAILED_CONNECT_REDIS, {"error": str(exc)})
+        raise DatastoreError(E.FAILED_CONNECT_REDIS % {"error": str(exc)}) from exc
     if not res:
-        error = E.TASK_NOT_FOUND % {"task_id": task_id}
-        current_app.logger.error(error)
-        raise TaskExcutionError(error)
+        current_app.logger.error(E.TASK_NOT_FOUND, {"task_id": task_id})
+        raise TaskExcutionError(E.TASK_NOT_FOUND % {"task_id": task_id})
     return res
 
 
@@ -724,7 +721,6 @@ def update_users(
 
     if isinstance(result, MapError):
         current_app.logger.error(E.RECEIVE_RESPONSE_MESSAGE, {"message": result.detail})
-        error = E.FAILED_BULK_OPERATION
         raise UnexpectedResponseError(result.detail)
 
     count_error = 0
@@ -781,8 +777,7 @@ def save_file(temp_file_id: UUID) -> UUID:
         error_msg = f"File not found: {file_path}"
         raise FileNotFound(error_msg)
     if file_path.suffix not in {".csv", ".tsv", ".xlsx"}:
-        error = E.FILE_FORMAT_UNSUPPORTED % {"suffix": file_path.suffix}
-        raise FileFormatError(error)
+        raise FileFormatError(E.FILE_FORMAT_UNSUPPORTED % {"suffix": file_path.suffix})
 
     target_dir = Path(config.STORAGE.local.storage) / datetime.now(UTC).strftime(
         "%Y/%m"
@@ -966,13 +961,11 @@ def get_execute_task_result(task_id: str) -> AsyncResult[UUID]:
     try:
         res = update_users.AsyncResult(task_id)
     except RedisConnectionError as exc:
-        error = E.FAILED_CONNECT_REDIS % {"error": str(exc)}
-        current_app.logger.error(error)
-        raise DatastoreError(error) from exc
+        current_app.logger.error(E.FAILED_CONNECT_REDIS, {"error": str(exc)})
+        raise DatastoreError(E.FAILED_CONNECT_REDIS % {"error": str(exc)}) from exc
     if not res:
-        error = E.TASK_NOT_FOUND % {"task_id": task_id}
-        current_app.logger.error(error)
-        raise TaskExcutionError(error)
+        current_app.logger.error(E.TASK_NOT_FOUND, {"task_id": task_id})
+        raise TaskExcutionError(E.TASK_NOT_FOUND % {"task_id": task_id})
     return res
 
 
@@ -995,8 +988,7 @@ def get_upload_result(
     """
     upload = history_table.get_upload_by_id(history_id)
     if not upload:
-        error = E.UPDATE_HISTORY_RECORD_NOT_FOUND % {"id": history_id}
-        raise RecordNotFound(error)
+        raise RecordNotFound(E.UPDATE_HISTORY_RECORD_NOT_FOUND % {"id": history_id})
 
     raw_results: list[dict] = history_table.get_paginated_upload_results(
         history_id, offset, size, status_filter or []
@@ -1055,9 +1047,8 @@ def chack_permission_to_operation(history_id: UUID, operator_id: str) -> bool:
     """
     upload = history_table.get_upload_by_id(history_id)
     if not upload:
-        error = E.UPDATE_HISTORY_RECORD_NOT_FOUND % {"id": history_id}
-        current_app.logger.error(error)
-        raise RecordNotFound(error)
+        current_app.logger.error(E.UPDATE_HISTORY_RECORD_NOT_FOUND, {"id": history_id})
+        raise RecordNotFound(E.UPDATE_HISTORY_RECORD_NOT_FOUND % {"id": history_id})
     return upload.operator_id == operator_id
 
 
@@ -1077,8 +1068,7 @@ def chack_permission_to_view(history_id: UUID) -> bool:
         return True
     upload = history_table.get_upload_by_id(history_id)
     if not upload:
-        error = E.UPDATE_HISTORY_RECORD_NOT_FOUND % {"id": history_id}
-        current_app.logger.error(error)
-        raise RecordNotFound(error)
+        current_app.logger.error(E.UPDATE_HISTORY_RECORD_NOT_FOUND, {"id": history_id})
+        raise RecordNotFound(E.UPDATE_HISTORY_RECORD_NOT_FOUND % {"id": history_id})
     repository_id = upload.file.file_content["repositories"][0]["id"]
     return repository_id not in get_permitted_repository_ids() and upload.public

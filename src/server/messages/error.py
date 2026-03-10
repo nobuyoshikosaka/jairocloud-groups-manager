@@ -645,7 +645,7 @@ FAILED_DELETE_FILE_RECORD = LogMessage(
     "Failed to delete file record(file_id: %(file_id)s) from database.",
 )
 
-INVALID_Query = LogMessage(
+INVALID_QUERY = LogMessage(
     "E618",
     "offset: %(offset)s and size: %(size)s must be non-negative integers.",
 )
@@ -657,7 +657,7 @@ FAILED_CREATE_FILE_RECORD = LogMessage(
 
 INVALID_FILE_STRUCTURE = LogMessage(
     "E621",
-    "Invalid file structure.",
+    "Invalid file structure. Please check the file and try again.",
 )
 
 FILE_EXPIRED = LogMessage(
