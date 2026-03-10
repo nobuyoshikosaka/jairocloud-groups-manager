@@ -204,8 +204,8 @@
         "public": "グループの公開状態",
         "users-count": "ユーザー数"
       },
+      "search-placeholder": "グループ名で検索...",
       "no-groupss-description": "あなたのリポジトリにはグループがありません。まずはグループを作成してください。",
-      "search-placeholder": "検索...",
       "title": "グループ一覧"
     },
     "title": "グループ"
@@ -331,6 +331,8 @@
       },
       "no-repositories-description": "あなたには管理できるリポジトリがありません",
       "no-repositories-title": "リポジトリが見つかりません",
+      "search-placeholder": "リポジトリ名、URL、EntityIDで検索...",
+      "search-placeholder-service-name-only": "リポジトリ名で検索...",
       "title": "リポジトリ一覧"
     },
     "title": "リポジトリ",
@@ -583,6 +585,10 @@
     }
   },
   "users": {
+    "alert": {
+      "filter-by-both-role-group-disabled": "現在、機能が制限されているため、ロールとグループのフィルターを同時に選択することができません。",
+      "filter-by-last-modified-disabled": "現在、機能が制限されているため、最終更新日時によるフィルターはご利用いただけません。"
+    },
     "all-users-actions": "すべてのユーザー",
     "button": {
       "all-users-download": "全件ダウンロード",
@@ -609,7 +615,8 @@
       },
       "no-users-description": "あなたのリポジトリにはユーザーがいません。まずはユーザーを作成するか、ファイルをアップロードしてください。",
       "no-users-title": "ユーザーが見つかりません",
-      "search-placeholder": "検索...",
+      "search-placeholder": "ユーザー名、Email、ePPN で検索...",
+      "search-placeholder-username-only": "ユーザー名で検索...",
       "title": "ユーザー一覧"
     },
     "title": "ユーザー"

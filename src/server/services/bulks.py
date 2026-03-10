@@ -141,7 +141,7 @@ def validate_upload_data(
         updata_users, create_users, repository_member, repo_user_by_id
     )
 
-    results = ValidateSummary(
+    results = ValidateResults(
         results=check_results,
         summary=summary,
         missing_user=missing_users,
@@ -243,6 +243,7 @@ def _read_file(file_path: str) -> t.Generator:
     Raises:
         FileNotFound: If the file does not exist.
         FileFormatError : If the format is unsupported or parsing fails.
+        FileValidationError: If the file content is invalid.
     """
     path = Path(file_path)
     if not path.exists():
@@ -264,7 +265,7 @@ def _read_file(file_path: str) -> t.Generator:
         else:
             error = f"{path}: No active sheet found in the Excel file."
             current_app.logger.error(error)
-            raise ResourceInvalid(error)
+            raise FileValidationError(E.INVALID_FILE_STRUCTURE)
     if iterator is None:
         error = E.FILE_FORMAT_UNSUPPORTED % {"suffix": path.suffix}
         raise FileFormatError(error)

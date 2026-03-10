@@ -218,8 +218,8 @@
         "public": "Public Status",
         "users-count": "Users"
       },
+      "search-placeholder": "Search by group name...",
       "no-groupss-description": "Your repository does not have any groups. Please create a group first.",
-      "search-placeholder": "Seach...",
       "title": "Groups List"
     },
     "title": "Groups"
@@ -346,6 +346,8 @@
       },
       "no-repositories-description": "you have no repositories to manage",
       "no-repositories-title": "No repositories found",
+      "search-placeholder": "Search by repository name, URL, EntityID...",
+      "search-placeholder-service-name-only": "Search by repository name...",
       "title": "Repositories List"
     },
     "title": "Repositories",
@@ -612,6 +614,10 @@
     }
   },
   "users": {
+    "alert": {
+      "filter-by-both-role-group-disabled": "Currently, due to limited functionality, it is not possible to select role and group filters at the same time.",
+      "filter-by-last-modified-disabled": "Due to limited functionality, filtering by last updated time is currently not available."
+    },
     "all-users-actions": "All users",
     "button": {
       "all-users-download": "Download all users",
@@ -640,7 +646,8 @@
       },
       "no-users-description": "Your repository does not have any users. Please create a user or upload a file first.",
       "no-users-title": "No users found",
-      "search-placeholder": "Search...",
+      "search-placeholder": "Search by username, email, ePPN...",
+      "search-placeholder-username-only": "Search by username...",
       "title": "Users List"
     },
     "title": "Users"

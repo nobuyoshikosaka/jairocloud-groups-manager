@@ -12,7 +12,10 @@ from flask_pydantic import validate
 
 from server.auth import is_user_logged_in
 from server.const import DEFAULT_SEARCH_COUNT, USER_ROLES
-from server.entities.bulk import ExecuteResults, ValidateResults
+from server.entities.bulk import (
+    ExecuteResults,
+    ValidateResults,
+)
 from server.exc import (
     FileFormatError,
     FileNotFound,
@@ -22,7 +25,7 @@ from server.exc import (
 )
 from server.messages import E
 from server.services import bulks, history_table, repositories
-from server.services.utils import get_permitted_repository_ids
+from server.services.utils import get_permitted_repository_ids, require_enabled
 
 from .helpers import roles_required, validate_files
 from .schemas import (
@@ -46,6 +49,7 @@ bp = Blueprint("bulk", __name__)
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate_files
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def upload_file(
     form: TargetRepositoryForm, files: BulkFileForm
 ) -> tuple[BulkBody | ErrorResponse, int]:
@@ -82,6 +86,7 @@ def upload_file(
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def validate_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
     """Get the status of a validation task.
 
@@ -104,6 +109,7 @@ def validate_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def validate_result(
     query: UploadQuery,
     task_id: str,
@@ -151,6 +157,7 @@ def validate_result(
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def execute(body: ExcuteRequest) -> tuple[BulkBody | ErrorResponse, int]:
     """Execute a bulk upload.
 
@@ -187,6 +194,8 @@ def execute(body: ExcuteRequest) -> tuple[BulkBody | ErrorResponse, int]:
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
+@validate()
+@require_enabled("enable_bulk_operation")
 def execute_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
     """Get the status of an execution task.
 
@@ -208,6 +217,7 @@ def execute_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
 @login_required
 @roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
 @validate(response_by_alias=True)
+@require_enabled("enable_bulk_operation")
 def result(
     history_id: UUID, query: UploadQuery
 ) -> tuple[ExecuteResults | ErrorResponse, int]:
