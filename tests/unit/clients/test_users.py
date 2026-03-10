@@ -5,6 +5,8 @@ import json
 import time
 import typing as t
 
+from http import HTTPStatus
+
 import pytest
 
 from requests.exceptions import HTTPError
@@ -39,9 +41,9 @@ def test_search_success(app: Flask, mocker: MockerFixture) -> None:
     mocker.patch.object(users, "alias_generator", side_effect=lambda x: x)
     mocker.patch("server.clients.users.get_time_stamp", return_value=time_stamp)
     mocker.patch("server.clients.users.compute_signature", return_value=signature)
-    expected_requests_url = f"{users.config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}"
+    expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}"
     expected_headers = {"Authorization": f"Bearer {access_token}"}
-    expected_timeout = users.config.MAP_CORE.timeout
+    expected_timeout = config.MAP_CORE.timeout
     expected_params = {
         "time_stamp": time_stamp,
         "signature": signature,
@@ -102,9 +104,9 @@ def test_search_with_include(app: Flask, mocker: MockerFixture) -> None:
         "Resources": [{"id": "u1", "schemas": ["a"], "userName": "u", "emails": [{"value": "mail@example.com"}]}],
     }
     expected_result: SearchResponse[MapUser] = SearchResponse[MapUser].model_validate(response_data)
-    expected_requests_url = f"{users.config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}"
+    expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}"
     expected_headers = {"Authorization": f"Bearer {access_token}"}
-    expected_timeout = users.config.MAP_CORE.timeout
+    expected_timeout = config.MAP_CORE.timeout
     expected_params = {
         "time_stamp": time_stamp,
         "signature": signature,
@@ -158,9 +160,9 @@ def test_search_with_exclude(app: Flask, mocker: MockerFixture) -> None:
         "startIndex": 1,
         "Resources": [{"id": "u1", "schemas": ["a"], "userName": "u", "emails": [{"value": "mail@example.com"}]}],
     }
-    expected_requests_url = f"{users.config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}"
+    expected_requests_url = f"{config.MAP_CORE.base_url}{MAP_USERS_ENDPOINT}"
     expected_headers = {"Authorization": f"Bearer {access_token}"}
-    expected_timeout = users.config.MAP_CORE.timeout
+    expected_timeout = config.MAP_CORE.timeout
     expected_excluded = set(exclude)
     expected_params = {
         "time_stamp": time_stamp,
@@ -1201,6 +1203,49 @@ def test_patch_by_id_does_not_clear_cache_on_error(app: Flask, mocker: MockerFix
     clear_eppn.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    ("status_code", "response_json", "expected_type"),
+    [
+        (200, "data/map_user.json", MapUser),
+        (400, "data/map_error.json", MapError),
+        (404, "data/map_error.json", MapError),
+    ],
+    ids=["success", "bad_request", "not_found"],
+)
+def test_get_self_various_status(app: Flask, mocker: MockerFixture, status_code, response_json, expected_type):
+    json_data = load_json_data(response_json)
+    mock_get = mocker.patch("server.clients.users.requests.get")
+    mock_get.return_value.text = json.dumps(json_data)
+    mock_get.return_value.status_code = status_code
+    time_stamp = str(int(time.time()))
+    mocker.patch("server.clients.users.get_time_stamp", return_value=time_stamp)
+    mocker.patch("server.clients.users.compute_signature", return_value=hashlib.sha256(b"hash").hexdigest())
+
+    if status_code > HTTPStatus.BAD_REQUEST:
+        mock_get.return_value.raise_for_status.side_effect = Exception("HTTP error")
+        with pytest.raises(Exception, match="HTTP error"):
+            users.get_self(access_token="token", client_secret="secret")
+    else:
+        result = users.get_self(access_token="token", client_secret="secret")
+        assert isinstance(result, expected_type)
+
+
+def test_get_self_with_include_exclude(app: Flask, mocker: MockerFixture):
+    json_data = load_json_data("data/map_user.json")
+    mock_get = mocker.patch("server.clients.users.requests.get")
+    mock_get.return_value.text = json.dumps(json_data)
+    mock_get.return_value.status_code = 200
+    time_stamp = str(int(time.time()))
+    mocker.patch("server.clients.users.get_time_stamp", return_value=time_stamp)
+    mocker.patch("server.clients.users.compute_signature", return_value=hashlib.sha256(b"hash").hexdigest())
+    mocker.patch.object(users, "alias_generator", side_effect=lambda x: x)
+
+    include = {"user_name", "email"}
+    exclude = {"meta"}
+    result = users.get_self(include=include, exclude=exclude, access_token="token", client_secret="secret")
+    assert isinstance(result, MapUser)
+
+
 @pytest.fixture
 def user_data() -> tuple[dict[str, t.Any], MapUser]:
     json_data = load_json_data("data/map_user.json")
@@ -1262,8 +1307,8 @@ def test_handle_user_updated_returns_early_on_non_mapuser(mocker):
 @pytest.mark.parametrize(
     ("is_logged_in", "is_admin", "permitted", "expected"),
     [
-        (False, False, [], "anonymous"),
-        (True, True, [], "system_admin"),
+        (False, False, [], "by_anonymous"),
+        (True, True, [], "by_system_admin"),
         (True, False, ["repo1", "repo2"], "repo1,repo2"),
         (True, False, [], ""),
     ],

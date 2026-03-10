@@ -9,8 +9,7 @@ if t.TYPE_CHECKING:
 
 
 def test_get_time_stamp_returns_int_timestamp_string(monkeypatch: pytest.MonkeyPatch):
-    # A fixed input should always make a fixed output.
-    # (For example, when the time is 1700000000.987654, aa() should return "1700000000".)
+    """A fixed input should always make a fixed output"""
 
     fixed_time = 1700000000.987654
     expecter_timestamp = "1700000000"
@@ -20,7 +19,7 @@ def test_get_time_stamp_returns_int_timestamp_string(monkeypatch: pytest.MonkeyP
 
 
 def test_compute_signature_matches_expected_hash():
-    # A known input should make a known SHA-256 hash.
+    """A known input should make a known SHA-256 hash"""
     cs = "secret"
     at = "token"
     ts = "1700000000"
@@ -30,7 +29,7 @@ def test_compute_signature_matches_expected_hash():
 
 
 def test_compute_signature_returns_sha256_hex_format():
-    # The return value should be a SHA-256 hash:
+    """The return value should be a SHA-256 hash"""
     expected_length = 64
     out = utils.compute_signature("a", "b", "c")
     assert isinstance(out, str)
@@ -39,7 +38,7 @@ def test_compute_signature_returns_sha256_hex_format():
 
 
 def test__compute_signature_changes_when_input_changes():
-    # If one character in the input changes, the output hash should also change
+    """If one character in the input changes, the output hash should also change"""
     base = utils.compute_signature("s", "t", "1")
     changed = utils.compute_signature("s", "t", "2")
     assert base != changed
