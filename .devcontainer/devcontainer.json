@@ -3,25 +3,25 @@
   "image": "mcr.microsoft.com/devcontainers/base:bookworm",
   "remoteUser": "vscode",
 
-  "initializeCommand": "docker network create jairocloud-groups-manager_default || true",
-  "runArgs": [
-    "--network",
-    "jairocloud-groups-manager_default"
-  ],
+  // "initializeCommand": "docker network create jairocloud-groups-manager_default || true",
+  // "runArgs": [
+  //   "--network",
+  //   "jairocloud-groups-manager_default"
+  // ],
 
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.14"
     },
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "24"
+      "version": "24.12"
     },
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-      "version": "latest",
-      "dockerDashComposeVersion": "latest",
-      "enableNonRootDocker": true,
-      "moby": false
-    }
+    // "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+    //   "version": "latest",
+    //   "dockerDashComposeVersion": "latest",
+    //   "enableNonRootDocker": true,
+    //   "moby": false
+    // }
   },
   "remoteEnv": {
     "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
@@ -32,13 +32,108 @@
     "FLASK_APP": "server.app"
 
   },
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-  ],
+  // "mounts": [
+  //   "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  // ],
 
   "onCreateCommand": "/bin/sh .devcontainer/setup_commands.sh install_deps",
   "postStartCommand": "/bin/sh .devcontainer/setup_commands.sh genarate_ssl_key",
-  "postAttachCommand": "/bin/sh .devcontainer/setup_commands.sh container_watch",
+  // "postAttachCommand": "/bin/sh .devcontainer/setup_commands.sh container_watch",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.languageServer": "Pylance",
+        "python.defaultInterpreterPath": "~/.venv/bin/python",
+        "[python]": {
+          "editor.rulers": [88],
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports": "explicit"
+          },
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "python.useEnvironmentsExtension": false,
+        "python.terminal.activateEnvironment": false,
+
+        "[typescript]": {
+          "editor.rulers": [100]
+        },
+        "[vue]": {
+          "editor.rulers": [100]
+        },
+        "typescript.tsdk": "./node_modules/typescript/lib",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "always"
+        },
+        "tailwindCSS.classAttributes": ["class", "ui", "active-class", "inactive-class"],
+        "tailwindCSS.experimental.classRegex": [
+          ["ui:\\s*{([^)]*)\\s*}", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+        ]
+      },
+
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "tamasfe.even-better-toml",
+        "charliermarsh.ruff",
+
+        "vue.volar",
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "lokalise.i18n-ally",
+
+        "editorconfig.editorconfig",
+        "shardulm94.trailing-spaces",
+        "mhutchie.git-graph",
+        "eamodio.gitlens"
+      ],
+      "ignoreExtensions": ["*"]
+    }
+  }
+}
+{
+  "name": "DevContainer for JAIRO Cloud Groups Manager",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "remoteUser": "vscode",
+
+  // "initializeCommand": "docker network create jairocloud-groups-manager_default || true",
+  // "runArgs": [
+  //   "--network",
+  //   "jairocloud-groups-manager_default"
+  // ],
+
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.14"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24.12"
+    },
+    // "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+    //   "version": "latest",
+    //   "dockerDashComposeVersion": "latest",
+    //   "enableNonRootDocker": true,
+    //   "moby": false
+    // }
+  },
+  "remoteEnv": {
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
+    "VIRTUAL_ENV": "/home/vscode/.venv",
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv",
+    "FLASK_ENV": "development",
+    "FLASK_DEBUG": "1",
+    "FLASK_APP": "server.app"
+
+  },
+  // "mounts": [
+  //   "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  // ],
+
+  "onCreateCommand": "/bin/sh .devcontainer/setup_commands.sh install_deps",
+  "postStartCommand": "/bin/sh .devcontainer/setup_commands.sh genarate_ssl_key",
+  // "postAttachCommand": "/bin/sh .devcontainer/setup_commands.sh container_watch",
 
   "customizations": {
     "vscode": {
