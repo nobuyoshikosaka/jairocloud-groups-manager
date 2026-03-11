@@ -500,7 +500,8 @@ def _build_check_results(
                     groups=user_group_ids,
                     email=u.emails or [],
                     status="error",
-                    code=str(exc),
+                    code=exc.code,
+                    message=exc.string,
                 )
             )
             count_error += 1

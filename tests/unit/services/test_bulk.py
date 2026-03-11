@@ -6,6 +6,9 @@ from uuid import UUID, uuid7
 
 import pytest
 
+from redis.exceptions import ConnectionError as RedisConnectionError
+
+from server.const import USER_ROLES
 from server.db.history import Files, UploadHistory, _FileContent
 from server.entities.bulk import (
     EachResult,
@@ -24,11 +27,15 @@ from server.entities.search_request import SearchResponse
 from server.entities.summaries import GroupSummary
 from server.entities.user_detail import RepositoryRole, UserDetail
 from server.exc import (
+    DatastoreError,
     FileFormatError,
     FileNotFound,
+    FileUploadError,
     FileValidationError,
+    InvalidFormError,
     OAuthTokenError,
     RecordNotFound,
+    TaskExcutionError,
     UnexpectedResponseError,
 )
 from server.messages import E
@@ -52,6 +59,33 @@ def assert_unordered_model_list_equal(list1, list2):
         return deep_tuple(x.dict())
 
     assert set(map(to_tuple, list1)) == set(map(to_tuple, list2))
+
+
+def test_upload_file(app, mocker: MockerFixture):
+    repository_id = "repo1"
+    mock_file = mocker.MagicMock()
+    mock_file.save.return_value = None
+    mock_commit = mocker.patch("server.db.db.session.commit")
+    mocker.patch("server.services.history_table.create_file", return_value=None)
+    mock_task = mocker.patch("server.services.bulks.delete_temporary_file.apply_async", return_value=None)
+    result = bulks.upload_file(repository_id, mock_file)
+    assert isinstance(result, UUID)
+    mock_commit.assert_called_once()
+    mock_task.assert_called_once()
+
+
+def test_upload_file_with_exception(app, mocker: MockerFixture):
+    repository_id = "repo1"
+    mock_file = mocker.MagicMock()
+    mock_file.save.side_effect = PermissionError
+    mocker.patch("server.services.history_table.create_file", return_value=None)
+    mock_commit = mocker.patch("server.db.db.session.commit")
+    mock_task = mocker.patch("server.services.bulks.delete_temporary_file.apply_async", return_value=None)
+    with pytest.raises(FileUploadError) as exc:
+        bulks.upload_file(repository_id, mock_file)
+    assert str(exc.value.code) == (E.FAILED_SAVE_UPLOADED_FILE % {"file_path": "dummy_path"}).code
+    mock_commit.assert_not_called()
+    mock_task.assert_not_called()
 
 
 def test_validate_upload_data(app, mocker: MockerFixture):
@@ -116,9 +150,11 @@ def test_validate_upload_data(app, mocker: MockerFixture):
             summary,
         ),
     )
+    mock_history = UploadHistory()
+    mock_history.id = uuid7()
     mock_create_upload = mocker.patch(
         "server.services.history_table.create_upload",
-        return_value=UploadHistory(id=uuid7()),
+        return_value=mock_history,
     )
     validate_summary = ValidateResults(
         results=check_results, summary=summary, missing_user=missing_users, offset=0, page_size=3
@@ -336,7 +372,7 @@ def test_build_user_detail_from_dict(app, mocker: MockerFixture):
                 eppns=["test@eppn"],
                 emails=["user1@example.com"],
                 preferred_language="en",
-                repository_roles=[RepositoryRole(id="repo1", service_name=None, user_role="repository_admin")],
+                repository_roles=[RepositoryRole(id="repo1", service_name=None, user_role=USER_ROLES.REPOSITORY_ADMIN)],
             ),
             UserDetail(
                 id="user2",
@@ -347,7 +383,7 @@ def test_build_user_detail_from_dict(app, mocker: MockerFixture):
                 eppns=["test@eppn"],
                 emails=["user2@example.com"],
                 preferred_language="ja",
-                repository_roles=[RepositoryRole(id="repo1", service_name=None, user_role="contributor")],
+                repository_roles=[RepositoryRole(id="repo1", service_name=None, user_role=USER_ROLES.CONTRIBUTOR)],
             ),
         ]
     )
@@ -395,7 +431,7 @@ def test_build_user_detail_from_dict_by_name(app, mocker: MockerFixture):
                 eppns=["test@eppn"],
                 emails=["user2@example.com"],
                 preferred_language="ja",
-                repository_roles=[RepositoryRole(id="repo1", service_name=None, user_role="repository_admin")],
+                repository_roles=[RepositoryRole(id="repo1", service_name=None, user_role=USER_ROLES.REPOSITORY_ADMIN)],
             ),
             UserDetail(
                 user_name="User 3",
@@ -405,7 +441,7 @@ def test_build_user_detail_from_dict_by_name(app, mocker: MockerFixture):
                 preferred_language="ja",
                 eppns=["test@eppn"],
                 emails=["user3@example.com"],
-                repository_roles=[RepositoryRole(id="repo1", service_name=None, user_role="contributor")],
+                repository_roles=[RepositoryRole(id="repo1", service_name=None, user_role=USER_ROLES.CONTRIBUTOR)],
             ),
         ]
     )
@@ -495,7 +531,7 @@ def test__build_check_results(app, mocker: MockerFixture):
             emails=["user2@example.com"],
             groups=[GroupSummary(id="group1", display_name="Group 1")],
         ),
-        UserDetail(id="user3", user_name="User 1", eppns=["test@eppn"], emails=["user1@example.com"]),
+        UserDetail(id="user3", user_name="User 3", eppns=["test@eppn"], emails=["user3@example.com"]),
         UserDetail(id="not_repo_user", user_name="User 1", eppns=["test@eppn"], emails=["user1@example.com"]),
     ]
     create_user = [
@@ -510,7 +546,7 @@ def test__build_check_results(app, mocker: MockerFixture):
         ),
         UserDetail(id="user5", user_name="User 5", eppns=["test@eppn"], emails=["user5@example.com"]),
     ]
-    repository_member = RepositoryMember(groups={"group1", "group2"}, users={"user1", "user2"})
+    repository_member = RepositoryMember(groups={"group1", "group2"}, users={"user1", "user2", "user3"})
     repo_user_by_id = {
         "user1": UserDetail(id="user1", user_name="User 1", eppns=["test@eppn"], emails=["user1@example.com"]),
         "user2": UserDetail(
@@ -539,7 +575,6 @@ def test__build_check_results(app, mocker: MockerFixture):
             user_name="User 5",
             groups=set(),
             status="create",
-            code=None,
         ),
         EachResult(
             id="user2",
@@ -548,20 +583,52 @@ def test__build_check_results(app, mocker: MockerFixture):
             user_name="User 2",
             groups={"group1"},
             status="update",
-            code=None,
         ),
         EachResult(
             id="user3",
             eppn=["test@eppn"],
-            email=["user1@example.com"],
+            email=["user3@example.com"],
             user_name="User 3",
             groups=set(),
             status="skip",
-            code=None,
         ),
     ]
     expected_summary = ResultSummary(create=1, update=1, delete=0, skip=1, error=1)
     mocker.patch("server.services.bulks.validate_user_to_map_user", return_value=MapUser())
+    result = bulks._build_check_results(update_user, create_user, repository_member, repo_user_by_id)  # noqa: SLF001
+    assert result == (expected_check_results, expected_summary)
+
+
+def test__build_check_results_invalid_form(app, mocker: MockerFixture):
+    update_user = []
+    create_user = [
+        UserDetail(user_name="User 1"),
+    ]
+    repository_member = RepositoryMember(groups={"group1", "group2"}, users={"user1", "user2"})
+    repo_user_by_id = {
+        "user1": UserDetail(id="user1", user_name="User 1", eppns=["test@eppn"], emails=["user1@example.com"]),
+        "user2": UserDetail(
+            id="user2",
+            user_name="User 2",
+            eppns=["test@eppn"],
+            emails=["user2@example.com"],
+            groups=[GroupSummary(id="group2", display_name="Group 2")],
+        ),
+    }
+    expected_check_results = [
+        EachResult(
+            id=None,
+            eppn=[],
+            email=[],
+            user_name="User 1",
+            groups=set(),
+            status="error",
+            code=E.USER_REQUIRES_EPPN.code,
+            message=E.USER_REQUIRES_EPPN.data,
+        ),
+    ]
+    expected_summary = ResultSummary(create=0, update=0, delete=0, skip=0, error=1)
+    mocker.patch("server.services.bulks.validate_user_to_map_user", side_effect=InvalidFormError(E.USER_REQUIRES_EPPN))
     result = bulks._build_check_results(update_user, create_user, repository_member, repo_user_by_id)  # noqa: SLF001
     assert result == (expected_check_results, expected_summary)
 
@@ -693,6 +760,31 @@ def test__check_value(app, mocker: MockerFixture, user_detail, expected):
 )
 def test__check_immutable_attributes(app, mocker: MockerFixture, original, update_user, expected):
     assert bulks._check_immutable_attributes(original, update_user) == expected  # noqa: SLF001
+
+
+def test_get_validate_task_result(app, mocker: MockerFixture):
+    task_id = "test_task_id"
+    expected = mocker.MagicMock()
+    mocker.patch("server.services.bulks.validate_upload_data.AsyncResult", return_value=expected)
+    assert bulks.get_validate_task_result(task_id) == expected
+
+
+def test_get_validate_task_result_none(app, mocker: MockerFixture):
+    task_id = "test_task_id"
+    mocker.patch("server.services.bulks.validate_upload_data.AsyncResult", return_value=None)
+    expected = E.TASK_NOT_FOUND % {"task_id": "test_task_id"}
+    with pytest.raises(TaskExcutionError) as exc:
+        bulks.get_validate_task_result(task_id)
+    assert str(exc.value) == str(expected)
+
+
+def test_get_validate_task_result_with_exception(app, mocker: MockerFixture):
+    task_id = "test_task_id"
+    expected_exception = RedisConnectionError("Failed to connect to Redis")
+    mocker.patch("server.services.bulks.validate_upload_data.AsyncResult", side_effect=expected_exception)
+    with pytest.raises(DatastoreError) as exc:
+        bulks.get_validate_task_result(task_id)
+    assert str(exc.value) == str(E.FAILED_CONNECT_REDIS % {"error": str(expected_exception)})
 
 
 def test_get_validate_result(app, mocker: MockerFixture):
@@ -891,9 +983,13 @@ def test_save_file(app, mocker: MockerFixture):
     mocker.patch("pathlib.Path.rename")
     file_id = uuid7()
     new_file_id = uuid7()
+    mock_files = Files()
+    mock_files.id = new_file_id
+    mock_files.file_content = file_content
+    mock_files.file_path = file_path
     return_fnc = mocker.patch(
         "server.services.history_table.create_file",
-        return_value=Files(id=new_file_id, file_content=file_content, file_path=file_path),
+        return_value=mock_files,
     )
     assert bulks.save_file(file_id) == new_file_id
     mock_get_file_by_id.assert_called_once_with(file_id)
@@ -1147,6 +1243,31 @@ def test__build_groups_update_bulk_operations_no_group(app, mocker: MockerFixtur
     ]
 
 
+def test_get_execute_task_result(app, mocker: MockerFixture):
+    task_id = "test_task_id"
+    expected = mocker.MagicMock()
+    mocker.patch("server.services.bulks.update_users.AsyncResult", return_value=expected)
+    assert bulks.get_execute_task_result(task_id) == expected
+
+
+def test_get_execute_task_result_none(app, mocker: MockerFixture):
+    task_id = "test_task_id"
+    mocker.patch("server.services.bulks.update_users.AsyncResult", return_value=None)
+    expected = E.TASK_NOT_FOUND % {"task_id": "test_task_id"}
+    with pytest.raises(TaskExcutionError) as exc:
+        bulks.get_execute_task_result(task_id)
+    assert str(exc.value) == str(expected)
+
+
+def test_get_execute_task_result_with_exception(app, mocker: MockerFixture):
+    task_id = "test_task_id"
+    expected_exception = RedisConnectionError("Failed to connect to Redis")
+    mocker.patch("server.services.bulks.update_users.AsyncResult", side_effect=expected_exception)
+    with pytest.raises(DatastoreError) as exc:
+        bulks.get_execute_task_result(task_id)
+    assert str(exc.value) == str(E.FAILED_CONNECT_REDIS % {"error": str(expected_exception)})
+
+
 def test_get_upload_result(app, mocker: MockerFixture):
     history_id = uuid7()
     status_filter = ["create"]
@@ -1222,3 +1343,47 @@ def test_delete_temporary_file_with_exception(app, mocker: MockerFixture):
     file_id = uuid7()
     mocker.patch("server.services.history_table.get_file_by_id", side_effect=RecordNotFound(""))
     assert bulks.delete_temporary_file(str(file_id)) is None
+
+
+def test_chack_permission_to_operation(app, mocker: MockerFixture):
+    mock_upload_record = UploadHistory()
+    mock_upload_record.operator_id = "user1"
+    history_id = uuid7()
+    mock_get_upload = mocker.patch("server.services.history_table.get_upload_by_id", return_value=mock_upload_record)
+    assert bulks.chack_permission_to_operation(history_id, "user1") is True
+    mock_get_upload.assert_called_once_with(history_id)
+
+
+def test_chack_permission_to_operation_no_history(app, mocker: MockerFixture):
+    history_id = uuid7()
+    expected = E.UPDATE_HISTORY_RECORD_NOT_FOUND % {"id": history_id}
+    mocker.patch("server.services.history_table.get_upload_by_id", return_value=None)
+    with pytest.raises(RecordNotFound) as exc:
+        bulks.chack_permission_to_operation(history_id, "user1")
+    assert str(exc.value) == str(expected)
+
+
+def test_chack_permission_to_view(app, mocker: MockerFixture):
+    history_id = uuid7()
+    mock_upload_record = mocker.MagicMock()
+    mock_upload_record.file.file_content["repositories"][0]["id"] = "repo1"
+    mock_upload_record.public = False
+    mocker.patch("server.services.bulks.get_permitted_repository_ids", return_value=set())
+    mocker.patch("server.services.history_table.get_upload_by_id", return_value=mock_upload_record)
+    assert bulks.chack_permission_to_view(history_id) is False
+
+
+def test_chack_permission_to_view_is_system_admin(app, mocker: MockerFixture):
+    history_id = uuid7()
+    mocker.patch("server.services.bulks.is_current_user_system_admin", return_value=True)
+    assert bulks.chack_permission_to_view(history_id) is True
+
+
+def test_chack_permission_to_view_history_none(app, mocker: MockerFixture):
+    history_id = uuid7()
+    mocker.patch("server.services.bulks.get_permitted_repository_ids", return_value=set())
+    mocker.patch("server.services.history_table.get_upload_by_id", return_value=None)
+    expected = E.UPDATE_HISTORY_RECORD_NOT_FOUND % {"id": history_id}
+    with pytest.raises(RecordNotFound) as exc:
+        bulks.chack_permission_to_view(history_id)
+    assert str(exc.value) == str(expected)
