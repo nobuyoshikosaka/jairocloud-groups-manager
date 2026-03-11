@@ -1005,7 +1005,7 @@ def test_update_raises_resource_not_found(app: Flask, gen_group_id, mocker: Mock
     mocker.patch("server.services.groups.get_by_id", return_value=None)
     mocker.patch("server.clients.groups.patch_by_id", return_value=None)
 
-    msg: str = "E204 | Group resource (id: jc_repo_id_groups_g202_test) not found."
+    msg: str = "E204 | Group resource (id: jc_repo_id_gr_g202_test) not found."
     with pytest.raises(ResourceNotFound, match=msg):
         groups.update(updated_group)
 
@@ -1983,6 +1983,7 @@ def test_delete_multiple_all_failure(app, gen_group_id, mocker: MockerFixture) -
 
 def test_delete_multiple_raises_resource_invalid_and_logs(app: Flask, gen_group_id, mocker: MockerFixture) -> None:
     """Test delete_multiple raises ResourceInvalid and logs when MapError is returned."""
+    mocker.patch("server.config.config.FEATURES.enable_bulk_operation", return_value=True)
     group_ids: set[str] = {gen_group_id("g1"), gen_group_id("g2")}
     mocker.patch("server.services.groups.get_access_token", return_value="token")
     mocker.patch("server.services.groups.get_client_secret", return_value="secret")
@@ -2286,7 +2287,7 @@ def test_delete_by_id_map_error_not_found(app, gen_group_id, mocker):
         "server.clients.groups.delete_by_id",
         return_value=MapError(detail=f"Group '{group_id}' Not Found", status="404", scim_type="noTarget"),
     )
-    msg: str = "E204 | Group resource (id: jc_repo_id_groups_g200_test) not found."
+    msg: str = "E204 | Group resource (id: jc_repo_id_gr_g200_test) not found."
     with pytest.raises(ResourceNotFound, match=msg):
         groups.delete_by_id(group_id)
 
@@ -2335,7 +2336,7 @@ def test_update_member_add_and_remove(app: Flask, gen_group_id, mocker: MockerFi
     group_id: str = gen_group_id("g113")
     same_user: str = "user12"
 
-    msg: str = "E260 | Conflict in updating Group members (id: jc_repo_id_groups_g113_test, users: user12)."
+    msg: str = "E260 | Conflict in updating Group members (id: jc_repo_id_gr_g113_test, users: user12)."
     with pytest.raises(RequestConflict, match=msg):
         groups.update_member(group_id, add={same_user}, remove={same_user})
 
@@ -2508,7 +2509,7 @@ def test_update_member_get_by_id_none(app, gen_group_id, mocker):
     group_id = gen_group_id("g301")
     mocker.patch.object(groups.config.MAP_CORE, "update_strategy", new="patch")
     mocker.patch("server.services.groups.get_by_id", return_value=None)
-    msg: str = "E204 | Group resource (id: jc_repo_id_groups_g301_test) not found."
+    msg: str = "E204 | Group resource (id: jc_repo_id_gr_g301_test) not found."
     with pytest.raises(ResourceNotFound, match=msg):
         groups.update_member(group_id, add={"u1"}, remove={"u2"})
 
@@ -2606,7 +2607,7 @@ def test_update_member_put_direct_success(app, gen_group_id, mocker):
 def test_update_member_put_not_found(app, gen_group_id, mocker):
     group_id = gen_group_id("g401")
     mocker.patch("server.services.groups.get_by_id", return_value=None)
-    msg: str = "E204 | Group resource (id: jc_repo_id_groups_g401_test) not found."
+    msg: str = "E204 | Group resource (id: jc_repo_id_gr_g401_test) not found."
     with pytest.raises(ResourceNotFound, match=msg):
         groups.update_member_put(group_id, {"u1"}, {"u2"})
 
@@ -2817,7 +2818,7 @@ def test_update_member_put_request_conflict(app, gen_group_id, mocker):
     add = {"user1", "user2"}
     remove = {"user2", "user3"}
     mocker.patch.object(groups.config.MAP_CORE, "update_strategy", new="put")
-    msg: str = "E260 | Conflict in updating Group members (id: jc_repo_id_groups_g_mem_conflict_test, users: user2)."
+    msg: str = "E260 | Conflict in updating Group members (id: jc_repo_id_gr_g_mem_conflict_test, users: user2)."
     with pytest.raises(RequestConflict, match=msg):
         groups.update_member_put(group_id, add, remove)
 
@@ -2842,7 +2843,7 @@ def test_update_member_put_map_error_resource_not_found(app, gen_group_id, mocke
     mocker.patch("server.services.groups.get_client_secret", return_value="secret")
     logger_mock = mocker.patch("flask.current_app.logger.error")
     map_error = MapError(
-        detail="E204 | Group resource (id: jc_repo_id_groups_g_mem_nf_test) not found.",
+        detail="E204 | Group resource (id: jc_repo_id_gr_g_mem_nf_test) not found.",
         status="404",
         scim_type="invalidValue",
     )
@@ -2878,7 +2879,7 @@ def test_update_member_map_not_found_pattern_raises_resource_not_found(app, gen_
     mocker.patch("server.services.utils.build_update_member_operations")
     map_error = MapError(detail=r"'(.*)' Not Found", status="404", scim_type="noTarget")
     mocker.patch("server.clients.groups.patch_by_id", return_value=map_error)
-    msg = "E204 | Group resource (id: jc_repo_id_groups_g_map_nf_test) not found."
+    msg = "E204 | Group resource (id: jc_repo_id_gr_g_map_nf_test) not found."
 
     with pytest.raises(ResourceNotFound, match=msg):
         groups.update_member(group_id, add, remove)
@@ -2936,13 +2937,13 @@ def test_update_member_put_http_error_branch(app, gen_group_id, mocker, status_c
             "401",
             ResourceNotFound,
             r"'(.*)' Not Found",
-            "E204 | Group resource (id: jc_repo_id_groups_g_mem_http_test) not found.",
+            "E204 | Group resource (id: jc_repo_id_gr_g_mem_http_test) not found.",
         ),
         (
             "500",
             OAuthTokenError,
             r"No update rights for '(.*)'",
-            "E223 | No update rights for Group (id: jc_repo_id_groups_g_mem_http_test) with current access token.",
+            "E223 | No update rights for Group (id: jc_repo_id_gr_g_mem_http_test) with current access token.",
         ),
         ("409", UnexpectedResponseError, "", "E051 | Received unexpected response from mAP Core API."),
     ],
@@ -3375,7 +3376,7 @@ def test_update_member_map_no_rights_update_pattern_raises_oauth_token_error(app
 def test_update_member_put_map_no_rights_update_pattern_raises_oauth_token_error(app, gen_group_id, mocker):
     """Test update_member_put raises ResourceNotFound when MapError.detail matches MAP_NOT_FOUND_PATTERN."""
     group_id = gen_group_id("g_mem_nf")
-    error_msg = "E223 | No update rights for Group (id: jc_repo_id_groups_g_mem_nf_test) with current access token."
+    error_msg = "E223 | No update rights for Group (id: jc_repo_id_gr_g_mem_nf_test) with current access token."
     add = {"user1"}
     remove = set()
     dummy_group = MapGroup(

@@ -80,7 +80,6 @@ def get_upload_history_data(
         {
             **history.__dict__,
             "operator": {"id": history.operator_id, "user_name": history.operator_name},
-            "summary": history.results.get("summary"),
             "file_id": file.id,
             "file_path": file.file_path,
             "repository_count": len(file.file_content.get("repositories", [])),

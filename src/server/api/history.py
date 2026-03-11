@@ -138,25 +138,3 @@ def files(file_id: UUID) -> Response | tuple[ErrorResponse, int]:
         current_app.logger.error(E.FILE_NOT_FOUND, {"path": file_path})
         return ErrorResponse(message=E.FILE_NOT_FOUND % {"path": file_path}), 404
     return send_file(path_or_file=file_path)
-
-
-@bp.get("/files/<file_id>/exists")
-@login_required
-@roles_required(USER_ROLES.SYSTEM_ADMIN, USER_ROLES.REPOSITORY_ADMIN)
-@validate(response_by_alias=True)
-def is_exist_files(file_id: UUID) -> tuple[bool | ErrorResponse, int]:
-    """Check if the file exists.
-
-    Args:
-        file_id (UUID): Unique identifier of the file
-
-    Returns:
-        bool:Whether to check if the file exists
-    """
-    try:
-        file_path = Path(history.get_file_path(file_id))
-    except RecordNotFound as exc:
-        return ErrorResponse(message=exc.message), 404
-    if not Path(file_path).exists():
-        return False, 200
-    return True, 200

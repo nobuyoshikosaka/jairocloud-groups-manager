@@ -9,12 +9,11 @@ const { query, makePageInfo, makeIndicators } = useBulk()
 const toast = useToast()
 
 const { handleFetchError } = useErrorHandling()
-const { data: status, execute: executeStatus }
+const { data: status, refresh: refreshStatus }
   = await useFetch<BulkProcessingStatus>(`/api/bulk/execute/status/${properties.taskId}`,
     {
       method: 'GET',
       lazy: true,
-      immediate: false,
       onResponseError({ response }) {
         switch (response.status) {
           case 404: {
@@ -33,7 +32,7 @@ const isPolling = ref(false)
 const pollExecuteStatus = async () => {
   isPolling.value = true
   for (let index = 0; index < maxAttempts; index++) {
-    await executeStatus()
+    await refreshStatus()
     const st = (status.value?.status)
     if (st === 'SUCCESS') {
       isPolling.value = false
@@ -60,13 +59,12 @@ const pollExecuteStatus = async () => {
   isPolling.value = false
 }
 
-const { data: executeResult, execute: fetchExecuteResult, status: getResultStatus }
+const { data: executeResult, refresh: refreshExecuteResult, status: getResultStatus }
   = await useFetch<ExecuteResults>(`/api/bulk/result/${properties.historyId}`, {
     method: 'GET',
     query,
     lazy: true,
     server: false,
-    immediate: false,
     onResponseError({ response }) {
       switch (response.status) {
         case 403: {
@@ -95,7 +93,7 @@ const { data: executeResult, execute: fetchExecuteResult, status: getResultStatu
 onMounted(async () => {
   if (properties.taskId)
     await pollExecuteStatus()
-  await fetchExecuteResult()
+  await refreshExecuteResult()
 })
 
 const indicators = computed(() => makeIndicators(executeResult.value))

@@ -364,13 +364,3 @@ class FileQuery(UsersQuery):
 
     model_config = ignore_extra_config
     """Configure to ignore extra fields."""
-
-
-class ExportBody(BaseModel):
-    """Body for user export request."""
-
-    user_ids: list[str]
-    """List of user IDs to export."""
-
-    model_config = camel_case_config
-    """Configure to use camelCase aliasing."""

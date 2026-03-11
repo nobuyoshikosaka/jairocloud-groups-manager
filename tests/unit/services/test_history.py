@@ -1,7 +1,7 @@
 import typing as t
 
 from datetime import UTC, date, datetime
-from uuid import UUID
+from uuid import UUID, uuid7
 
 import pytest
 
@@ -9,10 +9,11 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import SQLAlchemyError
 
 from server.db.history import DownloadHistory, Files, UploadHistory, _FileContent, _ResultData
-from server.entities.history_detail import DownloadHistoryData, HistoryQuery, HistorySummary, UploadHistoryData
+from server.entities.history_detail import DownloadHistoryData, HistoryQuery, UploadHistoryData
 from server.entities.search_request import SearchResult
 from server.entities.summaries import UserSummary
 from server.exc import DatabaseError, RecordNotFound
+from server.messages import E
 from server.services import history
 
 
@@ -104,7 +105,6 @@ test_download_history_table_data.parent_id = None
                             last_modified=None,
                         ),
                         status="P",
-                        summary=HistorySummary(create=0, update=0, delete=0, skip=0, error=0),
                         file_path="ver/tmp/2026/01/test_file.csv",
                         file_id=UUID("019c794d-fb97-70f2-aba2-c3888973190d"),
                         repository_count=1,
@@ -334,18 +334,20 @@ def test_update_public_status_not_found(app, mocker: MockerFixture):
     db = mocker.MagicMock()
     mocker.patch("server.services.history.db", db)
     db.session.get.return_value = None
+    history_id = uuid7()
     with pytest.raises(RecordNotFound) as exc:
-        history.update_public_status(tab="upload", history_id=UUID("019c794e-04c0-7403-8621-b04c40698107"), public=True)
-    assert str(exc.value) == "019c794e-04c0-7403-8621-b04c40698107 is not found"
+        history.update_public_status(tab="upload", history_id=history_id, public=True)
+    assert str(exc.value) == str(E.FAILED_GET_HISTORY_RECORD % {"history_id": history_id, "table": "upload"})
 
 
 def test_update_public_status_db_error(app, mocker: MockerFixture):
     db = mocker.MagicMock()
     mocker.patch("server.services.history.db", db)
     db.session.get.side_effect = SQLAlchemyError
+    history_id = uuid7()
     with pytest.raises(DatabaseError) as exc:
-        history.update_public_status(tab="upload", history_id=UUID("019c794e-04c0-7403-8621-b04c40698107"), public=True)
-    assert str(exc.value) == "Failed to update the public status due to a database error."
+        history.update_public_status(tab="upload", history_id=history_id, public=True)
+    assert str(exc.value) == str(E.FAILED_UPDATE_PUBLIC % {"history_id": history_id})
 
 
 def test_update_public_status(app, mocker: MockerFixture):
@@ -371,18 +373,20 @@ def test_get_file_path_not_found(app, mocker: MockerFixture):
     db = mocker.MagicMock()
     mocker.patch("server.services.history.db", db)
     db.session.get.return_value = None
+    file_id = uuid7()
     with pytest.raises(RecordNotFound) as exc:
-        history.get_file_path(UUID("019c794e-04c0-7403-8621-b04c40698107"))
-    assert str(exc.value) == "File with ID 019c794e-04c0-7403-8621-b04c40698107 not found."
+        history.get_file_path(file_id)
+    assert str(exc.value) == str(E.FAILED_GET_FILE_PATH % {"file_id": file_id})
 
 
 def test_get_file_path_db_error(app, mocker: MockerFixture):
     db = mocker.MagicMock()
     mocker.patch("server.services.history.db", db)
     db.session.get.side_effect = SQLAlchemyError
+    file_id = uuid7()
     with pytest.raises(DatabaseError) as exc:
-        history.get_file_path(UUID("019c794e-04c0-7403-8621-b04c40698107"))
-    assert str(exc.value) == "Failed to retrieve the file path due to a database error."
+        history.get_file_path(file_id)
+    assert str(exc.value) == str(E.FAILED_GET_FILE_PATH % {"file_id": file_id})
 
 
 def test_empty_history_criteria():

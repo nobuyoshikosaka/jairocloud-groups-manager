@@ -78,7 +78,7 @@ class ResultSummary(BaseModel):
 class EachResult(BaseModel):
     """Model for result of validation check for each user."""
 
-    id: str | None
+    id: str | None = None
     """The unique identifier for the user."""
 
     eppn: list[str]
@@ -96,8 +96,11 @@ class EachResult(BaseModel):
     status: t.Literal["create", "update", "delete", "skip", "error"]
     """The status of the validation check."""
 
-    code: str | None
+    code: str | None = None
     """The code representing the result of the validation check."""
+
+    message: str | None = None
+    """The message describing the result of the validation check."""
 
     model_config = camel_case_config | forbid_extra_config
     """Configure camelCase aliasing and forbid extra fields."""

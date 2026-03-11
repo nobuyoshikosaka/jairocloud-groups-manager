@@ -205,7 +205,7 @@ def build_user_from_file(
     header_row_index = 1
 
     for i, row in enumerate(it):
-        if i == header_row_index + 1 or row is None:
+        if i == header_row_index + 1 or not row:
             continue
 
         if i == 0:
@@ -226,6 +226,8 @@ def build_user_from_file(
             exclude = {"id"}
         else:
             user_name_value = r[user_name_idx] if user_name_idx else None
+            if not user_name_value:
+                continue
             bucket = new_data[user_name_value]
             exclude = {"user_name"}
         for col, j in idx_of.items():
@@ -263,8 +265,7 @@ def _read_file(file_path: str) -> t.Generator:
         if ws:
             iterator = ws.iter_rows(values_only=True)
         else:
-            error = f"{path}: No active sheet found in the Excel file."
-            current_app.logger.error(error)
+            current_app.logger.error(E.FILE_NOT_ACTIVE_SHEET, {"path": path})
             raise FileValidationError(E.INVALID_FILE_STRUCTURE)
     if iterator is None:
         raise FileFormatError(E.FILE_FORMAT_UNSUPPORTED % {"suffix": path.suffix})
@@ -499,7 +500,8 @@ def _build_check_results(
                     groups=user_group_ids,
                     email=u.emails or [],
                     status="error",
-                    code=exc.message,
+                    code=exc.code,
+                    message=exc.string,
                 )
             )
             count_error += 1
@@ -666,7 +668,7 @@ def update_users(
         UUID: The ID of the upload history record.
 
     Raises:
-        FileNotFound: If the upload history does not exist.
+        RecordNotFound: If the upload history does not exist.
         requests.RequestException: If there is an error communicating with mAP Core API.
         ValidationError: If there is an error parsing the response from mAP Core API.
         OAuthTokenError: If there is an issue with the access token.
@@ -675,9 +677,12 @@ def update_users(
     """
     upload_data = history_table.get_upload_by_id(history_id)
     if not upload_data:
-        error = f"History not found: {history_id}"
-        current_app.logger.error(error)
-        raise FileNotFound(error)
+        current_app.logger.error(
+            E.FAILED_GET_UPLOAD_HISTORY_RECORD, {"history_id": history_id}
+        )
+        raise RecordNotFound(
+            E.FAILED_GET_UPLOAD_HISTORY_RECORD % {"history_id": history_id}
+        )
 
     # file content must contain at least one repository.
     repository_id = upload_data.file.file_content["repositories"][0]["id"]
@@ -685,9 +690,8 @@ def update_users(
 
     summary = upload_data.results.get("summary", {})
     if summary.get("error", 1) > 0:
-        error = "There are errors in the validation results."
-        current_app.logger.error(error)
-        raise FileValidationError(error)
+        current_app.logger.error(E.VALIDATION_ERROR_BLOCK)
+        raise FileValidationError(E.VALIDATION_ERROR_BLOCK)
 
     bulk_ops, count_delete = _build_bulk_operations_from_check_results(
         repository_id, check_results, remove_users
@@ -716,6 +720,7 @@ def update_users(
         UnexpectedResponseError,
     ) as exc:
         history_table.update_upload_status(history_id=history_id, status="F")
+        db.session.commit()
         current_app.logger.error(exc)
         raise
 
@@ -740,11 +745,13 @@ def update_users(
             status="F",
             new_results={"results": check_results, "summary": summary},
         )
+        db.session.commit()
     else:
         history_table.update_upload_status(
             history_id=history_id,
             status="S",
         )
+        db.session.commit()
 
     current_app.logger.info(I.SUCCESS_BULK_OPERATION, {"history_id": history_id})
     return history_id
@@ -766,16 +773,15 @@ def save_file(temp_file_id: UUID) -> UUID:
     try:
         files = history_table.get_file_by_id(temp_file_id)
         repository_id = files.file_content["repositories"][0]["id"]
-    except (KeyError, AttributeError) as e:
-        current_app.logger.error("Failed to retrieve temporary file: %s", temp_file_id)
-        raise FileNotFound(str(e)) from e
+    except (KeyError, AttributeError) as exc:
+        current_app.logger.error(exc)
+        raise FileNotFound(
+            E.FAILED_GET_FILE_RECORD % {"file_id": temp_file_id}
+        ) from exc
 
     file_path = Path(files.file_path)
-    if file_path.parent != Path(config.STORAGE.local.temporary):
-        return files.id
     if not file_path.exists():
-        error_msg = f"File not found: {file_path}"
-        raise FileNotFound(error_msg)
+        raise FileNotFound(E.FILE_EXPIRED % {"path": file_path})
     if file_path.suffix not in {".csv", ".tsv", ".xlsx"}:
         raise FileFormatError(E.FILE_FORMAT_UNSUPPORTED % {"suffix": file_path.suffix})
 

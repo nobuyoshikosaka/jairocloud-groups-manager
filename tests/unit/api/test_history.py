@@ -11,7 +11,8 @@ from server.api import history
 from server.api.schemas import ErrorResponse, HistoryPublic, OperatorQuery
 from server.entities.history_detail import DownloadHistoryData, HistoryQuery, UploadHistoryData
 from server.entities.search_request import FilterOption, SearchResult
-from server.exc import DatabaseError, InvalidQueryError, RecordNotFound
+from server.exc import InvalidQueryError, RecordNotFound
+from server.messages import E
 
 
 if t.TYPE_CHECKING:
@@ -67,7 +68,7 @@ def test_filter_options_operators_invalid_query(app, mocker: MockerFixture):
             side_effect=InvalidQueryError(exception_message),
         )
         resp = test_func(tab="download", query=OperatorQuery(p=0, l=20))
-        assert resp[0] == ErrorResponse(code="", message=exception_message)
+        assert resp[0] == ErrorResponse(message=exception_message)
         assert resp[1] == HTTPStatus.BAD_REQUEST
         mock_get_filter_option.assert_called_once_with("download", key="o", criteria=OperatorQuery(q=None, p=0, l=20))
 
@@ -103,22 +104,6 @@ def test_get(app, mocker: MockerFixture, tab, expected):
             mock_get_download_history.assert_not_called()
 
 
-def test_get_datebase_error(app, mocker: MockerFixture):
-    test_func = inspect.unwrap(history.get)
-    with (
-        app.test_request_context(),
-    ):
-        exception_message = "download table connection error"
-        mock_get_download_history = mocker.patch(
-            "server.services.history.get_download_history_data",
-            side_effect=DatabaseError(""),
-        )
-        resp = test_func(tab="download", query=HistoryQuery(p=1, l=20))
-        assert resp[0] == ErrorResponse(code="", message=exception_message)
-        assert resp[1] == HTTPStatus.SERVICE_UNAVAILABLE
-        mock_get_download_history.assert_called_once_with(HistoryQuery(q=None, p=1, l=20))
-
-
 def test_public_status(app, mocker: MockerFixture):
     test_func = inspect.unwrap(history.public_status)
     request_body = HistoryPublic(public=True)
@@ -148,7 +133,7 @@ def test_public_status_record_not_found(app, mocker: MockerFixture):
             side_effect=RecordNotFound(exception_message),
         )
         resp = test_func(tab="download", history_id=UUID(history_id), body=request_body)
-        assert resp[0] == ErrorResponse(code="", message=exception_message)
+        assert resp[0] == ErrorResponse(message=exception_message)
         assert resp[1] == HTTPStatus.NOT_FOUND
         mock_update_public_status.assert_called_once_with(
             tab="download", history_id=UUID(history_id), public=request_body.public
@@ -175,7 +160,7 @@ def test_files_not_found(app, mocker: MockerFixture):
     mock_get_file_path = mocker.patch("server.services.history.get_file_path", return_value=file_path)
     with app.test_request_context():
         resp = test_func(file_id=UUID(file_id))
-        assert resp[0] == ErrorResponse(code="", message=f"File not found: {file_id}")
+        assert resp[0] == ErrorResponse(message=E.FILE_NOT_FOUND % {"path": file_path})
         assert resp[1] == HTTPStatus.NOT_FOUND
         mock_get_file_path.assert_called_once_with(UUID(file_id))
 
@@ -190,38 +175,6 @@ def test_files_record_not_found(app, mocker: MockerFixture):
     )
     with app.test_request_context():
         resp = test_func(file_id=UUID(file_id))
-        assert resp[0] == ErrorResponse(code="", message=exception_message)
-        assert resp[1] == HTTPStatus.NOT_FOUND
-        mock_get_file_path.assert_called_once_with(UUID(file_id))
-
-
-@pytest.mark.parametrize(
-    ("file_path", "expected"),
-    [
-        (__file__, True),
-        ("/non/existent/file/path", False),
-    ],
-)
-def test_is_exist_files(app, mocker: MockerFixture, file_path, expected):
-    test_func = inspect.unwrap(history.is_exist_files)
-    file_id = "019c794e-bb17-758f-8f0b-63fc3c40a1d1"
-    mock_get_file_path = mocker.patch("server.services.history.get_file_path", return_value=file_path)
-    with app.test_request_context():
-        resp = test_func(file_id=UUID(file_id))
-        assert resp == (expected, HTTPStatus.OK)
-        mock_get_file_path.assert_called_once_with(UUID(file_id))
-
-
-def test_is_exist_files_record_not_found(app, mocker: MockerFixture):
-    test_func = inspect.unwrap(history.is_exist_files)
-    file_id = "019c794e-bc5e-75a4-a8a6-9e4fd32f62e9"
-    exception_message = f"{file_id} is not found"
-    mock_get_file_path = mocker.patch(
-        "server.services.history.get_file_path",
-        side_effect=RecordNotFound(exception_message),
-    )
-    with app.test_request_context():
-        resp = test_func(file_id=UUID(file_id))
-        assert resp[0] == ErrorResponse(code="", message=exception_message)
+        assert resp[0] == ErrorResponse(message=exception_message)
         assert resp[1] == HTTPStatus.NOT_FOUND
         mock_get_file_path.assert_called_once_with(UUID(file_id))

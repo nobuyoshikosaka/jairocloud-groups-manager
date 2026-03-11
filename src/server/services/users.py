@@ -17,6 +17,7 @@ import requests
 from flask import current_app
 from pydantic_core import ValidationError
 
+from server.api.schemas import FileQuery
 from server.clients import users
 from server.config import config
 from server.const import (
@@ -64,7 +65,6 @@ from .utils import (
 
 
 if t.TYPE_CHECKING:
-    from server.api.schemas import FileQuery
     from server.clients.users import UsersSearchResponse
     from server.entities.map_user import Group, MapUser
     from server.entities.patch_request import PatchOperation
