@@ -178,35 +178,3 @@ def test_files_record_not_found(app, mocker: MockerFixture):
         assert resp[0] == ErrorResponse(message=exception_message)
         assert resp[1] == HTTPStatus.NOT_FOUND
         mock_get_file_path.assert_called_once_with(UUID(file_id))
-
-
-@pytest.mark.parametrize(
-    ("file_path", "expected"),
-    [
-        (__file__, True),
-        ("/non/existent/file/path", False),
-    ],
-)
-def test_is_exist_files(app, mocker: MockerFixture, file_path, expected):
-    test_func = inspect.unwrap(history.is_exist_files)
-    file_id = "019c794e-bb17-758f-8f0b-63fc3c40a1d1"
-    mock_get_file_path = mocker.patch("server.services.history.get_file_path", return_value=file_path)
-    with app.test_request_context():
-        resp = test_func(file_id=UUID(file_id))
-        assert resp == (expected, HTTPStatus.OK)
-        mock_get_file_path.assert_called_once_with(UUID(file_id))
-
-
-def test_is_exist_files_record_not_found(app, mocker: MockerFixture):
-    test_func = inspect.unwrap(history.is_exist_files)
-    file_id = "019c794e-bc5e-75a4-a8a6-9e4fd32f62e9"
-    exception_message = f"{file_id} is not found"
-    mock_get_file_path = mocker.patch(
-        "server.services.history.get_file_path",
-        side_effect=RecordNotFound(exception_message),
-    )
-    with app.test_request_context():
-        resp = test_func(file_id=UUID(file_id))
-        assert resp[0] == ErrorResponse(message=exception_message)
-        assert resp[1] == HTTPStatus.NOT_FOUND
-        mock_get_file_path.assert_called_once_with(UUID(file_id))

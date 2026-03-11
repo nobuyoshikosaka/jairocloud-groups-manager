@@ -6,7 +6,6 @@
     "about-description3": "ファイルに含まれていないユーザーの削除を選択できます。",
     "about-description4": "対応形式: TSV, CSV, Excel",
     "column": {
-      "email": "E-maile",
       "eppn": "ePPN",
       "groups": "グループ ID",
       "row": "行",
@@ -21,13 +20,10 @@
     },
     "execute": {
       "failed": "ユーザーの更新に失敗しました。",
-      "result_failed": "実行結果の取得に失敗しました。",
       "timeout": "一括更新処理がタイムアウトしました。"
     },
     "file-format-error": "対応していないファイル形式です。TSV、CSV、またはExcelファイルを選択してください。",
     "file-required": "ファイルを選択してください。",
-    "file-validate-error": "ファイルの検証に失敗しました。",
-    "filter": "フィルター",
     "import": {
     },
     "import-results": "一括操作結果",
@@ -58,7 +54,6 @@
       "validate": "データ検証",
       "validate_description": "変更内容の確認"
     },
-    "target-repository": "操作対象リポジトリ",
     "title": "ユーザー一括操作",
     "upload": {
       "execute": "アップロード実行"
@@ -74,8 +69,7 @@
       "fix_error": "エラーを修正してください。",
       "results": "データプレビュー",
       "timeout": "ファイルの検証がタイムアウトしました。"
-    },
-    "view-all": "すべて表示"
+    }
   },
   "button": {
     "add": "追加",
@@ -99,7 +93,6 @@
   },
   "error-page": {
     "failed": {
-      "bulk-validation": "ファイルの検証に失敗しました",
       "load-more": "再ダウンロード履歴の取得に失敗しました"
     },
     "forbidden": {
@@ -222,27 +215,16 @@
     "logoAlt": "ヘッダーロゴ"
   },
   "history": {
-    "available": "再ダウンロード",
     "date": "実行日時",
     "description": "ファイルのアップロード・ダウウンロードの履歴を確認できます。",
-    "download": {
-      "date": "ダウンロード日時"
-    },
-    "empty": "検索条件に一致するデータが見つかりませんでした。",
     "empty-data": "データがありません。",
     "expired": "期限切れ",
     "failed": "失敗",
-    "failed-count": "失敗件数",
-    "file": "ファイル",
     "file_not_available": "ファイルのダウンロードに失敗しました。",
     "filter": {
-      "options_not_found": "フィルターの取得に失敗しました。",
       "title": "フィルター"
     },
-    "first-download": "初回ダウンロード",
     "group-count": "グループ数",
-    "more": "さらに表示",
-    "operation": "実行条件",
     "operator": "実行ユーザー",
     "private": "非公開にする",
     "progress": "処理中",
@@ -253,8 +235,6 @@
     "show-detail": "詳細を表示",
     "status": "ステータス",
     "success": "成功",
-    "success-count": "成功件数",
-    "sum": "総ダウンロード回数 | 総アップロード回数",
     "tab": {
       "download": "ダウンロード履歴",
       "upload": "アップロード履歴"
@@ -262,24 +242,14 @@
     "table": {
       "column": {
         "download-date": "ダウンロード日時",
-        "eppns": "eppn",
-        "groups": "グループ",
-        "operator": "実行ユーザー",
-        "re-download": "再ダウンロード",
-        "users": "ユーザー"
+        "upload-date": "アップロード日時"
       }
     },
     "table-title": "履歴一覧",
     "target": "ダウンロード対象 | アップロード対象",
     "title": "履歴",
     "toggle_public_status_failed": "公開状態の更新に失敗しました。",
-    "unavailable": "期限切れ",
-    "upload": {
-      "date": "アップロード日時"
-    },
-    "uploaded-at": "アップロード日時",
-    "user-count": "ユーザー数",
-    "view": "表示件数"
+    "user-count": "ユーザー数"
   },
   "login": {
     "dev-account": "アカウント",

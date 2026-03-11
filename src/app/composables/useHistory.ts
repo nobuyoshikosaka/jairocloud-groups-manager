@@ -225,7 +225,9 @@ const useHistory = () => {
 
   function sortableHeader(key: 'timestamp') {
     const label = key === 'timestamp'
-      ? (tab.value === 'download' ? $t('history.download.date') : $t('history.upload.date'))
+      ? (tab.value === 'download'
+          ? $t('history.table.column.download-date')
+          : $t('history.table.column.upload-date'))
       : ''
     const iconSet = {
       asc: 'i-lucide-arrow-down-0-1',

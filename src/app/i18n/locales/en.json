@@ -6,7 +6,6 @@
     "about-description3": "You can choose to delete users who are not included in the file.",
     "about-description4": "Supported formats: TSV, CSV, Excel.",
     "column": {
-      "email": "E-mail",
       "eppn": "ePPN",
       "groups": "Group ID",
       "row": "row",
@@ -21,13 +20,10 @@
     },
     "execute": {
       "failed": "User update failed.",
-      "result_failed": "Failed to get execution results.",
       "timeout": "Bulk update process timed out."
     },
     "file-format-error": "The file format is not supported. \nChoose TSV, CSV, or Excel file.",
     "file-required": "Please select file.",
-    "file-validate-error": "File validation failed.",
-    "filter": "filter",
     "import": {
     },
     "import-results": "Batch operation results",
@@ -58,7 +54,6 @@
       "validate": "data validation",
       "validate_description": "Confirm changes"
     },
-    "target-repository": "Operation target repository",
     "title": "Bulk user operations",
     "upload": {
       "execute": "Execute upload"
@@ -74,8 +69,7 @@
       "fix_error": "Please fix the error.",
       "results": "data preview",
       "timeout": "File validation timed out."
-    },
-    "view-all": "Show all"
+    }
   },
   "button": {
     "add": "Add",
@@ -109,7 +103,6 @@
   },
   "error-page": {
     "failed": {
-      "bulk-validation": "File validation failed",
       "load-more": "Failed to retrieve download history again"
     },
     "forbidden": {
@@ -218,8 +211,8 @@
         "public": "Public Status",
         "users-count": "Users"
       },
-      "search-placeholder": "Search by group name...",
       "no-groupss-description": "Your repository does not have any groups. Please create a group first.",
+      "search-placeholder": "Search by group name...",
       "title": "Groups List"
     },
     "title": "Groups"
@@ -236,28 +229,16 @@
     "logoAlt": "Header App Logo"
   },
   "history": {
-    "available": "Re-download",
-    "cancel": "Number of cancellations",
     "date": "Execution date and time",
     "description": "You can check the history of file uploads and downloads.",
-    "download": {
-      "date": "Download date and time"
-    },
-    "empty": "No data matching your search criteria was found.",
     "empty-data": "No data.",
     "expired": "Expired",
     "failed": "failure",
-    "failed-count": "Number of failures",
-    "file": "file",
     "file_not_available": "File download failed.",
     "filter": {
-      "options_not_found": "Failed to get filter.",
       "title": "filter"
     },
-    "first-download": "First download",
     "group-count": "Number of groups",
-    "more": "Show more",
-    "operation": "Execution conditions",
     "operator": "Execution user",
     "private": "make private",
     "progress": "Processing",
@@ -268,8 +249,6 @@
     "show-detail": "Show details",
     "status": "status",
     "success": "success",
-    "success-count": "Number of successes",
-    "sum": "Total number of downloads | Total number of uploads",
     "tab": {
       "download": "Download history",
       "upload": "Upload history"
@@ -277,24 +256,14 @@
     "table": {
       "column": {
         "download-date": "Download date and time",
-        "eppns": "eppn",
-        "groups": "group",
-        "operator": "Execution user",
-        "re-download": "re-download",
-        "users": "user"
+        "upload-date": "Upload date and time"
       }
     },
     "table-title": "History list",
     "target": "Download target | Upload target",
     "title": "History",
     "toggle_public_status_failed": "Failed to update publishing status.",
-    "unavailable": "Expired",
-    "upload": {
-      "date": "Upload date and time"
-    },
-    "uploaded-at": "Upload date and time",
-    "user-count": "Number of users",
-    "view": "Number of items displayed"
+    "user-count": "Number of users"
   },
   "login": {
     "dev-account": "Account",

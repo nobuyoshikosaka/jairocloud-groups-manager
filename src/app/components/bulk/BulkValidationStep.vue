@@ -18,20 +18,19 @@ const {
 const { makePageInfo, makeIndicators } = useBulk()
 const { polling: { interval, maxAttempts } } = useAppConfig()
 const { handleFetchError } = useErrorHandling()
-const { data: status, execute: getValidateStatus }
+const { data: status, refresh: refreshValidateStatus }
   = await useFetch<BulkProcessingStatus>(`/api/bulk/validate/status/${taskId.value}`,
     {
       method: 'GET',
       lazy: true,
       server: false,
-      immediate: false,
       onResponseError({ response }) {
         switch (response.status) {
           case 404: {
             showError({
               status: 404,
               statusText: 'Not Found',
-              message: $t('error-page.not-found.bulk-validation'),
+              message: $t('bulk.validation.fetch_failed'),
             })
             break
           }
@@ -46,7 +45,7 @@ const isPolling = ref(false)
 const pollValidationStatus = async () => {
   isPolling.value = true
   for (let index = 0; index < maxAttempts; index++) {
-    await getValidateStatus()
+    await refreshValidateStatus()
     const st = (status.value?.status)
     if (st === 'SUCCESS') {
       isPolling.value = false
@@ -74,13 +73,12 @@ const pollValidationStatus = async () => {
   isPolling.value = false
 }
 
-const { data: validationResults, execute: getValidateResult, status: getResultStatus }
+const { data: validationResults, refresh: refreshValidateResult, status: getResultStatus }
   = await useFetch<ValidationResults>(`/api/bulk/validate/result/${taskId.value}`, {
     method: 'GET',
     query,
     lazy: true,
     server: false,
-    immediate: false,
     onResponseError({ response }) {
       switch (response.status) {
         case 400: {
@@ -118,7 +116,7 @@ const { data: validationResults, execute: getValidateResult, status: getResultSt
 
 onMounted(async () => {
   await pollValidationStatus()
-  getValidateResult()
+  refreshValidateResult()
 })
 
 const offset = computed(() => (validationResults.value?.offset ?? 1))

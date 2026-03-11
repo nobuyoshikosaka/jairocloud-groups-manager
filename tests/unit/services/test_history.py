@@ -9,7 +9,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import SQLAlchemyError
 
 from server.db.history import DownloadHistory, Files, UploadHistory, _FileContent, _ResultData
-from server.entities.history_detail import DownloadHistoryData, HistoryQuery, HistorySummary, UploadHistoryData
+from server.entities.history_detail import DownloadHistoryData, HistoryQuery, UploadHistoryData
 from server.entities.search_request import SearchResult
 from server.entities.summaries import UserSummary
 from server.exc import DatabaseError, RecordNotFound
@@ -105,7 +105,6 @@ test_download_history_table_data.parent_id = None
                             last_modified=None,
                         ),
                         status="P",
-                        summary=HistorySummary(create=0, update=0, delete=0, skip=0, error=0),
                         file_path="ver/tmp/2026/01/test_file.csv",
                         file_id=UUID("019c794d-fb97-70f2-aba2-c3888973190d"),
                         repository_count=1,
