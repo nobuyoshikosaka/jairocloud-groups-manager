@@ -356,6 +356,16 @@ class UploadQuery(BaseModel):
     """Page size (number of items per page)."""
 
 
+class FileQuery(UsersQuery):
+    """Query parameters for file export."""
+
+    f: t.Annotated[t.Literal["tsv", "csv"], "format"] = "tsv"
+    """File format for export."""
+
+    model_config = ignore_extra_config
+    """Configure to ignore extra fields."""
+
+
 class CacheQuery(BaseModel):
     """Schema for cache query parameters."""
 
@@ -387,3 +397,4 @@ class CacheRequest(BaseModel):
     """Operation type: 'all' to update all, 'id-specified' to update specified IDs."""
 
     model_config = camel_case_config
+    """Configure to use camelCase aliasing."""

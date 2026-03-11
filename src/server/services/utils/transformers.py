@@ -25,7 +25,7 @@ from server.entities.map_group import (
     Service as GroupService,
 )
 from server.entities.map_service import (
-    Administrator,
+    Administrator as ServiceAdministrator,
     Group as MapServiceGroup,
     MapService,
     ServiceEntityID,
@@ -69,7 +69,7 @@ def prepare_service(
         raise SystemAdminNotFound(error)
 
     service.administrators = [
-        Administrator(value=user_id) for user_id in administrators
+        ServiceAdministrator(value=user_id) for user_id in administrators
     ]
     service.groups = [
         MapServiceGroup(
@@ -402,11 +402,11 @@ def validate_group_to_map_group(  # noqa: C901, PLR0912
     from server.services import repositories  # noqa: PLC0415
 
     if repositories.get_by_id(repository_id) is None:
-        error = E.GROUP_REQUIRES_EXISTING_REPOSITORY % {"id": repository_id}
+        error = E.GROUP_REQUIRES_EXISTING_REPOSITORY % {"rid": repository_id}
         raise InvalidFormError(error)
 
     if not is_super() and repository_id not in get_permitted_repository_ids():
-        error = E.GROUP_FORBIDDEN_REPOSITORY % {"id": repository_id}
+        error = E.GROUP_FORBIDDEN_REPOSITORY % {"rid": repository_id}
         raise InvalidFormError(error)
 
     user_defined_id = group.user_defined_id
@@ -420,10 +420,10 @@ def validate_group_to_map_group(  # noqa: C901, PLR0912
             error = E.GROUP_TOO_LONG_ID % {"rid": repository_id, "max": max_id_length}
             raise InvalidFormError(error)
 
-        id_pattern = config.GROUPS.id_patterns.user_defined
-        group.id = id_pattern.format(
-            repository_id=repository_id, user_defined_id=user_defined_id
-        )
+    id_pattern = config.GROUPS.id_patterns.user_defined
+    group.id = id_pattern.format(
+        repository_id=repository_id, user_defined_id=user_defined_id
+    )
 
     if group.public is None:
         group.public = GROUP_DEFAULT_PUBLIC

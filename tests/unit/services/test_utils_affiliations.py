@@ -14,24 +14,24 @@ from server.services.utils.affiliations import (
 def test_detect_affiliations(app):
     group_ids = [
         "jc_roles_sysadm_test",  # sysado
-        "jc_test_ac_jp_roles_repoadm_test",  # repoado
-        "jc_test_ac_jp_roles_comadm_test",  # comado
-        "jc_test_ac_jp_roles_contributor_test",  # contributer
-        "jc_test_ac_jp_roles_generaluser_test",  # generaluser
-        "jc_test_ac_jp_groups_test3_test",
+        "jc_test_ac_jp_ro_radm_test",  # repoado
+        "jc_test_ac_jp_ro_cadm_test",  # comado
+        "jc_test_ac_jp_ro_cont_test",  # contributer
+        "jc_test_ac_jp_ro_user_test",  # generaluser
+        "jc_test_ac_jp_gr_test3_test",
     ]  # user
 
     result = detect_affiliations(group_ids)
 
     expected_repository_id_sys = None
-    expected_roles_sys = ["system_admin"]
+    expected_ro_sys = ["system_admin"]
     expected_rolegroup_type = "role"
 
     expected_repository_id = "test_ac_jp"
     expected_roles = ["repository_admin", "community_admin", "contributor", "general_user"]
 
     expected_group_repository_id = "test_ac_jp"
-    expected_group_id = "jc_test_ac_jp_groups_test3_test"
+    expected_group_id = "jc_test_ac_jp_gr_test3_test"
     expected_user_defined_id = "test3"
     expected_group_type = "group"
     expected_length = [2, 1]
@@ -39,15 +39,15 @@ def test_detect_affiliations(app):
     assert len(result.roles) == expected_length[0]
     assert len(result.groups) == expected_length[1]
 
-    result_roles_0 = result.roles[0]
-    assert result_roles_0.type == expected_rolegroup_type
-    assert result_roles_0.repository_id == expected_repository_id_sys
-    assert result_roles_0.role == expected_roles_sys[0]
+    result_ro_0 = result.roles[0]
+    assert result_ro_0.type == expected_rolegroup_type
+    assert result_ro_0.repository_id == expected_repository_id_sys
+    assert result_ro_0.role == expected_ro_sys[0]
 
-    result_roles_1 = result.roles[1]
-    assert result_roles_1.type == expected_rolegroup_type
-    assert result_roles_1.repository_id == expected_repository_id
-    assert sorted(result_roles_1.role) == sorted(expected_roles[0])
+    result_ro_1 = result.roles[1]
+    assert result_ro_1.type == expected_rolegroup_type
+    assert result_ro_1.repository_id == expected_repository_id
+    assert sorted(result_ro_1.role) == sorted(expected_roles[0])
 
     result_groups_0 = result.groups[0]
     assert result_groups_0.type == expected_group_type
@@ -57,7 +57,7 @@ def test_detect_affiliations(app):
 
 
 def test_detect_affiliation_no_match(app):
-    result = detect_affiliation("test1_roles_repoadm_test")
+    result = detect_affiliation("test1_ro_radm_test")
     expected = None
     assert result == expected
 
@@ -66,12 +66,12 @@ def test_detect_affiliation_no_match(app):
     ("group_id", "expected_repository_id", "expected_roles", "expected_type"),
     [
         ("jc_roles_sysadm_test", None, ["system_admin"], "role"),
-        ("jc_test_ac_jp_roles_repoadm_test", "test_ac_jp", ["repository_admin"], "role"),
-        ("jc_test_ac_jp_roles_comadm_test", "test_ac_jp", ["community_admin"], "role"),
-        ("jc_test_ac_jp_roles_contributor_test", "test_ac_jp", ["contributor"], "role"),
-        ("jc_test_ac_jp_roles_generaluser_test", "test_ac_jp", ["general_user"], "role"),
+        ("jc_test_ac_jp_ro_radm_test", "test_ac_jp", ["repository_admin"], "role"),
+        ("jc_test_ac_jp_ro_cadm_test", "test_ac_jp", ["community_admin"], "role"),
+        ("jc_test_ac_jp_ro_cont_test", "test_ac_jp", ["contributor"], "role"),
+        ("jc_test_ac_jp_ro_user_test", "test_ac_jp", ["general_user"], "role"),
     ],
-    ids=["sysadm", "repoadm", "comadm", "contributer", "generaluser"],
+    ids=["sysadm", "radm", "cadm", "cont", "user"],
 )
 def test_detect_affiliation_role_group(app, group_id, expected_repository_id, expected_roles, expected_type):
     result = detect_affiliation(group_id)
@@ -84,11 +84,11 @@ def test_detect_affiliation_role_group(app, group_id, expected_repository_id, ex
 
 def test_detect_affiliation_group(app):
     expected_repository_id = "test_ac_jp"
-    expected_group_id = "jc_test_ac_jp_groups_test3_test"
+    expected_group_id = "jc_test_ac_jp_gr_test3_test"
     expected_user_defined_id = "test3"
     expected_type = "group"
 
-    result = detect_affiliation("jc_test_ac_jp_groups_test3_test")
+    result = detect_affiliation("jc_test_ac_jp_gr_test3_test")
     assert result is not None
     assert isinstance(result, _Group)
     assert result.repository_id == expected_repository_id
@@ -106,28 +106,28 @@ def test_build_combined_regex_sys(app):
 
 def test_build_combined_regex_repo(app):
     pattern = _build_combined_regex().pattern
-    expected = "(?P<repository_admin>jc_(?P<repository_admin__repository_id>.+?)_roles_repoadm_test)"
+    expected = "(?P<repository_admin>jc_(?P<repository_admin__repository_id>.+?)_ro_radm_test)"
 
     assert expected in pattern
 
 
 def test_build_combined_regex_com(app):
     pattern = _build_combined_regex().pattern
-    expected = "(?P<community_admin>jc_(?P<community_admin__repository_id>.+?)_roles_comadm_test)"
+    expected = "(?P<community_admin>jc_(?P<community_admin__repository_id>.+?)_ro_cadm_test)"
 
     assert expected in pattern
 
 
 def test_build_combined_regex_con(app):
     pattern = _build_combined_regex().pattern
-    expected = "(?P<contributor>jc_(?P<contributor__repository_id>.+?)_roles_contributor_test)"
+    expected = "(?P<contributor>jc_(?P<contributor__repository_id>.+?)_ro_cont_test)"
 
     assert expected in pattern
 
 
 def test_build_combined_regex_gene(app):
     pattern = _build_combined_regex().pattern
-    expected = "(?P<general_user>jc_(?P<general_user__repository_id>.+?)_roles_generaluser_test)"
+    expected = "(?P<general_user>jc_(?P<general_user__repository_id>.+?)_ro_user_test)"
 
     assert expected in pattern
 
@@ -135,7 +135,7 @@ def test_build_combined_regex_gene(app):
 def test_build_combined_regex_user(app):
     pattern = _build_combined_regex().pattern
     expected = (
-        "(?P<user_defined>jc_(?P<user_defined__repository_id>.+?)_groups_(?P<user_defined__user_defined_id>.+?)_test)"
+        "(?P<user_defined>jc_(?P<user_defined__repository_id>.+?)_gr_(?P<user_defined__user_defined_id>.+?)_test)"
     )
 
     assert expected in pattern

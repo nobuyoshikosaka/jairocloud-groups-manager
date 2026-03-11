@@ -1,6 +1,6 @@
 type StatusType = 'create' | 'update' | 'delete' | 'skip' | 'error'
 
-interface ValidationResult {
+interface EachResult {
   row: number
   id: string
   status: StatusType
@@ -18,24 +18,13 @@ interface MissingUser {
   groups: string[]
 }
 
-interface ValidationSummary {
-  items: ValidationResult[]
+interface ValidationResults {
+  results: EachResult[]
   summary: Summary
   missingUsers: MissingUser[]
   total: number
   offset: number
   pageSize: number
-}
-
-interface UploadResult {
-  row: number
-  id: string
-  status: StatusType
-  userName: string
-  eppn: string[]
-  emails: string[]
-  groups: string[]
-  code?: string
 }
 
 interface Summary {
@@ -46,8 +35,8 @@ interface Summary {
   error: number
 }
 
-interface ResultSummary {
-  results: UploadResult[]
+interface ExecuteResults {
+  results: EachResult[]
   summary: Summary
   fileInfo: {
     fileName: string
@@ -92,6 +81,7 @@ interface BulkIndicator {
   icon: string
   key: StatusType
 }
-export type { StatusType, ValidationResult, MissingUser, UploadResult, Summary, ExcuteResponse,
-  BulkProcessingStatus, ValidationSummary, ResultSummary, ExcuteRequest, UploadQuery, BulkIndicator,
+export type { StatusType, EachResult, MissingUser, Summary, ExcuteResponse,
+  BulkProcessingStatus, ValidationResults, ExecuteResults, ExcuteRequest,
+  UploadQuery, BulkIndicator,
 }

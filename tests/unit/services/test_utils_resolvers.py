@@ -51,7 +51,7 @@ def test_resolve_repository_id_with_valid_service_id(app: Flask, mocker: MockerF
 def test_resolve_repository_id_error(app: Flask, mocker: MockerFixture):
     """Tests resolve_repository_id raises ValueError if neither fqdn nor service_id is provided."""
 
-    error_msg = "Either 'fqdn' or 'resource_id' must be provided."
+    error_msg = "E151 | Either 'fqdn' or 'service_id' must be provided."
 
     with pytest.raises(ValueError, match=error_msg):
         resolve_repository_id()

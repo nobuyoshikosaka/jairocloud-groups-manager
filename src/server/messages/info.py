@@ -179,6 +179,39 @@ SUCCESS_UPDATE_USER_AFFILIATIONS = LogMessage(
 )
 
 
+SUCCESS_UPLOAD_FILES = LogMessage(
+    "I601",
+    "successfully uploaded file and create Files record: %(file_path)s",
+)
+
+SUCCESS_VALIDATE = LogMessage(
+    "I602",
+    "successfully validated the uploaded file: %(file_id)s",
+)
+
+SUCCESS_GET_VALIDATE_RESULT = LogMessage(
+    "I603",
+    "successfully retrieved validation result for history record: %(history_id)s",
+)
+
+SUCCESS_BULK_OPERATION = LogMessage(
+    "I604",
+    "successfully completed bulk operation for history record: %(history_id)s",
+)
+
+SUCCESS_GET_BULK_OPERATION_RESULT = LogMessage(
+    "I605",
+    "successfully retrieved bulk operation result for history record: %(history_id)s",
+)
+
+
+SUCCESS_UPDATE_PUBLIC_STATUS = LogMessage(
+    "I700",
+    "successfully update public status of history record (id: %(history_id)s)  in"
+    " database.",
+)
+
+
 GROUP_CACHE_UPDATE_STARTED = LogMessage(
     "I800",
     "Group cache update task started (operation: %(op)s, task: %(task_id)s).",

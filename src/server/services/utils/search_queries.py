@@ -241,7 +241,7 @@ def _group_groups_filter(criteria: GroupsCriteria, id_path: str) -> str:
             return _all_repository_all_group_filter(id_path)
         case _:
             error = E.UNRECOGNIZED_SEARCH_CRITERIA
-            raise InvalidQueryError(error)  # pragma: no cover
+            raise InvalidQueryError(error)
 
 
 def build_users_search_query(criteria: UsersCriteria) -> SearchRequestParameter:
@@ -271,13 +271,13 @@ def build_users_search_query(criteria: UsersCriteria) -> SearchRequestParameter:
 
     if criteria.q:
         # partial match search on user_name, emails, edu_person_principal_names
-        filter_expr.append(
-            " or ".join([
-                f'({path("user_name")} co "{criteria.q}")',
+        term_filter = [f'({path("user_name")} co "{criteria.q}")']
+        if not config.FEATURES.search_only_username:
+            term_filter.extend([
                 f'({path("emails.value")} co "{criteria.q}")',
                 f'({path("edu_person_principal_names.value")} co "{criteria.q}")',
             ])
-        )
+        filter_expr.append(" or ".join(term_filter))
 
     if criteria.i:
         # exact match search on IDs
@@ -346,7 +346,6 @@ def _user_groups_filter(criteria: UsersCriteria, path: str) -> str:
         _repository_admin_user_groups_filter(
             criteria, path, permitted, specified_roles
         ),
-        f'{path} ne "{config.GROUPS.id_patterns.system_admin}"',
     ]
     return t.cast("str", _combine_filter_exprs(filter_expr))
 
@@ -380,9 +379,9 @@ def _system_admin_user_groups_filter(  # noqa: PLR0911
 
         case (None, None, None):
             return _all_repository_all_group_filter(path)
-        case _:
+        case _:  # pragma: no cover
             error = E.UNRECOGNIZED_SEARCH_CRITERIA
-            raise InvalidQueryError(error)  # pragma: no cover
+            raise InvalidQueryError(error)
 
 
 def _repository_admin_user_groups_filter(
@@ -409,9 +408,9 @@ def _repository_admin_user_groups_filter(
             )
         case (None, None):
             return _specified_repository_all_group_filter(path, list(permitted))
-        case _:
+        case _:  # pragma: no cover
             error = E.UNRECOGNIZED_SEARCH_CRITERIA
-            raise InvalidQueryError(error)  # pragma: no cover
+            raise InvalidQueryError(error)
 
 
 @cache
@@ -454,6 +453,13 @@ def _all_repository_specified_role_filter(path: str, roles: list[USER_ROLES]) ->
         prefix, suffix = id_patterns[role]
         filters.append(f'{path} sw "{prefix}" and {path} ew "{suffix}"')
 
+    if USER_ROLES.SYSTEM_ADMIN not in roles:
+        return (
+            f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+            + " or ".join(filters)
+            + ")"
+        )
+
     return " or ".join(filters)
 
 
@@ -462,7 +468,13 @@ def _all_repository_specified_group_filter(path: str, group_ids: list[str]) -> s
 
     Filter by exact match for group IDs without specifying a repository.
     """
-    return " or ".join([f'{path} eq "{group_id}"' for group_id in group_ids])
+    if path == "id":
+        return " or ".join([f'{path} eq "{group_id}"' for group_id in group_ids])
+    return (
+        f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+        + " or ".join([f'{path} eq "{group_id}"' for group_id in group_ids])
+        + ")"
+    )
 
 
 def _all_repository_specified_role_specified_group_filter(
@@ -484,11 +496,21 @@ def _specified_repository_all_group_filter(path: str, repository_ids: list[str])
     Filter by prefix match for group IDs within specified repositories.
     """
     prefix_patterns = _get_prefix_patterns()
-    return " or ".join([
-        f'{path} sw "{prefix}{repo_id}"'
-        for prefix in prefix_patterns
-        for repo_id in repository_ids
-    ])
+    if path == "id":
+        return " or ".join([
+            f'{path} sw "{prefix}{repo_id}"'
+            for prefix in prefix_patterns
+            for repo_id in repository_ids
+        ])
+    return (
+        f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+        + " or ".join([
+            f'{path} sw "{prefix}{repo_id}"'
+            for prefix in prefix_patterns
+            for repo_id in repository_ids
+        ])
+        + ")"
+    )
 
 
 def _specified_repository_specified_role_filter(
@@ -498,6 +520,9 @@ def _specified_repository_specified_role_filter(
 
     Filter by exact match for role-type group IDs within specified repositories.
     """
+    if not roles:
+        return _empty_filter(path)
+
     filters: list[str] = []
     for role in roles:
         if role == USER_ROLES.SYSTEM_ADMIN:
@@ -510,7 +535,11 @@ def _specified_repository_specified_role_filter(
             for repo_id in repository_ids
         )
 
-    return " or ".join(filters)
+    return (
+        f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+        + " or ".join(filters)
+        + ")"
+    )
 
 
 def _specified_repository_specified_group_filter(
@@ -524,7 +553,13 @@ def _specified_repository_specified_group_filter(
     # filter by repository IDs that the specified group belongs to
     filtered_groups = [aff for aff in groups if aff.repository_id in repository_ids]
     if filtered_groups:
-        return " or ".join([f'{path} eq "{g.group_id}"' for g in filtered_groups])
+        if path == "id":
+            return " or ".join([f'{path} eq "{g.group_id}"' for g in filtered_groups])
+        return (
+            f'{path} ne "{config.GROUPS.id_patterns.system_admin}" and ('
+            + " or ".join([f'{path} eq "{g.group_id}"' for g in filtered_groups])
+            + ")"
+        )
 
     return _empty_filter(path)
 
@@ -903,7 +938,7 @@ def make_criteria_object(resource_type: str, **kwargs: t.Any) -> Criteria:  # py
             protocol_cls = RepositoriesCriteria
         case _:
             error = E.UNRECOGNIZED_SEARCH_CRITERIA
-            raise InvalidQueryError(error)  # pragma: no cover
+            raise InvalidQueryError(error)
 
     hints = t.get_type_hints(protocol_cls)
 

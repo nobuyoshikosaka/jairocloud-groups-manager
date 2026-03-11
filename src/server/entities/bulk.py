@@ -35,23 +35,29 @@ class RepositoryMember(BaseModel):
     """The users belonging to the repository."""
 
 
-class ValidateSummary(BaseModel):
+class ValidateResults(BaseModel):
     """Model for summary of bulk validation result."""
 
-    results: list[CheckResult]
+    results: list[EachResult]
     """The list of validation results for each user."""
 
-    summary: HistorySummary
+    summary: ResultSummary
     """The summary of the validation operation."""
 
     missing_user: list[UserDetail] = []
     """The list of missing users."""
 
+    offset: int
+    """The offset for pagination."""
+
+    page_size: int
+    """The page size for pagination."""
+
     model_config = camel_case_config | forbid_extra_config
     """Configure camelCase aliasing and forbid extra fields."""
 
 
-class HistorySummary(BaseModel):
+class ResultSummary(BaseModel):
     """Summary of the history operation."""
 
     create: int
@@ -69,10 +75,10 @@ class HistorySummary(BaseModel):
     """Configure camelCase aliasing and forbid extra fields."""
 
 
-class CheckResult(BaseModel):
+class EachResult(BaseModel):
     """Model for result of validation check for each user."""
 
-    id: str | None
+    id: str | None = None
     """The unique identifier for the user."""
 
     eppn: list[str]
@@ -90,20 +96,23 @@ class CheckResult(BaseModel):
     status: t.Literal["create", "update", "delete", "skip", "error"]
     """The status of the validation check."""
 
-    code: str | None
+    code: str | None = None
     """The code representing the result of the validation check."""
+
+    message: str | None = None
+    """The message describing the result of the validation check."""
 
     model_config = camel_case_config | forbid_extra_config
     """Configure camelCase aliasing and forbid extra fields."""
 
 
-class ResultSummary(BaseModel):
+class ExecuteResults(BaseModel):
     """Model for summary of bulk upload result."""
 
-    items: list[CheckResult]
+    items: list[EachResult]
     """The list of upload results for each user."""
 
-    summary: HistorySummary
+    summary: ResultSummary
     """The summary of the upload operation."""
 
     file_id: UUID
@@ -147,7 +156,7 @@ class Aggregated(t.TypedDict):
     summary: dict[str, int]
     """Summary of the aggregation."""
 
-    results: list[CheckResult]
+    results: list[EachResult]
     """List of check results."""
 
     missing_user: list[UserDetail]

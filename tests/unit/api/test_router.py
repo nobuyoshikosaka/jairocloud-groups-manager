@@ -35,7 +35,6 @@ def test_create_api_blueprint(mocker: MockerFixture):
     mock_register_blueprint.assert_called_once_with(
         mock_blueprint,
         url_prefix="/test",
-        strict_slashes=False,
     )
 
 
@@ -65,7 +64,6 @@ def test_create_api_blueprint_multiple_words(mocker: MockerFixture):
     mock_register_blueprint.assert_called_once_with(
         mock_blueprint,
         url_prefix="/cache-groups",
-        strict_slashes=False,
     )
 
 

@@ -11,7 +11,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from server.entities.summaries import GroupSummary, RepositorySummary, UserSummary
+from server.entities.summaries import UserSummary
 
 from .common import camel_case_config
 
@@ -45,6 +45,9 @@ class DownloadHistoryData(BaseModel):
 
     file_path: str
     """Path of the downloaded file."""
+
+    file_exists: bool = False
+    """Indicates if the downloaded file still exists."""
 
     repository_count: int
     """Number of repositories involved in the download."""
@@ -83,9 +86,6 @@ class UploadHistoryData(BaseModel):
     status: t.Literal["S", "F", "P"]
     """Status of the upload operation."""
 
-    summary: HistorySummary | None = None
-    """Summary of the upload operation."""
-
     file_path: str
     """Path of the uploaded file."""
 
@@ -103,53 +103,6 @@ class UploadHistoryData(BaseModel):
 
     model_config = camel_case_config
     """Configure to use camelCase aliasing."""
-
-
-class Results(BaseModel):
-    """Result of the upload operation."""
-
-    user_id: str
-    """User ID."""
-
-    eppn: list[str]
-    """User EPPN."""
-
-    emails: list[str]
-    """ User emails"""
-
-    user_name: str
-    """User name."""
-
-    group: list[str]
-    """Group list."""
-
-    status: t.Literal["C", "U", "S", "D", "E"]
-    """Status of the upload operation."""
-
-    code: str | None
-    """Error code if the upload failed."""
-
-    model_config = camel_case_config
-    """Configure to use camelCase aliasing."""
-
-
-class HistorySummary(BaseModel):
-    """Summary of the history operation."""
-
-    create: int
-    """Number of created items."""
-
-    update: int
-    """Number of updated items."""
-
-    delete: int
-    """Number of deleted items."""
-
-    skip: int
-    """Number of skipped items."""
-
-    error: int
-    """Number of error items."""
 
 
 class HistoryQuery(BaseModel):
@@ -190,19 +143,3 @@ class HistoryQuery(BaseModel):
 
     model_config = ignore_extra_config
     """Configure to ignore extra fields."""
-
-
-class HistoryDataFilter(BaseModel):
-    """Available filters for history data."""
-
-    operators: list[UserSummary]
-    """List of operators."""
-
-    target_repositories: list[RepositorySummary]
-    """List of target repositories."""
-
-    target_groups: list[GroupSummary]
-    """List of target groups."""
-
-    target_users: list[UserSummary]
-    """List of target users."""

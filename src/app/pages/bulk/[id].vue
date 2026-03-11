@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const historyId = computed(() => route.params.id as string)
-const taskId = computed(() => route.query.taskId as string)
+const taskId = computed(() => route.query.taskId as string | undefined)
 
 const { currentStep, items } = useBulk()
 currentStep.value = 'result'

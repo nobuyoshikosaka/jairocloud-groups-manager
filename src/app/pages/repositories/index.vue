@@ -11,14 +11,25 @@ const {
 const { searchTerm, pageNumber, pageSize } = criteria
 
 const table = useTemplateRef('table')
-const { table: { pageSize: { repositories: pageOptions } } } = useAppConfig()
+const {
+  table: { pageSize: { repositories: pageOptions } },
+  features: { repositories: { 'server-search': serverSearch } },
+} = useAppConfig()
+const serverQuery = computed(() => {
+  if (serverSearch) return query.value
 
+  const { q, l, ...remain } = query.value
+  return {
+    ...remain,
+    l: -1,
+  }
+})
 const { handleFetchError } = useErrorHandling()
 const {
   data: searchResult, status, refresh,
 } = useFetch<RepositoriesSearchResult>('/api/repositories', {
   method: 'GET',
-  query,
+  query: serverQuery,
   onResponseError({ response }) {
     switch (response.status) {
       case 400: {
@@ -74,7 +85,12 @@ const pageInfo = makePageInfo(searchResult)
 
   <div class="grid grid-cols-3 gap-4 my-4 h-8">
     <UInput
-      v-model="searchTerm" :placeholder="$t('users.table.search-placeholder')"
+      v-model="searchTerm"
+      :placeholder="
+        serverSearch || tableView
+          ? $t('repositories.table.search-placeholder')
+          : $t('repositories.table.search-placeholder-service-name-only')
+      "
       icon="i-lucide-search" :ui="{ trailing: 'pe-1.5' }"
       @keydown.enter="() => updateQuery({ q: searchTerm, p: 1 })"
     >
@@ -133,7 +149,7 @@ const pageInfo = makePageInfo(searchResult)
   <div v-if="tableView">
     <UTable
       ref="table"
-      v-model:column-visibility="columnVisibility"
+      v-model:column-visibility="columnVisibility" v-model:global-filter="searchTerm"
       :loading="status === 'pending'"
       :data="searchResult?.resources" :columns="columns" :ui="{ root: 'mb-8' }"
     >
@@ -148,7 +164,13 @@ const pageInfo = makePageInfo(searchResult)
   </div>
   <div v-else class="grid grid-cols-3 gap-4">
     <UPageCard
-      v-for="item in searchResult?.resources" :key="item.id"
+      v-for="
+        item in searchResult?.resources.filter(
+          repo => serverSearch
+            || !searchTerm
+            || repo.serviceName.toLowerCase().includes(searchTerm.toLowerCase()),
+        )
+      " :key="item.id"
       :ui="{ root: 'p-4 cursor-pointer', title: 'hover:underline' }"
     >
       <template #title>

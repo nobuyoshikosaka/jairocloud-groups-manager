@@ -2,11 +2,10 @@
   "bulk": {
     "about": "一括操作について",
     "about-description": "ファイルに含まれるユーザーは新規登録または更新されます。",
-    "about-description2": "既存ユーザーはidで照合し、一致する場合は更新されます",
-    "about-description3": "ファイルに含まれていないユーザーの削除を選択できます",
+    "about-description2": "既存ユーザーはidで照合し、一致する場合は更新されます。",
+    "about-description3": "ファイルに含まれていないユーザーの削除を選択できます。",
     "about-description4": "対応形式: TSV, CSV, Excel",
     "column": {
-      "email": "E-maile",
       "eppn": "ePPN",
       "groups": "グループ ID",
       "row": "行",
@@ -20,13 +19,11 @@
     "excute": {
     },
     "execute": {
-      "failed": "ユーザーの更新に失敗しました",
-      "result_failed": "実行結果の取得に失敗しました"
+      "failed": "ユーザーの更新に失敗しました。",
+      "timeout": "一括更新処理がタイムアウトしました。"
     },
     "file-format-error": "対応していないファイル形式です。TSV、CSV、またはExcelファイルを選択してください。",
-    "file-required": "ファイルを選択してください",
-    "file-validate-error": "ファイルの検証に失敗しました",
-    "filter": "フィルター",
+    "file-required": "ファイルを選択してください。",
     "import": {
     },
     "import-results": "一括操作結果",
@@ -36,9 +33,10 @@
       "select": "削除するユーザーを選択してください。"
     },
     "missing_user": "ファイルに含まれていないユーザー",
+    "no-results": "データが見つかりません。",
     "operator": "実行ユーザー",
-    "repository-required": "リポジトリを選択してください",
-    "select-repository": "リポジトリを選択してください",
+    "repository-required": "リポジトリを選択してください。",
+    "select-repository": "リポジトリを選択してください。",
     "select_all": "すべて選択",
     "start-at": "開始日時",
     "status": {
@@ -56,7 +54,6 @@
       "validate": "データ検証",
       "validate_description": "変更内容の確認"
     },
-    "target-repository": "操作対象リポジトリ",
     "title": "ユーザー一括操作",
     "upload": {
       "execute": "アップロード実行"
@@ -65,13 +62,14 @@
     "upload-file": "アップロードファイル",
     "upload-file-info": "一括操作結果",
     "validation": {
-      "error": "不正なデータが検出されました",
+      "error": "不正なデータが検出されました。",
       "error-detail": "ファイルを修正して再度アップロードしてください。",
-      "fetch_failed": "検証結果の取得に失敗しました",
-      "fix_error": "エラーを修正してください",
-      "results": "データプレビュー"
-    },
-    "view-all": "すべて表示"
+      "failed": "ファイルの検証に失敗しました。",
+      "fetch_failed": "検証結果の取得に失敗しました。",
+      "fix_error": "エラーを修正してください。",
+      "results": "データプレビュー",
+      "timeout": "ファイルの検証がタイムアウトしました。"
+    }
   },
   "button": {
     "add": "追加",
@@ -106,7 +104,12 @@
     "loading": "読み込み中..."
   },
   "error-page": {
+    "failed": {
+      "load-more": "再ダウンロード履歴の取得に失敗しました"
+    },
     "forbidden": {
+      "bulk-edit": "このリポジトリのユーザーを操作する権限がありません。",
+      "bulk-result": "アップロード履歴を閲覧する権限がありません。",
       "group-access": "このグループにアクセスする権限がありません。",
       "group-caches": "グループキャッシュを管理する権限がありません。",
       "group-create": "選択したリポジトリにグループを作成する権限がありません。",
@@ -121,6 +124,8 @@
       "user-edit": "このユーザーの情報を変更する権限がありません。"
     },
     "not-found": {
+      "bulk-result": "該当するアップロード履歴が見つかりません。",
+      "bulk-validation": "ファイルの検証結果が見つかりません",
       "group": "該当するグループが見つかりません。",
       "repository": "該当するリポジトリが見つかりません。",
       "user": "該当するユーザーが見つかりません。"
@@ -227,8 +232,8 @@
         "public": "グループの公開状態",
         "users-count": "ユーザー数"
       },
+      "search-placeholder": "グループ名で検索...",
       "no-groupss-description": "あなたのリポジトリにはグループがありません。まずはグループを作成してください。",
-      "search-placeholder": "検索...",
       "title": "グループ一覧"
     },
     "title": "グループ"
@@ -245,38 +250,26 @@
     "logoAlt": "ヘッダーロゴ"
   },
   "history": {
-    "available": "再ダウンロード",
     "date": "実行日時",
     "description": "ファイルのアップロード・ダウウンロードの履歴を確認できます。",
-    "download": {
-      "date": "ダウンロード日時"
-    },
-    "empty": "検索条件に一致するデータが見つかりませんでした",
-    "empty-data": "データがありません",
+    "empty-data": "データがありません。",
     "expired": "期限切れ",
     "failed": "失敗",
-    "failed-count": "失敗件数",
-    "file": "ファイル",
+    "file_not_available": "ファイルのダウンロードに失敗しました。",
     "filter": {
-      "options_not_found": "フィルターの取得に失敗しました",
       "title": "フィルター"
     },
-    "first-download": "初回ダウンロード",
     "group-count": "グループ数",
-    "more": "さらに表示",
-    "operation": "実行条件",
     "operator": "実行ユーザー",
     "private": "非公開にする",
     "progress": "処理中",
     "public": "公開にする",
     "re-download": "再ダウンロード",
-    "re-download-count": "再DL",
+    "re-download-count": "再DL: {count}回",
     "reset": "リセット",
     "show-detail": "詳細を表示",
     "status": "ステータス",
     "success": "成功",
-    "success-count": "成功件数",
-    "sum": "総ダウンロード回数 | 総アップロード回数",
     "tab": {
       "download": "ダウンロード履歴",
       "upload": "アップロード履歴"
@@ -284,23 +277,14 @@
     "table": {
       "column": {
         "download-date": "ダウンロード日時",
-        "eppns": "eppn",
-        "groups": "グループ",
-        "operator": "実行ユーザー",
-        "re-download": "再ダウンロード",
-        "users": "ユーザー"
+        "upload-date": "アップロード日時"
       }
     },
     "table-title": "履歴一覧",
     "target": "ダウンロード対象 | アップロード対象",
     "title": "履歴",
-    "unavailable": "期限切れ",
-    "upload": {
-      "date": "アップロード日時"
-    },
-    "uploaded-at": "アップロード日時",
-    "user-count": "ユーザー数",
-    "view": "表示件数"
+    "toggle_public_status_failed": "公開状態の更新に失敗しました。",
+    "user-count": "ユーザー数"
   },
   "login": {
     "dev-account": "アカウント",
@@ -362,6 +346,8 @@
       },
       "no-repositories-description": "あなたには管理できるリポジトリがありません",
       "no-repositories-title": "リポジトリが見つかりません",
+      "search-placeholder": "リポジトリ名、URL、EntityIDで検索...",
+      "search-placeholder-service-name-only": "リポジトリ名で検索...",
       "title": "リポジトリ一覧"
     },
     "title": "リポジトリ",
@@ -626,6 +612,10 @@
     }
   },
   "users": {
+    "alert": {
+      "filter-by-both-role-group-disabled": "現在、機能が制限されているため、ロールとグループのフィルターを同時に選択することができません。",
+      "filter-by-last-modified-disabled": "現在、機能が制限されているため、最終更新日時によるフィルターはご利用いただけません。"
+    },
     "all-users-actions": "すべてのユーザー",
     "button": {
       "all-users-download": "全件ダウンロード",
@@ -652,7 +642,8 @@
       },
       "no-users-description": "あなたのリポジトリにはユーザーがいません。まずはユーザーを作成するか、ファイルをアップロードしてください。",
       "no-users-title": "ユーザーが見つかりません",
-      "search-placeholder": "検索...",
+      "search-placeholder": "ユーザー名、Email、ePPN で検索...",
+      "search-placeholder-username-only": "ユーザー名で検索...",
       "title": "ユーザー一覧"
     },
     "title": "ユーザー"

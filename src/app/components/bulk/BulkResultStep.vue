@@ -1,27 +1,43 @@
 <script setup lang="ts">
 const properties = defineProps<{
   historyId: string
-  taskId: string
+  taskId?: string
 }>()
 
-const {
-  uploadResult,
-  useBulkIndicators,
-  fetchUploadResult,
-} = useExecuteUpload()
-const { makePageInfo } = useBulk()
+const { query, makePageInfo, makeIndicators } = useBulk()
 
 const toast = useToast()
-const url = `/api/bulk/result/${properties.historyId}`
 
-const { data: status, execute: executeStatus }
-  = await useFetch<BulkProcessingStatus>(`/api/bulk/execute/status/${properties.taskId}`)
+const { handleFetchError } = useErrorHandling()
+const { data: status, refresh: refreshStatus }
+  = await useFetch<BulkProcessingStatus>(`/api/bulk/execute/status/${properties.taskId}`,
+    {
+      method: 'GET',
+      lazy: true,
+      onResponseError({ response }) {
+        switch (response.status) {
+          case 404: {
+            break
+          }
+          default:{
+            handleFetchError({ response })
+            break
+          }
+        }
+      },
+      server: false })
+
 const { polling: { interval, maxAttempts } } = useAppConfig()
+const isPolling = ref(false)
 const pollExecuteStatus = async () => {
+  isPolling.value = true
   for (let index = 0; index < maxAttempts; index++) {
-    await executeStatus()
+    await refreshStatus()
     const st = (status.value?.status)
-    if (st === 'SUCCESS') return
+    if (st === 'SUCCESS') {
+      isPolling.value = false
+      return
+    }
     if (st === 'FAILURE') {
       toast.add({
         title: $t('bulk.status.error'),
@@ -29,10 +45,9 @@ const pollExecuteStatus = async () => {
         color: 'error',
         icon: 'i-lucide-circle-x',
       })
+      isPolling.value = false
       return
     }
-    const { uploadResult: result } = await fetchUploadResult(url)
-    uploadResult.value = result.value
     await new Promise(r => setTimeout(r, interval))
   }
   toast.add({
@@ -41,14 +56,49 @@ const pollExecuteStatus = async () => {
     color: 'error',
     icon: 'i-lucide-circle-x',
   })
+  isPolling.value = false
 }
+
+const { data: executeResult, refresh: refreshExecuteResult, status: getResultStatus }
+  = await useFetch<ExecuteResults>(`/api/bulk/result/${properties.historyId}`, {
+    method: 'GET',
+    query,
+    lazy: true,
+    server: false,
+    onResponseError({ response }) {
+      switch (response.status) {
+        case 403: {
+          showError({
+            status: 403,
+            statusText: 'Forbidden',
+            message: $t('error-page.forbidden.bulk-result'),
+          })
+          break
+        }
+        case 404: {
+          showError({
+            status: 404,
+            statusText: 'Not Found',
+            message: $t('error-page.not-found.bulk-result'),
+          })
+          break
+        }
+        default: {
+          handleFetchError({ response })
+          break
+        }
+      }
+    },
+  })
 onMounted(async () => {
-  await pollExecuteStatus()
+  if (properties.taskId)
+    await pollExecuteStatus()
+  await refreshExecuteResult()
 })
 
-const indicators = useBulkIndicators
-const fileInfo = computed(() => uploadResult.value!.fileInfo)
-const pageInfo = makePageInfo(uploadResult)
+const indicators = computed(() => makeIndicators(executeResult.value))
+const fileInfo = computed(() => executeResult.value!.fileInfo)
+const pageInfo = computed(() => makePageInfo(executeResult))
 </script>
 
 <template>
@@ -95,11 +145,12 @@ const pageInfo = makePageInfo(uploadResult)
     </div>
 
     <BulkUserTable
-      :data="uploadResult!.results"
-      :total-count="uploadResult!.total"
+      :data="executeResult!.results"
+      :total-count="executeResult!.total"
       :page-info="pageInfo"
-      :offset="uploadResult!.offset"
+      :offset="executeResult!.offset"
       :title="$t('bulk.import-results')"
+      :status="isPolling ? 'loading' : getResultStatus "
     />
   </div>
 </template>

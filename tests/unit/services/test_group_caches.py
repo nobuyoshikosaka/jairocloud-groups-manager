@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from redis import RedisError
+from weko_group_cache_db.config import setup_config as setup_wgcd_config
 from weko_group_cache_db.signals import ExecutedData, ProgressData
 
 from server.api.schemas import CacheQuery
@@ -29,6 +30,11 @@ from server.services.group_caches import (
 
 if t.TYPE_CHECKING:
     from pytest_mock import MockerFixture
+
+
+@pytest.fixture(autouse=True)
+def setup_config(app):
+    setup_wgcd_config(config.CACHE_GROUPS)
 
 
 def test_get_repository_cache(app, mocker: MockerFixture, gen_summaries, cache_keys, cached_data, datastore):
@@ -349,8 +355,8 @@ def test_update_all(app, mocker: MockerFixture, datastore, gen_summaries):
     mock_check.assert_called_once()
     mock_search.assert_called_once_with(query)
     mock_update_task.assert_called_once_with((fqdn_list,))
-    app_cache.delete.assert_called_once_with("jcgroups-weko-group-cache-db")
-    app_cache.hset.assert_called_once_with("jcgroups-weko-group-cache-db", mapping={"status": "pending"})
+    app_cache.delete.assert_called_once_with("jcgroups-test-weko-group-cache-db")
+    app_cache.hset.assert_called_once_with("jcgroups-test-weko-group-cache-db", mapping={"status": "pending"})
     mocker.stopall()
 
 
@@ -380,8 +386,8 @@ def test_update_id_specified(app, mocker: MockerFixture, datastore, gen_summarie
     mock_check.assert_called_once()
     mock_search.assert_called_once_with(query)
     mock_update_task.assert_called_once_with((fqdn_list,))
-    app_cache.delete.assert_called_once_with("jcgroups-weko-group-cache-db")
-    app_cache.hset.assert_called_once_with("jcgroups-weko-group-cache-db", mapping={"status": "pending"})
+    app_cache.delete.assert_called_once_with("jcgroups-test-weko-group-cache-db")
+    app_cache.hset.assert_called_once_with("jcgroups-test-weko-group-cache-db", mapping={"status": "pending"})
     mocker.stopall()
 
 
@@ -427,7 +433,7 @@ def test_update_raises_failed_task_running(app, mocker: MockerFixture, datastore
         update(op, ids)
 
     mock_check.assert_called_once()
-    app_cache.hset.assert_called_once_with("jcgroups-weko-group-cache-db", mapping={"status": "pending"})
+    app_cache.hset.assert_called_once_with("jcgroups-test-weko-group-cache-db", mapping={"status": "pending"})
 
     mock_update_task.assert_called_once_with((fqdn_list,))
 
@@ -454,7 +460,7 @@ def test_is_update_task_running_pending(app, datastore):
 
     result = is_update_task_running()
     assert result is True
-    app_cache.hget.assert_called_once_with("jcgroups-weko-group-cache-db", "status")
+    app_cache.hget.assert_called_once_with("jcgroups-test-weko-group-cache-db", "status")
 
 
 def test_is_update_task_running_started(app, datastore):
@@ -463,7 +469,7 @@ def test_is_update_task_running_started(app, datastore):
 
     result = is_update_task_running()
     assert result is True
-    app_cache.hget.assert_called_once_with("jcgroups-weko-group-cache-db", "status")
+    app_cache.hget.assert_called_once_with("jcgroups-test-weko-group-cache-db", "status")
 
 
 def test_is_update_task_running_in_progress(app, datastore):
@@ -472,7 +478,7 @@ def test_is_update_task_running_in_progress(app, datastore):
 
     result = is_update_task_running()
     assert result is True
-    app_cache.hget.assert_called_once_with("jcgroups-weko-group-cache-db", "status")
+    app_cache.hget.assert_called_once_with("jcgroups-test-weko-group-cache-db", "status")
 
 
 def test_is_update_task_running_completed(app, datastore):
@@ -481,7 +487,7 @@ def test_is_update_task_running_completed(app, datastore):
 
     result = is_update_task_running()
     assert result is False
-    app_cache.hget.assert_called_once_with("jcgroups-weko-group-cache-db", "status")
+    app_cache.hget.assert_called_once_with("jcgroups-test-weko-group-cache-db", "status")
 
 
 def test_is_update_task_running_not_exists(app, datastore):
@@ -490,7 +496,7 @@ def test_is_update_task_running_not_exists(app, datastore):
 
     result = is_update_task_running()
     assert result is False
-    app_cache.hget.assert_called_once_with("jcgroups-weko-group-cache-db", "status")
+    app_cache.hget.assert_called_once_with("jcgroups-test-weko-group-cache-db", "status")
 
 
 def test_handle_progress(app, mocker: MockerFixture, unwrap, datastore):
@@ -499,7 +505,7 @@ def test_handle_progress(app, mocker: MockerFixture, unwrap, datastore):
 
     unwrap(handle_progress)(None, data)
 
-    cache_key = "jcgroups-weko-group-cache-db"
+    cache_key = "jcgroups-test-weko-group-cache-db"
     app_cache.hset.assert_called_once_with(cache_key, mapping=data.model_dump(mode="json"))
 
 
@@ -510,7 +516,7 @@ def test_handle_progress_redis_error(app, mocker: MockerFixture, unwrap, datasto
 
     unwrap(handle_progress)(None, data)
 
-    cache_key = "jcgroups-weko-group-cache-db"
+    cache_key = "jcgroups-test-weko-group-cache-db"
     app_cache.hset.assert_called_once_with(cache_key, mapping=data.model_dump(mode="json"))
 
     assert str(W.FAILED_UPDATE_TASK_PROGRESS % {"done": 5, "total": 10}) in caplog.text
@@ -529,7 +535,7 @@ def test_handle_excuted(app, mocker: MockerFixture, unwrap, datastore):
 
     unwrap(handle_excuted)(None, data)
 
-    cache_key = "jcgroups-weko-group-cache-db"
+    cache_key = "jcgroups-test-weko-group-cache-db"
     field_name = "example_com_0"
     app_cache.hset.assert_called_once_with(cache_key, mapping={field_name: data.model_dump_json()})
 
@@ -548,7 +554,7 @@ def test_handle_excuted_redis_error(app, mocker: MockerFixture, unwrap, datastor
 
     unwrap(handle_excuted)(None, data)
 
-    cache_key = "jcgroups-weko-group-cache-db"
+    cache_key = "jcgroups-test-weko-group-cache-db"
     field_name = "example_com_0"
     app_cache.hset.assert_called_once_with(cache_key, mapping={field_name: data.model_dump_json()})
 
@@ -594,7 +600,7 @@ def test_get_task_status(app, mocker: MockerFixture, unwrap, datastore):
 
     assert result == TaskDetail(results=expect_result, status="in_progress", current="example_com", total=10, done=5)
 
-    app_cache.hgetall.assert_called_once_with("jcgroups-weko-group-cache-db")
+    app_cache.hgetall.assert_called_once_with("jcgroups-test-weko-group-cache-db")
     app_cache.delete.assert_not_called()
 
 

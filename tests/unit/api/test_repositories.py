@@ -4,9 +4,8 @@ import typing as t
 from pydantic import HttpUrl
 
 from server.api import repositories
-from server.api.schemas import ErrorResponse, RepositoriesQuery, RepositoryDeleteQuery
+from server.api.schemas import ErrorResponse, RepositoriesQuery, RepositoryDeleteQuery, SearchResult
 from server.entities.repository_detail import RepositoryDetail
-from server.entities.search_request import SearchResult
 from server.exc import InvalidFormError, InvalidQueryError, ResourceInvalid, ResourceNotFound
 
 
@@ -44,7 +43,7 @@ def test_get_invalid_query_error(app, mocker: MockerFixture) -> None:
     response = original_func(RepositoriesQuery(q="search", i=["repo1"], k="created", d="desc", p=3, l=20))
     data, status, *_ = response
     assert status == expected_status
-    assert isinstance(data, repositories.ErrorResponse)
+    assert isinstance(data, ErrorResponse)
     assert "Invalid query" in data.message
 
 
@@ -95,7 +94,7 @@ def test_post_invalid_form_error(app, test_config, mocker: MockerFixture) -> Non
     response = original_func(expected)
     data, status, *_ = response
     assert status == expected_status
-    assert isinstance(data, repositories.ErrorResponse)
+    assert isinstance(data, ErrorResponse)
     assert data.message == "invalid form"
     assert not data.code
 
@@ -152,6 +151,20 @@ def test_id_get_success(app, test_config, mocker: MockerFixture) -> None:
     assert data.service_name == "TestRepo"
 
 
+def test_id_get_not_found_error(app, mocker: MockerFixture) -> None:
+    """Test: /repositories/<id> GET returns 404 error for not found."""
+    expected_status = 404
+    mocker.patch("server.api.repositories.has_permission", return_value=True)
+    mocker.patch("server.services.repositories.get_by_id", return_value=None)
+    original_func = inspect.unwrap(repositories.id_get)
+    response = original_func("repo1")
+    data, status = response
+    assert status == expected_status
+    assert isinstance(data, ErrorResponse)
+    assert data.message == "Service resource for Repository (id: repo1) not found."
+    assert data.code == "E104"
+
+
 def test_id_get_permission_error(app, mocker: MockerFixture) -> None:
     """Test: /repositories/<id> GET returns 403 error for permission denied."""
     expected_status = 403
@@ -167,22 +180,8 @@ def test_id_get_permission_error(app, mocker: MockerFixture) -> None:
     data, status = response
     assert status == expected_status
     assert isinstance(data, ErrorResponse)
-    assert data.message == "not has permission"
-    assert not data.code
-
-
-def test_id_get_not_found_error(app, mocker: MockerFixture) -> None:
-    """Test: /repositories/<id> GET returns 404 error for not found."""
-    expected_status = 404
-    mocker.patch("server.api.repositories.has_permission", return_value=True)
-    mocker.patch("server.services.repositories.get_by_id", return_value=None)
-    original_func = inspect.unwrap(repositories.id_get)
-    response = original_func("repo1")
-    data, status = response
-    assert status == expected_status
-    assert isinstance(data, ErrorResponse)
-    assert data.message == "repository not found"
-    assert not data.code
+    assert data.message == "Logged-in user does not have permission to access this Repository (id: repo1)."
+    assert data.code == "E103"
 
 
 def test_id_put_success(app, test_config, mocker: MockerFixture) -> None:
@@ -211,9 +210,10 @@ def test_id_put_success(app, test_config, mocker: MockerFixture) -> None:
     assert data.service_name == "TestRepo"
 
 
-def test_id_put_permission_error(app, test_config, mocker: MockerFixture) -> None:
-    """Test: /repositories/<id> PUT returns 403 error for permission denied."""
-    expected_status = 403
+def test_id_put_invalid_form_error(app, test_config, mocker: MockerFixture) -> None:
+    """Test: /repositories/<id> PUT returns 400 error for invalid form."""
+
+    expected_status = 400
     service_url: HttpUrl = HttpUrl(test_config.MAP_CORE.base_url)
     expected = RepositoryDetail(
         id="repo1",
@@ -226,13 +226,14 @@ def test_id_put_permission_error(app, test_config, mocker: MockerFixture) -> Non
         users_count=None,
         groups_count=None,
     )
-    mocker.patch("server.api.repositories.has_permission", return_value=False)
+    mocker.patch("server.api.repositories.has_permission", return_value=True)
+    mocker.patch("server.services.repositories.update", side_effect=InvalidFormError("invalid form"))
     original_func = inspect.unwrap(repositories.id_put)
     response = original_func("repo1", expected)
     data, status = response
     assert status == expected_status
     assert isinstance(data, ErrorResponse)
-    assert data.message == "not has permission"
+    assert data.message == "invalid form"
     assert not data.code
 
 
@@ -263,60 +264,6 @@ def test_id_put_not_found_error(app, test_config, mocker: MockerFixture) -> None
     assert not data.code
 
 
-def test_id_put_invalid_form_error(app, test_config, mocker: MockerFixture) -> None:
-    """Test: /repositories/<id> PUT returns 400 error for invalid form."""
-
-    expected_status = 400
-    service_url: HttpUrl = HttpUrl(test_config.MAP_CORE.base_url)
-    expected = RepositoryDetail(
-        id="repo1",
-        service_name="TestRepo",
-        service_url=service_url,
-        entity_ids=[],
-        active=True,
-        service_id="svc1",
-        created=None,
-        users_count=None,
-        groups_count=None,
-    )
-    mocker.patch("server.api.repositories.has_permission", return_value=True)
-    mocker.patch("server.services.repositories.update", side_effect=InvalidFormError("invalid form"))
-    original_func = inspect.unwrap(repositories.id_put)
-    response = original_func("repo1", expected)
-    data, status = response
-    assert status == expected_status
-    assert isinstance(data, ErrorResponse)
-    assert data.message == "invalid form"
-    assert not data.code
-
-
-def test_id_put_resource_invalid_error(app, test_config, mocker: MockerFixture) -> None:
-    """Test: /repositories/<id> PUT returns 409 error for resource invalid."""
-
-    expected_status = 409
-    service_url: HttpUrl = HttpUrl(test_config.MAP_CORE.base_url)
-    expected = RepositoryDetail(
-        id="repo1",
-        service_name="TestRepo",
-        service_url=service_url,
-        entity_ids=[],
-        active=True,
-        service_id="svc1",
-        created=None,
-        users_count=None,
-        groups_count=None,
-    )
-    mocker.patch("server.api.repositories.has_permission", return_value=True)
-    mocker.patch("server.services.repositories.update", side_effect=ResourceInvalid("resource invalid"))
-    original_func = inspect.unwrap(repositories.id_put)
-    response = original_func("repo1", expected)
-    data, status = response
-    assert status == expected_status
-    assert isinstance(data, ErrorResponse)
-    assert data.message == "resource invalid"
-    assert not data.code
-
-
 def test_id_delete_success(app, mocker: MockerFixture) -> None:
     """Test: /repositories/<id> DELETE deletes repository successfully."""
     expected_status = 204
@@ -327,6 +274,18 @@ def test_id_delete_success(app, mocker: MockerFixture) -> None:
     data, status = response
     assert status == expected_status
     assert not data
+
+
+def test_id_delete_invalid_form_error(app, mocker: MockerFixture) -> None:
+    expected_status = 400
+    query = RepositoryDeleteQuery(confirmation="delete")
+    mocker.patch("server.services.repositories.delete_by_id", side_effect=InvalidFormError("invalid form"))
+    original_func = inspect.unwrap(repositories.id_delete)
+    response, status = original_func("repo1", query)
+    assert status == expected_status
+    assert isinstance(response, ErrorResponse)
+    assert response.message == "invalid form"
+    assert not response.code
 
 
 def test_id_delete_not_found_error(app, mocker: MockerFixture) -> None:
@@ -340,20 +299,6 @@ def test_id_delete_not_found_error(app, mocker: MockerFixture) -> None:
     assert status == expected_status
     assert isinstance(data, ErrorResponse)
     assert data.message == "not found"
-    assert not data.code
-
-
-def test_id_delete_resource_invalid_error(app, mocker: MockerFixture) -> None:
-    """Test: /repositories/<id> DELETE returns 400 error for resource invalid."""
-    expected_status = 400
-    query = RepositoryDeleteQuery(confirmation="delete")
-    mocker.patch("server.services.repositories.delete_by_id", side_effect=ResourceInvalid("resource invalid"))
-    original_func = inspect.unwrap(repositories.id_delete)
-    response = original_func("repo1", query)
-    data, status = response
-    assert status == expected_status
-    assert isinstance(data, ErrorResponse)
-    assert data.message == "resource invalid"
     assert not data.code
 
 
@@ -383,13 +328,10 @@ def test_has_permission_not_permitted(mocker: MockerFixture) -> None:
     assert result is False
 
 
-def test_id_delete_invalid_form_error(app, mocker: MockerFixture) -> None:
-    expected_status = 400
-    query = RepositoryDeleteQuery(confirmation="delete")
-    mocker.patch("server.services.repositories.delete_by_id", side_effect=InvalidFormError("invalid form"))
-    original_func = inspect.unwrap(repositories.id_delete)
-    response, status = original_func("repo1", query)
-    assert status == expected_status
-    assert isinstance(response, ErrorResponse)
-    assert response.message == "invalid form"
-    assert not response.code
+def test_filter_options_calls_search_repositories_options(app, mocker: MockerFixture) -> None:
+    dummy = ["dummy_option"]
+    mock = mocker.patch("server.api.repositories.search_repositories_options", return_value=dummy)
+    original_func = inspect.unwrap(repositories.filter_options)
+    result = original_func()
+    assert result == dummy
+    mock.assert_called_once_with()

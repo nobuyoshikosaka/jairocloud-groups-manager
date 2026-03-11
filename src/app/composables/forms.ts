@@ -26,6 +26,7 @@ const useSelectMenuInfiniteScroll = <T>(
     debounce = 300,
     scrollDistance = 10,
     query = {},
+    server = true,
   } = options
 
   const page = ref(1)
@@ -41,10 +42,11 @@ const useSelectMenuInfiniteScroll = <T>(
       ...query,
       q: searchTermDebounced.value || undefined,
       p: page.value,
-      l: limit,
+      l: server ? limit : -1,
     })),
     lazy: true,
     immediate: false,
+    watch: false,
   })
 
   watch(data, (newData) => {
@@ -57,6 +59,7 @@ const useSelectMenuInfiniteScroll = <T>(
   })
 
   watch(searchTermDebounced, () => {
+    if (!server) return
     page.value = 1
     hasMore.value = true
     execute()

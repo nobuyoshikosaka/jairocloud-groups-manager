@@ -104,10 +104,8 @@ def test_validate_json_data_invalid_type():
     json_data = load_json_data("data/map_user.json")
     json_data["meta"]["resourceType"] = "InvalidType"
 
-    with pytest.raises(ValidationError) as exc_info:
+    with pytest.raises(ValidationError, match="Input should be 'User'"):
         MapUser.model_validate(json_data)
-
-    assert "Input should be 'User'" in str(exc_info.value)
 
 
 def test_validate_reassign_resource_type():
@@ -115,7 +113,5 @@ def test_validate_reassign_resource_type():
     user = MapUser.model_validate(json_data)
 
     assert user.meta
-    with pytest.raises(ValidationError) as exc_info:
+    with pytest.raises(ValidationError, match="Instance is frozen"):
         user.meta.resource_type = "User"
-
-    assert "Instance is frozen" in str(exc_info.value)

@@ -43,62 +43,79 @@ def test_config():
     db_host = "postgres" if is_running_in_docker() else "localhost"
     redis_host = "redis" if is_running_in_docker() else "localhost"
     amqp_host = "rabbitmq" if is_running_in_docker() else "localhost"
-    return RuntimeConfig.model_validate({
-        "SECRET_KEY": "test_secret_key",
-        "LOG": {
-            "level": "DEBUG",
-        },
-        "SP": {
-            "connector_id": "jairocloud-groups-manager_test",
-            "entity_id": "https://test/shibboleth-sp",
-            "crt": "/test/server.crt",
-            "key": "/test/server.key",
-            "connecter_id": "test_connecter_id",
-        },
-        "MAP_CORE": {
-            "base_url": "https://mapcore.test.jp",
-            "timeout": 3,
-        },
-        "REPOSITORIES": {
-            "id_patterns": {
-                "sp_connector": "jc_{repository_id}_test",
+    return RuntimeConfig.model_validate(
+        {
+            "SECRET_KEY": "test_secret_key",
+            "LOG": {
+                "level": "DEBUG",
             },
-        },
-        "GROUPS": {
-            "id_patterns": {
-                "system_admin": "jc_roles_sysadm_test",
-                "repository_admin": "jc_{repository_id}_roles_repoadm_test",
-                "community_admin": "jc_{repository_id}_roles_comadm_test",
-                "contributor": "jc_{repository_id}_roles_contributor_test",
-                "general_user": "jc_{repository_id}_roles_generaluser_test",
-                "user_defined": "jc_{repository_id}_groups_{user_defined_id}_test",
+            "SP": {
+                "connector_id": "jairocloud-groups-manager_test",
+                "entity_id": "https://test/shibboleth-sp",
+                "crt": "/test/server.crt",
+                "key": "/test/server.key",
             },
-            "name_patterns": {
-                "system_admin": "group_sysadm_{user_defined_id}_test",
-                "repository_admin": "group_repoadm_{repository_name}_{user_defined_id}_test",
-                "community_admin": "group_comadm_{repository_name}_{user_defined_id}_test",
-                "contributor": "group_contributor_{repository_name}_{user_defined_id}_test",
-                "general_user": "group_generaluser_{repository_name}_{user_defined_id}_test",
+            "MAP_CORE": {
+                "base_url": "https://mapcore.test.jp",
+                "timeout": 3,
             },
-        },
-        "POSTGRES": {"db": "jctest", "host": db_host},
-        "REDIS": {
-            "cache_type": "RedisCache",
-            "single": {"base_url": f"redis://{redis_host}:6379/0"},
-            "sentinel": {
-                "nodes": [
-                    {"host": "sentinel-1", "port": 26379},
-                    {"host": "sentinel-2", "port": 26379},
-                ],
+            "REPOSITORIES": {
+                "id_patterns": {
+                    "sp_connector": "jc_{repository_id}_test",
+                },
             },
+            "GROUPS": {
+                "id_patterns": {
+                    "system_admin": "jc_roles_sysadm_test",
+                    "repository_admin": "jc_{repository_id}_ro_radm_test",
+                    "community_admin": "jc_{repository_id}_ro_cadm_test",
+                    "contributor": "jc_{repository_id}_ro_cont_test",
+                    "general_user": "jc_{repository_id}_ro_user_test",
+                    "user_defined": "jc_{repository_id}_gr_{user_defined_id}_test",
+                },
+                "name_patterns": {
+                    "system_admin": "ジャイロクラウドシステム管理者_テスト",
+                    "repository_admin": "{repository_name}管理者_テスト",
+                    "community_admin": "{repository_name}コミュニティ管理者_テスト",
+                    "contributor": "{repository_name}投稿ユーザー_テスト",
+                    "general_user": "{repository_name}一般ユーザー_テスト",
+                },
+                "max_id_length": "50 - len('jc_') - len('_gr_')",
+            },
+            "POSTGRES": {"db": "jctest", "host": db_host},
+            "USERS": {
+                "export_fields": [
+                    "id",
+                    "user_name",
+                    "groups[].id",
+                    "groups[].name",
+                    "role",
+                    "edu_person_principal_names[]",
+                    "preferred_language",
+                    "emails[]",
+                ]
+            },
+            "REDIS": {
+                "cache_type": "RedisCache",
+                "key_prefix": "jcgroups-test-",
+                "single": {"base_url": f"redis://{redis_host}:6379/0"},
+                "sentinel": {
+                    "nodes": [
+                        {"host": "sentinel-1", "port": 26379},
+                        {"host": "sentinel-2", "port": 26379},
+                    ],
+                },
+            },
+            "RABBITMQ": {"url": f"amqp://guest:guest@{amqp_host}:5672//"},
+            "STORAGE": {"local": {"temporary": "/var/tmp/jcgroups"}},  # noqa: S108
+            "CACHE_GROUPS": {
+                "cache_key_suffix": "_gakunin_groups",
+                "api_endpoint": "https://sample.gakunin.jp/api/groups/",
+                "directory_path": "/var/mnt",
+            },
+            "FEATURES": {"search_only_username": False, "enable_bulk_operation": True},
         },
-        "RABBITMQ": {"url": f"amqp://guest:guest@{amqp_host}:5672//"},
-        "CACHE_GROUPS": {
-            "cache_key_suffix": "_gakunin_groups",
-            "api_endpoint": "https://sample.gakunin.jp/api/groups/",
-            "directory_path": "/var/mnt",
-        },
-    })
+    )
 
 
 def mock_redis(mocker: MockerFixture):
