@@ -83,6 +83,7 @@ class Files(db.Model):
         nullable=False,
     )
     """Repositories, groups, and users contained in the file."""
+
     __table_args__ = (Index(None, "file_content", postgresql_using="gin"),)
 
 

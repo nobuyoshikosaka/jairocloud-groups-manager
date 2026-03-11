@@ -56,7 +56,7 @@ branch = true
 source = ["src/server"]
 
 [tool.coverage.report]
-omit = ["__init__.py", "tests/*"]
+omit = ["__init__.py", "src/contrib/*", "tests/*"]
 exclude_also = [
   "if t.TYPE_CHECKING:",
 ]
