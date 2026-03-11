@@ -21,7 +21,7 @@ from server.exc import (
     FileNotFound,
     FileValidationError,
     RecordNotFound,
-    TaskExcutionError,
+    TaskExecutionError,
 )
 from server.messages import E
 from server.services import bulks, history_table, repositories
@@ -101,7 +101,7 @@ def validate_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
     """
     try:
         res = bulks.get_validate_task_result(task_id)
-    except TaskExcutionError as exc:
+    except TaskExecutionError as exc:
         return ErrorResponse(message=exc.message), 404
     return BulkBody(status=res.state), 200
 
@@ -148,7 +148,7 @@ def validate_result(
         result = bulks.get_validate_result(
             history_id=history_id, status_filter=status_filter, offset=offset, size=size
         )
-    except (RecordNotFound, TaskExcutionError) as exc:
+    except (RecordNotFound, TaskExecutionError) as exc:
         return ErrorResponse(message=exc.message), 404
     return result, 200
 
@@ -207,7 +207,7 @@ def execute_status(task_id: str) -> tuple[BulkBody | ErrorResponse, int]:
     """
     try:
         res = bulks.get_execute_task_result(task_id)
-    except TaskExcutionError as exc:
+    except TaskExecutionError as exc:
         return ErrorResponse(message=exc.message), 404
     return BulkBody(status=res.state), 200
 

@@ -204,8 +204,15 @@ SUCCESS_GET_BULK_OPERATION_RESULT = LogMessage(
     "successfully retrieved bulk operation result for history record: %(history_id)s",
 )
 
+
 SUCCESS_UPDATE_PUBLIC_STATUS = LogMessage(
     "I700",
     "successfully update public status of history record (id: %(history_id)s)  in"
     " database.",
+)
+
+
+GROUP_CACHE_UPDATE_STARTED = LogMessage(
+    "I800",
+    "Group cache update task started (operation: %(op)s, task: %(task_id)s).",
 )

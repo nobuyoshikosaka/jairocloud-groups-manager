@@ -51,7 +51,7 @@ from server.exc import (
     InvalidFormError,
     OAuthTokenError,
     RecordNotFound,
-    TaskExcutionError,
+    TaskExecutionError,
     UnexpectedResponseError,
 )
 from server.messages import E, I
@@ -607,7 +607,7 @@ def get_validate_task_result(task_id: str) -> AsyncResult[UUID]:
 
     Raises:
         DatastoreError: If there is an error connecting to the datastore.
-        TaskExcutionError: If the task with the given ID does not exist.
+        TaskExecutionError: If the task with the given ID does not exist.
     """
     try:
         res = validate_upload_data.AsyncResult(task_id)
@@ -616,7 +616,7 @@ def get_validate_task_result(task_id: str) -> AsyncResult[UUID]:
         raise DatastoreError(E.FAILED_CONNECT_REDIS % {"error": str(exc)}) from exc
     if not res:
         current_app.logger.error(E.TASK_NOT_FOUND, {"task_id": task_id})
-        raise TaskExcutionError(E.TASK_NOT_FOUND % {"task_id": task_id})
+        raise TaskExecutionError(E.TASK_NOT_FOUND % {"task_id": task_id})
     return res
 
 
@@ -962,7 +962,7 @@ def get_execute_task_result(task_id: str) -> AsyncResult[UUID]:
 
     Raises:
         DatastoreError: If there is an error connecting to the datastore.
-        TaskExcutionError: If the task with the given ID does not exist.
+        TaskExecutionError: If the task with the given ID does not exist.
     """
     try:
         res = update_users.AsyncResult(task_id)
@@ -971,7 +971,7 @@ def get_execute_task_result(task_id: str) -> AsyncResult[UUID]:
         raise DatastoreError(E.FAILED_CONNECT_REDIS % {"error": str(exc)}) from exc
     if not res:
         current_app.logger.error(E.TASK_NOT_FOUND, {"task_id": task_id})
-        raise TaskExcutionError(E.TASK_NOT_FOUND % {"task_id": task_id})
+        raise TaskExecutionError(E.TASK_NOT_FOUND % {"task_id": task_id})
     return res
 
 

@@ -35,7 +35,7 @@ from server.exc import (
     InvalidFormError,
     OAuthTokenError,
     RecordNotFound,
-    TaskExcutionError,
+    TaskExecutionError,
     UnexpectedResponseError,
 )
 from server.messages import E
@@ -773,7 +773,7 @@ def test_get_validate_task_result_none(app, mocker: MockerFixture):
     task_id = "test_task_id"
     mocker.patch("server.services.bulks.validate_upload_data.AsyncResult", return_value=None)
     expected = E.TASK_NOT_FOUND % {"task_id": "test_task_id"}
-    with pytest.raises(TaskExcutionError) as exc:
+    with pytest.raises(TaskExecutionError) as exc:
         bulks.get_validate_task_result(task_id)
     assert str(exc.value) == str(expected)
 
@@ -1254,7 +1254,7 @@ def test_get_execute_task_result_none(app, mocker: MockerFixture):
     task_id = "test_task_id"
     mocker.patch("server.services.bulks.update_users.AsyncResult", return_value=None)
     expected = E.TASK_NOT_FOUND % {"task_id": "test_task_id"}
-    with pytest.raises(TaskExcutionError) as exc:
+    with pytest.raises(TaskExecutionError) as exc:
         bulks.get_execute_task_result(task_id)
     assert str(exc.value) == str(expected)
 

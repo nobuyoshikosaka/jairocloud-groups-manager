@@ -191,6 +191,9 @@ following conditions:
 - URLs ending with "/admin" are excluded from matching.
 """
 
+GROUP_CACHE_KEY_PATTERN: Final = "weko-group-cache-db"
+"""Regular expression pattern to identify cache keys in Redis."""
+
 
 class ValidationEntity:
     """Constants for validation entities."""

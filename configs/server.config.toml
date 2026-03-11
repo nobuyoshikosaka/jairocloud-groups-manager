@@ -233,6 +233,40 @@ port = 26379
 url = "amqp://guest:guest@rabbitmq:5672//"
 
 
+[cache_groups]
+# Cache key suffix of group information in Redis.
+cache_key_suffix = "_gakunin_groups"
+
+# Map groups API endpoint.
+api_endpoint = "/api/groups"
+
+# Cache time-to-live of group information in Redis.
+# if it specified less than 0, it will be considered as no expiration.
+cache_ttl = 86400
+
+# Request timeout (in seconds) when connecting to mAP API.
+request_timeout = 20
+
+# Request interval (in seconds) between mAP API requests.
+request_interval = 3
+
+# Request retries when failed to fetch groups from mAP API.
+request_retries = 3
+
+# Base time (in seconds) for exponential backoff during request retries.
+request_retry_base = 4
+
+# Factor (in seconds) for exponential backoff during request retries.
+request_retry_factor = 5
+
+# Maximum time (in seconds) for exponential backoff during request retries.
+request_retry_max = 90
+
+
+# Path to the directory containing institution TLS files.
+directory_path = "/var/mnt"
+
+
 # [develop]
 # Enable or disable developer login feature.
 # developer_login = false

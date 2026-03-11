@@ -59,7 +59,7 @@ def connection(
     timeout = config.REDIS.socket_timeout
     try:
         if config.REDIS.cache_type == "RedisCache":
-            base_url = config.REDIS.single.base_url.rstrip("/")
+            base_url = config.REDIS.single.base_url
             store = Redis.from_url(f"{base_url}/{db}")
         else:
             sentinels = sentinel.Sentinel(

@@ -56,6 +56,7 @@ const table = {
     users: [20, 50, 100] as [number, ...number[]],
     history: [20, 50, 100] as [number, ...number[]],
     bulks: [20, 50, 100] as [number, ...number[]],
+    cacheGroups: [20, 50, 100] as number[],
   },
 }
 

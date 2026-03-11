@@ -364,3 +364,37 @@ class FileQuery(UsersQuery):
 
     model_config = ignore_extra_config
     """Configure to ignore extra fields."""
+
+
+class CacheQuery(BaseModel):
+    """Schema for cache query parameters."""
+
+    q: t.Annotated[str | None, "term"] = None
+    """Search term for querying cache entries."""
+
+    f: t.Annotated[list[t.Literal["e", "n"]] | None, "filter"] = None
+    """Filter expression for querying cache entries."""
+
+    p: t.Annotated[int | None, "page"] = None
+    """Page number for pagination."""
+
+    l: t.Annotated[int | None, "per"] = None  # noqa: E741
+    """Number of items per page for pagination."""
+
+
+type CacheOperation = t.Literal["all", "id-specified"]
+
+
+class CacheRequest(BaseModel):
+    """Schema for cache update request."""
+
+    ids: list[str] | None = None
+    """List of repository IDs to update cache for.
+    Required if operation is 'id-specified'.
+    """
+
+    op: CacheOperation
+    """Operation type: 'all' to update all, 'id-specified' to update specified IDs."""
+
+    model_config = camel_case_config
+    """Configure to use camelCase aliasing."""

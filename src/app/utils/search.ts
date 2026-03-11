@@ -70,6 +70,19 @@ const normalizeUsersQuery = (query: LocationQuery): UsersSearchQuery => {
 }
 
 /**
+  * Normalize location query to cache groups search query
+ */
+const normalizeCacheGroupsQuery = (query: LocationQuery): CacheGroupsSearchQuery => {
+  const { table: { pageSize } } = useAppConfig()
+  return {
+    q: query.q ? pickSingle(query.q) : undefined,
+    f: query.f ? toArray(query.f) as GroupCacheStatus[] : undefined,
+    p: Number(query.p) || 1,
+    l: Number(query.l) || pageSize.cacheGroups?.[0],
+  }
+}
+
+/**
  * Normalize location query to history
  */
 const normalizeHistoryQuery = (query: LocationQuery): HistoryQuery => {
@@ -101,4 +114,5 @@ const normalizeUploadQuery = (query: LocationQuery): UploadQuery => {
 export {
   normalizeRepositoriesQuery, normalizeGroupsQuery, normalizeUsersQuery,
   normalizeHistoryQuery, normalizeUploadQuery,
+  normalizeCacheGroupsQuery,
 }

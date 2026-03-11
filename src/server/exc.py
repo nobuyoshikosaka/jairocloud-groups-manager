@@ -97,7 +97,7 @@ class DatastoreError(InfrastructureError):
     """
 
 
-class TaskExcutionError(DatastoreError):
+class TaskExecutionError(DatastoreError):
     """Exception for task execution errors.
 
     Errors caused by issues during task execution.
@@ -220,4 +220,11 @@ class InvalidExportError(BulkOperationError):
     """Exception for invalid export errors.
 
     Errors caused by issues during export operations.
+    """
+
+
+class GroupCacheError(JAIROCloudGroupsManagerError):
+    """Exception for group cache errors.
+
+    Errors caused by issues in group cache operations.
     """

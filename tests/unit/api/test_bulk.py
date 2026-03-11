@@ -11,7 +11,7 @@ from server.api import bulk
 from server.api.schemas import BulkBody, ErrorResponse, ExcuteRequest, TargetRepositoryForm, UploadQuery
 from server.entities.bulk import ExecuteResults, ResultSummary, ValidateResults
 from server.entities.login_user import LoginUser
-from server.exc import FileNotFound, FileValidationError, RecordNotFound, TaskExcutionError
+from server.exc import FileNotFound, FileValidationError, RecordNotFound, TaskExecutionError
 from server.messages import E
 
 
@@ -91,7 +91,7 @@ def test_validate_status_not_found(app, mocker: MockerFixture):
     task_id = "task_id"
     test_func = inspect.unwrap(bulk.validate_status)
     expected_message = E.TASK_NOT_FOUND % {"task_id": task_id}
-    mocker.patch("server.services.bulks.get_validate_task_result", side_effect=TaskExcutionError(expected_message))
+    mocker.patch("server.services.bulks.get_validate_task_result", side_effect=TaskExecutionError(expected_message))
     expected = ErrorResponse(message=expected_message)
     with app.test_request_context():
         result = test_func(task_id)
@@ -269,7 +269,7 @@ def test_execute_status_not_found(app, mocker: MockerFixture):
     test_func = inspect.unwrap(bulk.execute_status)
     task_id = "task_id"
     expected_message = E.TASK_NOT_FOUND % {"task_id": task_id}
-    mocker.patch("server.services.bulks.get_execute_task_result", side_effect=TaskExcutionError(expected_message))
+    mocker.patch("server.services.bulks.get_execute_task_result", side_effect=TaskExecutionError(expected_message))
     with app.test_request_context():
         result = test_func(task_id)
         assert result[0] == ErrorResponse(message=expected_message)
