@@ -15,10 +15,6 @@ export default defineNuxtConfig({
     scan: true,
   },
 
-  imports: {
-    dirs: ['~/types'],
-  },
-
   devtools: {
     enabled: true,
   },

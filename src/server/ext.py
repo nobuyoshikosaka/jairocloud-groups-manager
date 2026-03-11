@@ -9,7 +9,6 @@ import typing as t
 from pathlib import Path
 
 from sqlalchemy_utils import database_exists
-from weko_group_cache_db.config import setup_config as setup_weko_group_cache_db_config
 
 from .api.router import create_api_blueprint
 from .auth import login_manager
@@ -83,7 +82,6 @@ class JAIROCloudGroupsManager:
 
         app.config.from_mapping(self.config.for_flask)
         app.config.from_prefixed_env()
-        setup_weko_group_cache_db_config(self.config.CACHE_DB)
 
     def init_db_app(self, app: Flask) -> None:  # noqa: PLR6301
         """Initialize the database for the this extension.

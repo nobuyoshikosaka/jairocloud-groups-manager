@@ -45,8 +45,8 @@ export function useMenu() {
 
         },
         {
-          label: $t('cache-groups.title'),
-          to: '/cache-groups',
+          label: $t('group-caches.title'),
+          to: '/group-caches',
           icon: 'i-lucide-database',
           requiredSystemAdmin: true,
         },

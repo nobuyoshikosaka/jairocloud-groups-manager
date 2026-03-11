@@ -88,31 +88,19 @@
   },
   "cache-groups": {
     "button": {
-      "update-all-repositories": "全リポジトリを更新",
-      "update-selected-repositories": "選択したリポジトリを更新"
     },
-    "confirm-update-all-repositories": "全リポジトリ（{count}件）の更新を行いますか？",
     "confirm-update-selected-repositories": "以下の{count}リポジトリを更新しますか？",
     "count": "{current} / {total} 件",
-    "description": "WEKO3が利用するグループ情報のキャッシュ状況を管理できます。",
     "filter-placeholder": "キャッシュ状態",
-    "search-placeholder": "検索...",
     "select": {
-      "cache": "キャッシュあり",
-      "no-cache": "キャッシュなし"
     },
     "table": {
       "column": {
-        "repository-name": "リポジトリ名",
-        "repository-status": "更新状況",
-        "repository-updated-at": "キャッシュ更新日時",
-        "repository-url": "リポジトリURL"
+        "repository-status": "更新状況"
       }
     },
-    "title": "グループキャッシュ",
     "update-completed": "更新完了（{count}件）",
-    "update-error": "キャッシュ更新処理が実行中です。",
-    "updating": "更新中..."
+    "update-error": "キャッシュ更新処理が実行中です。"
   },
   "common": {
     "loading": "読み込み中..."
@@ -120,6 +108,7 @@
   "error-page": {
     "forbidden": {
       "group-access": "このグループにアクセスする権限がありません。",
+      "group-caches": "グループキャッシュを管理する権限がありません。",
       "group-create": "選択したリポジトリにグループを作成する権限がありません。",
       "group-delete": "このグループを削除する権限がありません。",
       "group-edit": "このグループの情報を変更する権限がありません。",
@@ -188,6 +177,28 @@
         }
       }
     }
+  },
+  "group-caches": {
+    "button": {
+      "update-all": "全リポジトリを更新",
+      "update-all-repositories": "キャッシュを全更新",
+      "update-selected-repositories": "キャッシュを更新"
+    },
+    "description": "WEKO3 が利用するグループ情報のキャッシュ状況を管理できます。",
+    "search-placeholder": "検索...",
+    "status": {
+      "cached": "キャッシュあり",
+      "no-cached": "キャッシュなし"
+    },
+    "table": {
+      "column": {
+        "repository-name": "リポジトリ名",
+        "repository-updated-at": "キャッシュ更新日時",
+        "repository-url": "リポジトリURL"
+      }
+    },
+    "title": "グループキャッシュ",
+    "updating": "更新中..."
   },
   "groups": {
     "actions": {
@@ -324,18 +335,24 @@
     "remove-users-from-group": {
       "selection": "除外元のグループを選択してください。",
       "title": "以下のユーザーをグループから除外します。"
+    },
+    "update-all-repositories-cache": {
+      "alert": "すべての処理は完了までに長い時間がかかります。現時点ではこの処理を途中で停止できません。",
+      "title": "全リポジトリのキャッシュの更新を実行しますか。"
     }
   },
   "repositories": {
     "actions": {
       "copy-sp-connector-id": "SP コネクタ ID をコピー"
     },
+    "all-repositories-actions": "すべてのリポジトリ",
     "description": "あなたが管理しているリポジトリの情報を確認できます。",
+    "entity-id-label": "Entity ID：",
     "list": {
       "no-repositories-description": "検索条件を変更して、再度お試しください。",
       "no-repositories-title": "リポジトリが見つかりません"
     },
-    "entity-id-label": "Entity ID：",
+    "selected-repositories-actions": "選択したリポジトリ",
     "table": {
       "column": {
         "entity-ids": "Entity ID",
@@ -428,6 +445,9 @@
         "description": "サーバーがリクエストを不正とみなしました。",
         "title": "不正なリクエスト"
       },
+      "cache-update-in-progress": {
+        "description": "すでにグループキャッシュの更新処理が進行中です。"
+      },
       "conflict": {
         "description": "入力内容に競合がありました。",
         "title": "競合エラー"
@@ -441,6 +461,9 @@
       },
       "invalid-search-query": {
         "description": "不正な検索条件が含まれます。"
+      },
+      "no-cache-update-task": {
+        "description": "キャッシュの更新処理は実行中ではありません。"
       },
       "not-found": {
         "description": "リクエスト先が見つかりません。",
@@ -497,6 +520,9 @@
       },
       "deleted": {
         "title": "削除成功"
+      },
+      "group-cache-update-started": {
+        "description": "グループキャッシュの更新処理が開始しました。"
       },
       "group-created": {
         "description": "グループの作成に成功しました。"

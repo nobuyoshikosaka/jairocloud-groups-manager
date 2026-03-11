@@ -52,7 +52,7 @@ interface UsersSearchQuery {
 
 interface CacheGroupsSearchQuery {
   q?: string
-  f?: string[]
+  f?: GroupCacheStatus[]
   p?: number
   l?: number
 }
@@ -89,6 +89,8 @@ type GlobalSearchResults = (
   | UsersSearchResult & { type: 'users' }
 )[]
 
+type GroupCachesSearchResult = SearchResult<RepositoryCache>
+
 export type {
   FilterOption,
   RepositoriesSearchQuery, RepositoriesSortableKeys,
@@ -97,5 +99,5 @@ export type {
   SortOrder,
   SearchResult, UsersSearchResult, GroupsSearchResult, RepositoriesSearchResult,
   GlobalSearchResults,
-  CacheGroupsSearchQuery,
+  CacheGroupsSearchQuery, GroupCachesSearchResult,
 }

@@ -9,13 +9,9 @@ import typing as t
 from flask import Blueprint, current_app
 from flask_login import login_required
 from flask_pydantic import validate
+from weko_group_cache_db.config import setup_config as setup_weko_group_cache_db_config
 
-from server.api.helpers import roles_required
-from server.api.schemas import (
-    CacheQuery,
-    CacheRequest,
-    ErrorResponse,
-)
+from server.config import config
 from server.const import USER_ROLES
 from server.entities.cache import TaskDetail
 from server.entities.search_request import SearchResult
@@ -23,8 +19,21 @@ from server.exc import InvalidQueryError, RequestConflict
 from server.messages import E
 from server.services import group_caches
 
+from .helpers import roles_required
+from .schemas import (
+    CacheQuery,
+    CacheRequest,
+    ErrorResponse,
+)
+
 
 bp = Blueprint("group-caches", __name__)
+
+
+@bp.before_request
+def init_settings() -> None:
+    """Initialize settings for the request."""
+    setup_weko_group_cache_db_config(config.CACHE_DB)
 
 
 @bp.get("/", strict_slashes=False)

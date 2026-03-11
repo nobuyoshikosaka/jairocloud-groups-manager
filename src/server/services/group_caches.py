@@ -292,6 +292,7 @@ def get_task_status() -> TaskDetail | None:
             RepositoryCache(
                 id=r.id,
                 service_name=r.service_name,
+                service_url=r.service_url,
                 updated=result.updated_at,
                 status=result.status,
             )

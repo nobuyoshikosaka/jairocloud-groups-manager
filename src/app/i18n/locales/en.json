@@ -88,48 +88,27 @@
   },
   "cache-groups": {
     "button": {
-      "update-all-repositories": "Update all repositories",
-      "update-selected-repositories": "Update selected repositories"
     },
-    "confirm-update-all-repositories": "Do you want to update all repositories ({count})?",
     "confirm-update-selected-repositories": "Would you like to update the following {count} repositories?",
     "count": "{current} / {total} items",
-    "description": "You can manage the cache status of group information used by WEKO3.",
     "filter-placeholder": "Cache status",
-    "search-placeholder": "search...",
     "select": {
-      "cache": "With cash",
-      "no-cache": "No cache"
     },
     "table": {
       "column": {
-        "repository-name": "Repository name",
-        "repository-status": "Update status",
-        "repository-updated-at": "Cache update date and time",
-        "repository-url": "Repository URL"
+        "repository-status": "Update status"
       }
     },
-    "title": "Caching Groups",
     "update-completed": "Update completed ({count} items)",
-    "update-error": "Cache update processing is in progress.",
-    "updating": "Updating..."
+    "update-error": "Cache update processing is in progress."
   },
   "common": {
     "loading": "Loading..."
   },
-  "error": {
-    "conflict": {
-    },
-    "server": {
-    },
-    "unexpected": {
-    },
-    "validation": {
-    }
-  },
   "error-page": {
     "forbidden": {
       "group-access": "You do not have permission to access this group.",
+      "group-caches": "You do not have permission to manage group caches.",
       "group-create": "You do not have permission to create groups in the selected repository.",
       "group-delete": "You do not have permission to delete this group.",
       "group-edit": "You do not have permission to change information for this group.",
@@ -203,6 +182,29 @@
       }
     }
   },
+  "group-caches": {
+    "button": {
+      "update-all": "Update all repositories",
+      "update-all-repositories": "Update all cache",
+      "update-selected-repositories": "Update cache"
+    },
+    "description": "You can manage the cache status of group information used by WEKO3.",
+    "search-placeholder": "search...",
+    "status": {
+      "cached": "Cached",
+      "no-cached": "Not cached"
+    },
+    "table": {
+      "column": {
+        "repository-name": "Repository name",
+        "repository-updated-at": "Cache update date and time",
+        "repository-url": "Repository URL"
+      },
+      "no-cache": ""
+    },
+    "title": "Caching Groups",
+    "updating": "Updating..."
+  },
   "groups": {
     "actions": {
       "copy-id": "Copy ID to clipboard"
@@ -211,7 +213,7 @@
     },
     "delete-selected-button": "Delete groups",
     "description": "You can manage groups in your repository.",
-    "selected-groups-actions": "Selected groups",
+    "selected-groups-actions": "Selected Groups",
     "table": {
       "cell": {
         "public": {
@@ -339,18 +341,24 @@
     "remove-users-from-group": {
       "selection": "Please select the group to remove.",
       "title": "Remove the following users from the group."
+    },
+    "update-all-repositories-cache": {
+      "alert": "This process will take a long time to complete. It cannot be stopped at this time.",
+      "title": "Are you sure to update the cache for all repositories?"
     }
   },
   "repositories": {
     "actions": {
       "copy-sp-connector-id": "Copy SP Connecter ID to clipboard\t"
     },
+    "all-repositories-actions": "All Repositories",
     "description": "You can check information about the repositories you manage.",
+    "entity-id-label": "Entity ID: ",
     "list": {
       "no-repositories-description": "Please change your search criteria and try again.",
       "no-repositories-title": "Repository not found"
     },
-    "entity-id-label": "Entity ID: ",
+    "selected-repositories-actions": "Selected Repositories",
     "table": {
       "column": {
         "entity-ids": "Entity ID",
@@ -439,7 +447,6 @@
     "display-count-label": "Number of items displayed:",
     "display-info-text": "Displaying {start}～{end} items (all {total} items)",
     "display-info-text-empty": "Displaying 0 items (all 0 items)",
-    "page-size-label": "Page size:"
     "filter-button-label": "Filter",
     "page-size-label": "Page size:",
     "selected": "selected",
@@ -456,6 +463,9 @@
         "description": "The server marked the request as invalid.",
         "title": "Bad Request"
       },
+      "cache-update-in-progress": {
+        "description": "The group cache update operation is already in progress."
+      },
       "conflict": {
         "description": "There was a conflict in the input content.",
         "title": "Conflict Error"
@@ -469,6 +479,9 @@
       },
       "invalid-search-query": {
         "description": "Contains invalid search criteria."
+      },
+      "no-cache-update-task": {
+        "description": "The cache update process is not currently running."
       },
       "not-found": {
         "description": "Request destination not found.",
@@ -525,6 +538,9 @@
       },
       "deleted": {
         "title": "Delete successful"
+      },
+      "group-cache-update-started": {
+        "description": "The group cache update operation has started."
       },
       "group-created": {
         "description": "Successfully created group."
@@ -630,7 +646,7 @@
     }
   },
   "users": {
-    "all-users-actions": "All users",
+    "all-users-actions": "All Users",
     "button": {
       "all-users-download": "Download all users",
       "selected-users-add-to-group": "Add to group",
@@ -647,7 +663,7 @@
       "repository-admin": "Repository Administrator",
       "system-admin": "System Administrator"
     },
-    "selected-users-actions": "Selected users",
+    "selected-users-actions": "Selected Users",
     "table": {
       "column": {
         "emails": "Email",
